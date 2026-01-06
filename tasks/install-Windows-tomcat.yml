@@ -1,0 +1,9 @@
+---
+- block:
+  - name: Install Tomcat
+    win_chocolatey:
+      name: "tomcat"
+      state: present
+      choco_args: '-f -y'
+    register: tomcat_installation
+  become: no
