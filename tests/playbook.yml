@@ -1,0 +1,14 @@
+---
+- hosts: all
+  become: yes
+  gather_facts: no
+  vars:
+    jdk_version: 21
+
+  # include_role:
+  #   - name: windows-base
+
+  roles:
+    - windows-base
+    - provision-java
+    - provision-tomcat
