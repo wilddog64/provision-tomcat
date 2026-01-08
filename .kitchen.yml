@@ -1,0 +1,74 @@
+---
+driver:
+  name: vagrant
+  driver: virtualbox
+
+provisioner:
+  require_chef_omnibus: false
+  name: ansible_playbook
+  hosts: test-kitchen
+  require_ansible_repo: true
+  playbook: tests/playbook.yml
+  roles_path: ..
+  ansible_version: latest
+  host_key_checking: false
+  # vault_password_file: ./secrets/my_pass.txt
+  idempotency_test: false
+  chef_bootstrap_url: null
+  verbose: vv
+  extra_vars:
+    env: stage2
+    extract_build_number: 16
+    extract_debug: 'False'
+    skip_migration: yes
+
+platforms:
+  - name: ubuntu-2404
+    driver_config:
+      box: hashicorp-education/ubuntu-24-04
+  - name: rockylinux9
+    driver_config:
+      box: rockylinux/9
+  - name: win11
+    driver_config:
+      box: stromweld/windows-11
+      communicator: winrm
+    transport:
+      name: winrm
+      elevated: true
+      ssl_peer_verification: false
+      port: 5985
+      winrm_transport: :plaintext
+      ssl: false
+      connection_retries: 5
+      connection_retry_sleep: 10
+    provisioner:
+      name: ansible_push
+      hosts: test-kitchen
+      require_ansible_repo: true
+      playbook: tests/playbook.yml
+      roles_path: ..
+      ansible_version: latest
+      ansible_host_key_checking: false
+      idempotency_test: false
+      chef_bootstrap_url: null
+      ansible_verbosity: 2
+      require_windows_support: true
+      extra_vars:
+        env: stage2
+        extract_build_number: 16
+        extract_debug: 'False'
+        skip_migration: yes
+        ansible_connection: winrm
+        ansible_winrm_transport: basic
+        ansible_port: 5985
+        ansible_winrm_scheme: http
+        ansible_winrm_server_cert_validation: ignore
+        ansible_user: vagrant
+        ansible_password: vagrant
+        ansible_host: 127.0.0.1
+
+suites:
+  - name: default
+    run_list:
+    attributes:
