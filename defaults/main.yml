@@ -1,3 +1,7 @@
 #SPDX-License-Identifier: MIT-0
 ---
 # defaults file for provision-tomcat
+tomcat_package_name: tomcat
+tomcat_service_name: Tomcat9
+tomcat_force_install: false
+tomcat_choco_args: []

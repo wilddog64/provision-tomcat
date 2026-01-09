@@ -1,38 +1,57 @@
-Role Name
-=========
+# Provision Tomcat Role
 
-A brief description of the role goes here.
+This Ansible role installs Apache Tomcat on Windows hosts via Chocolatey. It assumes the `windows-base` role has already installed/configured Chocolatey in a known location.
 
-Requirements
-------------
+## Requirements
 
-Any pre-requisites that may not be covered by Ansible itself or the role should be mentioned here. For instance, if the role uses the EC2 module, it may be a good idea to mention in this section that the boto package is required.
+- Control node: Python 3.9+, Ansible 2.14+, and the `chocolatey.chocolatey` collection.
+- Target node: Windows accessible over WinRM with admin rights.
+- Chocolatey present on the target (run the `windows-base` role first).
 
-Role Variables
---------------
+## Role Variables
 
-A description of the settable variables for this role should go here, including any variables that are in defaults/main.yml, vars/main.yml, and any variables that can/should be set via parameters to the role. Any variables that are read from other roles and/or the global scope (ie. hostvars, group vars, etc.) should be mentioned here as well.
+Default variables (`defaults/main.yml`):
 
-Dependencies
-------------
+| Variable | Default | Description |
+| --- | --- | --- |
+| `tomcat_package_name` | `tomcat` | Chocolatey package to install. |
+| `tomcat_service_name` | `Tomcat9` | Windows service name to manage. |
+| `tomcat_force_install` | `false` | When true, add `--force` to the Chocolatey call (service is stopped regardless). |
+| `tomcat_choco_args` | `[]` | Additional Chocolatey arguments (list). |
 
-A list of other roles hosted on Galaxy should go here, plus any details in regards to parameters that may need to be set for other roles, or variables that are used from other roles.
+The role always stops the Tomcat service (if present) before running Chocolatey and starts it afterward. Set `tomcat_force_install: true` (optionally with extra `tomcat_choco_args`) when you want to force a reinstall/upgrade; otherwise Chocolatey will skip if the package is already present.
 
-Example Playbook
-----------------
+## Tasks Overview
 
-Including an example of how to use your role (for instance, with variables passed in as parameters) is always nice for users too:
+`tasks/install-Windows-tomcat.yml` executes a single block:
 
-    - hosts: servers
-      roles:
-         - { role: username.rolename, x: 42 }
+1. `win_chocolatey` installs Tomcat with the configured package name/args.
+2. Registers `tomcat_installation` so downstream roles can inspect change status.
 
-License
--------
+The block only runs when `ansible_facts.os_family == 'Windows'`.
 
-BSD
+## Example Playbook
 
-Author Information
-------------------
+```yaml
+---
+- hosts: windows
+  gather_facts: yes
+  roles:
+    - windows-base
+    - provision-tomcat
+```
 
-An optional section for the role authors to include contact information, or a website (HTML is not allowed).
+## Local Testing
+
+Use the repo’s Make targets (which wrap Test Kitchen + Vagrant):
+
+```
+make test-win11
+# On Windows PowerShell
+set KITCHEN_YAML=.kitchen-win.yml
+make test-win11
+```
+
+## License
+
+Apache-2.0 (see `LICENSE`).

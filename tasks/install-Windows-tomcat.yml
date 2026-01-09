@@ -1,9 +1,46 @@
 ---
 - block:
-  - name: Install Tomcat
+  - name: Normalize Tomcat chocolatey args
+    set_fact:
+      tomcat_effective_choco_args: >-
+        {{ (tomcat_choco_args | default([])) + (['--force'] if tomcat_force_install | bool else []) }}
+
+  - name: Query Tomcat service state
+    ansible.windows.win_service_info:
+      name: "{{ tomcat_service_name }}"
+    register: tomcat_service_info
+    failed_when: false
+
+  - name: Remember whether Tomcat service exists
+    set_fact:
+      tomcat_service_exists: >-
+        {{ (tomcat_service_info.services | default([])) | length > 0 }}
+
+  - name: Stop Tomcat service if running
+    ansible.windows.win_service:
+      name: "{{ tomcat_service_name }}"
+      state: stopped
+    when: tomcat_service_exists
+
+  - name: Install Tomcat via Chocolatey
     win_chocolatey:
-      name: "tomcat"
+      name: "{{ tomcat_package_name }}"
       state: present
-      choco_args: '-f -y'
+      choco_args: "{{ tomcat_effective_choco_args | join(' ') if (tomcat_effective_choco_args | length > 0) else omit }}"
     register: tomcat_installation
+
+  - name: Wait for Tomcat service to exist (initial install)
+    ansible.windows.win_service_info:
+      name: "{{ tomcat_service_name }}"
+    register: tomcat_service_after_install
+    retries: 5
+    delay: 3
+    until: (tomcat_service_after_install.services | default([])) | length > 0
+    when: tomcat_installation.changed | default(false)
+
+  - name: Start Tomcat service if previously running or freshly installed
+    ansible.windows.win_service:
+      name: "{{ tomcat_service_name }}"
+      state: started
+    when: tomcat_service_exists or (tomcat_installation.changed | default(false))
   become: no
