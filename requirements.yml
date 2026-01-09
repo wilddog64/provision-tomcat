@@ -1,0 +1,15 @@
+roles:
+  - name: windows-base
+    src: https://github.com/wilddog64/windows-base.git
+    scm: git
+    version: main        # or a tag/branch, e.g. v1.0.0
+
+  - name: provision-java
+    src: https://github.com/wilddog64/provision-java.git
+    scm: git
+    version: main
+
+  - name: provision-tomcat
+    src: https://github.com/wilddog64/provision-tomcat.git
+    scm: git
+    version: main
