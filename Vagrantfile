@@ -12,7 +12,8 @@ Vagrant.configure("2") do |config|
 
   # Every Vagrant development environment requires a box. You can search for
   # boxes at https://atlas.hashicorp.com/search.
-  config.vm.box = 'stromweld/windows-11'
+  config.vm.box = 'stromweld/windows-10'
+  # config.vm.box = 'gusztavvargadr/windows-11'
 
   config.vm.communicator = "winrm"
   config.winrm.username = "vagrant"
@@ -21,17 +22,21 @@ Vagrant.configure("2") do |config|
   config.winrm.basic_auth_only = true
 
   # configure ansible provisioner
-  config.vm.provision :ansible do | ansible |
+  config.vm.provision :ansible_local do | ansible |
     ansible.limit    = 'all'                # apply to a Vagrant host
+    ansible.install_mode      = :pip
+    ansible.galaxy_role_file  = 'requirements.yml'
+    ansible.galaxy_roles_path = 'roles'
     ansible.playbook = 'tests/playbook.yml' # point to local playbook for easy testing
-    # ansible.verbose  = 'vv'                 # minimum verbose
-    ansible.extra_vars = {
-      'ansible_python_interpreter' => '/usr/bin/python3',
-      'ansible_connection' => 'winrm',
-      'ansible_winrm_transport' => 'basic',
-      'ansible_winrm_server_cert_validation' => 'ignore',
-      'ansible_winrm_scheme' => 'http',
-    }
+
+    # ansible.verbose  = 'vv'                # minimum verbose
+    # ansible.extra_vars = {
+    #   'ansible_python_interpreter'           => '',
+    #   'ansible_connection'                   => 'winrm',
+    #   'ansible_winrm_transport'              => 'basic',
+    #   'ansible_winrm_server_cert_validation' => 'ignore',
+    #   'ansible_winrm_scheme'                 => 'http',
+    # }
   end
   # Disable automatic box update checking. If you disable this, then
   # boxes will only be checked for updates when the user runs
