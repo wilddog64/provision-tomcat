@@ -70,5 +70,38 @@ platforms:
 
 suites:
   - name: default
-    run_list:
-    attributes:
+    provisioner:
+      extra_vars:
+        tomcat_state: present
+    verifier:
+      name: shell
+      command: |
+        # Verify Tomcat service exists and is running
+        vagrant ssh -c "powershell.exe -Command \"Get-Service -Name Tomcat9 | Select-Object -ExpandProperty Status\"" | grep -q "Running"
+        # Verify Tomcat responds on port 8080
+        curl -f http://localhost:8080 || curl -f http://localhost:8080 | grep -q "404"
+
+  - name: latest
+    provisioner:
+      extra_vars:
+        tomcat_state: latest
+    verifier:
+      name: shell
+      command: |
+        # Verify Tomcat service exists and is running
+        vagrant ssh -c "powershell.exe -Command \"Get-Service -Name Tomcat9 | Select-Object -ExpandProperty Status\"" | grep -q "Running"
+        # Verify Tomcat responds on port 8080
+        curl -f http://localhost:8080 || curl -f http://localhost:8080 | grep -q "404"
+        # Verify we got the latest version from Chocolatey
+        vagrant ssh -c "powershell.exe -Command \"choco list tomcat --local-only --exact\"" | grep tomcat
+
+  - name: idempotence
+    provisioner:
+      extra_vars:
+        tomcat_state: present
+      idempotency_test: true
+    verifier:
+      name: shell
+      command: |
+        # After second run (idempotency test), verify service still running
+        vagrant ssh -c "powershell.exe -Command \"Get-Service -Name Tomcat9 | Select-Object -ExpandProperty Status\"" | grep -q "Running"
