@@ -11,4 +11,35 @@
   roles:
     - windows-base
     - provision-java
-    - provision-tomcat
+
+  tasks:
+    - name: Load provision-tomcat defaults
+      include_vars:
+        file: ../defaults/main.yml
+
+    - name: Include local provision-tomcat tasks
+      include_tasks: ../tasks/main.yml
+
+
+- name: Verify Tomcat accessibility from host
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  tasks:
+    - name: Test Tomcat HTTP response via port forward
+      shell: curl -s -o /dev/null -w "%{http_code}" http://localhost:8080
+      register: http_check
+      failed_when: false
+      changed_when: false
+
+    - name: Report actual Tomcat status
+      debug:
+        msg: >-
+          {% if http_check.stdout is defined and http_check.stdout | trim in ['200', '404'] %}
+          SUCCESS: Tomcat is responding on http://localhost:8080 (HTTP {{ http_check.stdout | trim }})
+          {% elif http_check.stdout is defined %}
+          WARNING: Unexpected HTTP response: {{ http_check.stdout | trim }}
+          {% else %}
+          FAILED: Tomcat is not responding on port 8080. Check service status in VM.
+          {% endif %}
