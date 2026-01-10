@@ -5,22 +5,32 @@
       tomcat_effective_choco_args: >-
         {{ (tomcat_choco_args | default([])) + (['--force'] if tomcat_force_install | bool else []) }}
 
-  - name: Query Tomcat service state
+  - name: Verify Java is installed (using fact from provision-java role)
+    assert:
+      that:
+        - java_home is defined
+        - java_home | length > 0
+      fail_msg: "Java is not installed. Ensure provision-java role ran successfully."
+      success_msg: "Java verified at {{ java_home }}"
+
+  - name: Check if Tomcat service exists and is properly installed
     ansible.windows.win_service_info:
       name: "{{ tomcat_service_name }}"
-    register: tomcat_service_info
-    failed_when: false
+    register: tomcat_service_check
 
-  - name: Remember whether Tomcat service exists
+  - name: Set fact for whether Tomcat is properly installed
     set_fact:
-      tomcat_service_exists: >-
-        {{ (tomcat_service_info.services | default([])) | length > 0 }}
+      tomcat_properly_installed: >-
+        {{ (tomcat_service_check.services | default([])) | length > 0 }}
 
-  - name: Stop Tomcat service if running
-    ansible.windows.win_service:
-      name: "{{ tomcat_service_name }}"
-      state: stopped
-    when: tomcat_service_exists
+  - name: Display current Tomcat installation status
+    debug:
+      msg: >-
+        {% if tomcat_properly_installed %}
+        Tomcat service already exists - will ensure it is running (no reinstall)
+        {% else %}
+        Tomcat not found - will install
+        {% endif %}
 
   - name: Install Tomcat via Chocolatey
     win_chocolatey:
@@ -28,19 +38,41 @@
       state: present
       choco_args: "{{ tomcat_effective_choco_args | join(' ') if (tomcat_effective_choco_args | length > 0) else omit }}"
     register: tomcat_installation
+    when: not tomcat_properly_installed or (tomcat_force_install | default(false))
 
   - name: Wait for Tomcat service to exist (initial install)
     ansible.windows.win_service_info:
       name: "{{ tomcat_service_name }}"
     register: tomcat_service_after_install
-    retries: 5
-    delay: 3
+    retries: 10
+    delay: 5
     until: (tomcat_service_after_install.services | default([])) | length > 0
     when: tomcat_installation.changed | default(false)
 
-  - name: Start Tomcat service if previously running or freshly installed
+  - name: Ensure Tomcat service is started
     ansible.windows.win_service:
       name: "{{ tomcat_service_name }}"
       state: started
-    when: tomcat_service_exists or (tomcat_installation.changed | default(false))
+    retries: 5
+    delay: 10
+    register: tomcat_service_start
+    until: tomcat_service_start is succeeded
+    failed_when: false
+
+  - name: Verify Tomcat service status
+    ansible.windows.win_service_info:
+      name: "{{ tomcat_service_name }}"
+    register: tomcat_final_status
+
+  - name: Display Tomcat service status
+    debug:
+      msg: "Tomcat service state: {{ tomcat_final_status.services[0].state | default('unknown') }}, status: {{ tomcat_final_status.services[0].status | default('unknown') }}"
+    when:
+      - tomcat_final_status is defined
+      - (tomcat_final_status.services | default([])) | length > 0
+
+  - name: Tomcat installation complete
+    debug:
+      msg: "Tomcat installation complete. Access via http://localhost:8080 (check post_tasks for verification)"
+
   become: no
