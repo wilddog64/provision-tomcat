@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl:*)",
+      "Bash(vagrant ssh:*)",
+      "Bash(vagrant winrm:*)",
+      "Bash(kitchen list:*)",
+      "Bash(rbenv exec kitchen:*)",
+      "Bash(vagrant global-status:*)",
+      "Bash(vagrant destroy:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
