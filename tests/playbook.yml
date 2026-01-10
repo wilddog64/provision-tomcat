@@ -5,20 +5,10 @@
   vars:
     jdk_version: 21
 
-  # include_role:
-  #   - name: windows-base
-
   roles:
     - windows-base
     - provision-java
-
-  tasks:
-    - name: Load provision-tomcat defaults
-      include_vars:
-        file: ../defaults/main.yml
-
-    - name: Include local provision-tomcat tasks
-      include_tasks: ../tasks/main.yml
+    - provision-tomcat
 
 
 - name: Verify Tomcat accessibility from host
