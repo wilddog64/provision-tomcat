@@ -12,7 +12,7 @@ Vagrant.configure("2") do |config|
 
   # Every Vagrant development environment requires a box. You can search for
   # boxes at https://atlas.hashicorp.com/search.
-  config.vm.box = 'stromweld/windows-10'
+  config.vm.box = 'stromweld/windows-11'
   # config.vm.box = 'gusztavvargadr/windows-11'
 
   config.vm.communicator = "winrm"
@@ -22,9 +22,9 @@ Vagrant.configure("2") do |config|
   config.winrm.basic_auth_only = true
 
   # configure ansible provisioner
-  config.vm.provision :ansible_local do | ansible |
+  config.vm.provision :ansible do | ansible |
     ansible.limit    = 'all'                # apply to a Vagrant host
-    ansible.install_mode      = :pip
+    # ansible.install_mode      = :pip
     ansible.galaxy_role_file  = 'requirements.yml'
     ansible.galaxy_roles_path = 'roles'
     ansible.playbook = 'tests/playbook.yml' # point to local playbook for easy testing
