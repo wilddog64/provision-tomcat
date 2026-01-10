@@ -57,31 +57,43 @@ This design avoids unnecessary reinstalls that could cause downtime in productio
 
 ## Upgrade Procedures
 
-Both Tomcat and Java can be upgraded using the same pattern. Since Tomcat typically requires a compatible Java version, it's common to upgrade both together.
+### How Upgrades Work
 
-### Related Variables
+The role automatically detects and handles Tomcat upgrades:
 
-**Tomcat Upgrade Variables:**
+1. **Detects existing installation** - Finds any `apache-tomcat-*` directory
+2. **Checks if upgrade needed** - Compares existing version to `tomcat_version` variable
+3. **Performs upgrade**:
+   - Stops Tomcat service
+   - Uninstalls old service
+   - Backs up old directory with timestamp (e.g., `apache-tomcat-9.0.100.bak.1736549230`)
+   - Downloads and extracts new version
+   - Installs and starts new service
+
+### Upgrade Variables
+
+**Tomcat:**
 
 | Variable | Default | Description |
 | --- | --- | --- |
-| `tomcat_state` | `present` | Set to `latest` to upgrade Tomcat to the newest version available in Chocolatey repository |
-| `tomcat_version` | `null` | Set to a specific version (e.g., `"9.0.95"`) to install/upgrade to that exact version (if available in repository) |
+| `tomcat_version` | `"9.0.113"` | Set to target version (e.g., `"9.0.120"`) to upgrade |
+| `tomcat_major_version` | `"9"` | Major version - change when upgrading to Tomcat 10/11 |
+| `tomcat_auto_start` | `true` | Auto-start after upgrade |
 
-**Java Upgrade Variables:**
+**Java:**
 
 | Variable | Default | Description |
 | --- | --- | --- |
-| `java_state` | `present` | Set to `latest` to upgrade Java to the newest version available in Chocolatey repository |
-| `java_version` | `21` | Major Java version (e.g., `11`, `17`, `21`) - changes the package name to `microsoft-openjdk-{version}` |
-| `java_package_version` | `null` | Set to a specific version (e.g., `"21.0.5"`) to install/upgrade to that exact version (if available in repository) |
+| `java_state` | `present` | Set to `latest` to upgrade Java to newest version |
+| `java_version` | `21` | Major Java version (e.g., `11`, `17`, `21`) |
+| `java_package_version` | `null` | Set to specific version (e.g., `"21.0.5"`) to install/upgrade |
 | `java_install_dir` | `c:\java` | Installation directory - remains consistent across upgrades |
 
 ### Upgrade Scenarios
 
-#### Scenario 1: Upgrade Both Tomcat and Java to Latest Versions
+#### Scenario 1: Upgrade Tomcat to Specific Version
 
-**Recommended for:** Development/testing environments, scheduled maintenance windows
+**Recommended for:** Production environments with tested versions
 
 **Playbook:**
 ```yaml
@@ -89,8 +101,7 @@ Both Tomcat and Java can be upgraded using the same pattern. Since Tomcat typica
 - hosts: windows
   gather_facts: yes
   vars:
-    java_state: latest
-    tomcat_state: latest
+    tomcat_version: "9.0.120"  # New version
   roles:
     - windows-base
     - provision-java
@@ -98,16 +109,16 @@ Both Tomcat and Java can be upgraded using the same pattern. Since Tomcat typica
 ```
 
 **What happens:**
-1. Checks current Java installation
-2. If newer Java version available, upgrades in-place
-3. Updates `JAVA_HOME` and PATH
-4. Checks current Tomcat installation
-5. If newer Tomcat version available, upgrades in-place
-6. Restarts Tomcat service with new versions
+1. Role detects existing Tomcat 9.0.113
+2. Stops Tomcat service
+3. Uninstalls old service
+4. Backs up `apache-tomcat-9.0.113` to `apache-tomcat-9.0.113.bak.{timestamp}`
+5. Downloads and extracts Tomcat 9.0.120
+6. Installs and starts new service
 
 **Command:**
 ```bash
-ansible-playbook -i inventory playbook.yml --extra-vars "java_state=latest tomcat_state=latest"
+ansible-playbook -i inventory playbook.yml --extra-vars "tomcat_version=9.0.120"
 ```
 
 #### Scenario 2: Upgrade Only Tomcat (Keep Java as-is)
