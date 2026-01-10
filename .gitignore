@@ -1,8 +1,10 @@
 *.retry
 .vagrant/
+.vagrant.d/
 Gemfile.lock
 .kitchen/
 secrets/
 *.log
 .direnv/
 .venv/
+roles/
