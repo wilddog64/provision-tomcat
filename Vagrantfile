@@ -26,7 +26,7 @@ Vagrant.configure("2") do |config|
     ansible.limit    = 'all'                # apply to a Vagrant host
     # ansible.install_mode      = :pip
     ansible.galaxy_role_file  = 'requirements.yml'
-    ansible.galaxy_roles_path = 'roles'
+    # ansible.galaxy_roles_path = 'roles'
     ansible.playbook = 'tests/playbook.yml' # point to local playbook for easy testing
 
     # ansible.verbose  = 'vv'                # minimum verbose
