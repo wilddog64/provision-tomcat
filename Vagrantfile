@@ -30,13 +30,12 @@ Vagrant.configure("2") do |config|
     ansible.playbook = 'tests/playbook.yml' # point to local playbook for easy testing
 
     # ansible.verbose  = 'vv'                # minimum verbose
-    # ansible.extra_vars = {
-    #   'ansible_python_interpreter'           => '',
-    #   'ansible_connection'                   => 'winrm',
-    #   'ansible_winrm_transport'              => 'basic',
-    #   'ansible_winrm_server_cert_validation' => 'ignore',
-    #   'ansible_winrm_scheme'                 => 'http',
-    # }
+    ansible.extra_vars = {
+      'ansible_connection'                   => 'winrm',
+      'ansible_winrm_transport'              => 'basic',
+      'ansible_winrm_server_cert_validation' => 'ignore',
+      'ansible_winrm_scheme'                 => 'http',
+    }
   end
   # Disable automatic box update checking. If you disable this, then
   # boxes will only be checked for updates when the user runs
