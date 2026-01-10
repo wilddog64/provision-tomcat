@@ -1,12 +1,12 @@
 # Provision Tomcat Role
 
-This Ansible role installs Apache Tomcat on Windows hosts via Chocolatey. It assumes the `windows-base` role has already installed/configured Chocolatey in a known location.
+This Ansible role installs Apache Tomcat on Windows hosts by downloading the official Tomcat zip archive directly from Apache mirrors. It handles installation, upgrades, Windows service configuration, and firewall rules.
 
 ## Requirements
 
-- Control node: Python 3.9+, Ansible 2.14+, and the `chocolatey.chocolatey` collection.
-- Target node: Windows accessible over WinRM with admin rights.
-- Chocolatey present on the target (run the `windows-base` role first).
+- Control node: Python 3.9+, Ansible 2.14+, and the `ansible.windows` and `community.windows` collections
+- Target node: Windows accessible over WinRM with admin rights
+- Java must be installed first (use the `provision-java` role)
 
 ## Role Variables
 
@@ -14,572 +14,386 @@ Default variables (`defaults/main.yml`):
 
 | Variable | Default | Description |
 | --- | --- | --- |
-| `tomcat_package_name` | `tomcat` | Chocolatey package to install. |
-| `tomcat_service_name` | `Tomcat9` | Windows service name to manage. |
-| `tomcat_state` | `present` | Chocolatey package state: `present` (install if not present) or `latest` (install and upgrade to newest version). |
-| `tomcat_version` | `null` | (Optional) Specific version to install (e.g., `9.0.113`). **Note:** Only works if that version is available in the Chocolatey repository. |
-| `tomcat_choco_args` | `[]` | Additional Chocolatey arguments (list). |
+| `tomcat_version` | `'9.0.113'` | Tomcat version to install |
+| `tomcat_major_version` | `'9'` | Major version (used for service name and paths) |
+| `tomcat_service_name` | `"Tomcat{{ tomcat_major_version }}"` | Windows service name (e.g., `Tomcat9`) |
+| `tomcat_install_dir` | `'C:/Tomcat/Tomcat'` | Base installation directory |
+| `tomcat_download_url` | `"https://dlcdn.apache.org/tomcat/tomcat-{{ tomcat_major_version }}/v{{ tomcat_version }}/bin/apache-tomcat-{{ tomcat_version }}-windows-x64.zip"` | Apache mirror download URL |
+| `tomcat_temp_dir` | `'C:/temp'` | Temporary directory for downloads |
+| `tomcat_auto_start` | `true` | Whether to start Tomcat service automatically after installation |
 
-## Behavior
+The Tomcat installation will be located at: `{{ tomcat_install_dir }}/apache-tomcat-{{ tomcat_version }}/`
 
-The role is designed to be **idempotent** and **production-safe**:
+Example: `C:/Tomcat/Tomcat/apache-tomcat-9.0.113/`
 
-1. **Checks if Tomcat is already installed** - Queries the Windows service to see if Tomcat exists
-2. **Installs or upgrades based on `tomcat_state`:**
-   - `tomcat_state: present` (default) - Installs if not present, skips if service already exists
-   - `tomcat_state: latest` - Installs if not present, upgrades to newest version if available
-3. **Ensures service is running** - After installation/upgrade, ensures the Tomcat service is started
-4. **Verifies and reports** - Displays service status and provides access information
+## Features
 
-**Default behavior (`tomcat_state: present`):**
-- Initial install: Installs Tomcat
-- Subsequent runs: Skips installation (service exists), only ensures it's running
-- No automatic upgrades unless explicitly requested
+### Direct Download Installation
 
-**Upgrade behavior (`tomcat_state: latest`):**
-- Runs `win_chocolatey` with `state: latest`
-- Chocolatey checks for newer versions and upgrades if available
-- Service is restarted after upgrade
+- Downloads Tomcat directly from Apache mirrors (no dependency on Chocolatey)
+- Extracts to configured installation directory
+- Installs Windows service using Tomcat's `service.bat` script
+- Automatically configures Windows Firewall to allow port 8080
 
-**Version pinning (`tomcat_version: "x.y.z"`):**
-- When `tomcat_version` is set, the role attempts to install that specific version
-- Overrides `tomcat_state` behavior - uses the version you specify
-- **Note:** The Chocolatey community repository may only keep the latest version available. To verify available versions, run:
-  ```powershell
-  choco search tomcat --all-versions
-  ```
-- If only the latest version is available, version pinning won't work as expected
-- For true version pinning, consider:
-  - Using an internal Chocolatey repository with multiple versions cached
-  - Using a different installation method (e.g., downloading specific Tomcat archives directly)
-
-This design avoids unnecessary reinstalls that could cause downtime in production.
-
-## Upgrade Procedures
-
-### How Upgrades Work
+### Automatic Upgrades
 
 The role automatically detects and handles Tomcat upgrades:
 
 1. **Detects existing installation** - Finds any `apache-tomcat-*` directory
 2. **Checks if upgrade needed** - Compares existing version to `tomcat_version` variable
-3. **Performs upgrade**:
+3. **Performs upgrade safely**:
    - Stops Tomcat service
    - Uninstalls old service
    - Backs up old directory with timestamp (e.g., `apache-tomcat-9.0.100.bak.1736549230`)
    - Downloads and extracts new version
-   - Installs and starts new service
+   - Installs new service with proper environment variables
+   - Starts new service
 
-### Upgrade Variables
+### Service Management
 
-**Tomcat:**
+- Uses batch commands (not PowerShell) for reliability
+- Sets `CATALINA_HOME` environment variable during service installation
+- Supports auto-start control via `tomcat_auto_start` variable
+- Provides Ansible tags for selective execution
 
-| Variable | Default | Description |
-| --- | --- | --- |
-| `tomcat_version` | `"9.0.113"` | Set to target version (e.g., `"9.0.120"`) to upgrade |
-| `tomcat_major_version` | `"9"` | Major version - change when upgrading to Tomcat 10/11 |
-| `tomcat_auto_start` | `true` | Auto-start after upgrade |
+### Firewall Configuration
 
-**Java:**
+- Automatically creates Windows Firewall rule named "Tomcat Server"
+- Allows inbound TCP connections on port 8080
+- Ensures Tomcat is accessible from host machine via port forwarding
 
-| Variable | Default | Description |
-| --- | --- | --- |
-| `java_state` | `present` | Set to `latest` to upgrade Java to newest version |
-| `java_version` | `21` | Major Java version (e.g., `11`, `17`, `21`) |
-| `java_package_version` | `null` | Set to specific version (e.g., `"21.0.5"`) to install/upgrade |
-| `java_install_dir` | `c:\java` | Installation directory - remains consistent across upgrades |
+## Behavior
 
-### Upgrade Scenarios
+The role is designed to be **idempotent** and **production-safe**:
 
-#### Scenario 1: Upgrade Tomcat to Specific Version
+1. **First installation:**
+   - Downloads Tomcat zip from Apache mirror
+   - Extracts to installation directory
+   - Sets `CATALINA_HOME` environment variable
+   - Installs Windows service
+   - Configures firewall rule
+   - Starts service (if `tomcat_auto_start: true`)
 
-**Recommended for:** Production environments with tested versions
+2. **Subsequent runs (same version):**
+   - Detects existing installation
+   - Skips download/extract
+   - Ensures service is running (if `tomcat_auto_start: true`)
+   - No changes made
 
-**Playbook:**
+3. **Upgrade runs (different version):**
+   - Detects version mismatch
+   - Stops existing service
+   - Backs up old installation
+   - Downloads new version
+   - Installs new service
+   - Starts new service
+
+## Ansible Tags
+
+The role supports these tags for selective task execution:
+
+| Tag | Description |
+| --- | --- |
+| `tomcat-install` | Installation and upgrade tasks |
+| `tomcat-service` | Service management tasks |
+| `tomcat-restart` | Restart Tomcat service |
+| `tomcat-verify` | Verification tasks |
+
+**Examples:**
+```bash
+# Only install/upgrade Tomcat
+ansible-playbook playbook.yml --tags tomcat-install
+
+# Only restart Tomcat
+ansible-playbook playbook.yml --tags tomcat-restart
+
+# Skip installation, only verify
+ansible-playbook playbook.yml --skip-tags tomcat-install
+```
+
+## Example Playbooks
+
+### Basic Installation
+
+```yaml
+---
+- hosts: windows
+  gather_facts: yes
+  roles:
+    - windows-base        # Sets up Windows prerequisites
+    - provision-java      # Installs Java (required)
+    - provision-tomcat    # Installs Tomcat
+```
+
+### Install Specific Version
+
 ```yaml
 ---
 - hosts: windows
   gather_facts: yes
   vars:
-    tomcat_version: "9.0.120"  # New version
+    tomcat_version: "9.0.120"
   roles:
     - windows-base
     - provision-java
     - provision-tomcat
 ```
 
-**What happens:**
-1. Role detects existing Tomcat 9.0.113
-2. Stops Tomcat service
-3. Uninstalls old service
-4. Backs up `apache-tomcat-9.0.113` to `apache-tomcat-9.0.113.bak.{timestamp}`
-5. Downloads and extracts Tomcat 9.0.120
-6. Installs and starts new service
+### Install Without Auto-Start
 
-**Command:**
+```yaml
+---
+- hosts: windows
+  gather_facts: yes
+  vars:
+    tomcat_version: "9.0.113"
+    tomcat_auto_start: false
+  roles:
+    - windows-base
+    - provision-java
+    - provision-tomcat
+```
+
+### Upgrade to New Version
+
+```yaml
+---
+- hosts: windows
+  gather_facts: yes
+  vars:
+    tomcat_version: "9.0.120"  # Change to new version
+  roles:
+    - windows-base
+    - provision-java
+    - provision-tomcat
+```
+
+When you change `tomcat_version`, the role will:
+1. Detect the version mismatch
+2. Stop the old service
+3. Backup the old installation (e.g., `apache-tomcat-9.0.113.bak.1736549230`)
+4. Install the new version
+5. Start the new service
+
+## Upgrade Procedures
+
+### Simple Version Upgrade
+
+To upgrade Tomcat to a new version:
+
 ```bash
 ansible-playbook -i inventory playbook.yml --extra-vars "tomcat_version=9.0.120"
 ```
 
-#### Scenario 2: Upgrade Only Tomcat (Keep Java as-is)
+### Upgrade Java and Tomcat Together
 
-**Recommended for:** Tomcat security patches, when Java version is stable
-
-**Playbook:**
-```yaml
----
-- hosts: windows
-  gather_facts: yes
-  vars:
-    tomcat_state: latest
-    # java_state defaults to 'present' - no Java upgrade
-  roles:
-    - windows-base
-    - provision-java    # Ensures Java is present, no upgrade
-    - provision-tomcat  # Upgrades Tomcat
-```
-
-**Command:**
-```bash
-ansible-playbook -i inventory playbook.yml --extra-vars "tomcat_state=latest"
-```
-
-#### Scenario 3: Upgrade Only Java (Keep Tomcat as-is)
-
-**Recommended for:** Java security patches, when Tomcat version is stable
-
-**Playbook:**
-```yaml
----
-- hosts: windows
-  gather_facts: yes
-  vars:
-    java_state: latest
-    # tomcat_state defaults to 'present' - no Tomcat upgrade
-  roles:
-    - windows-base
-    - provision-java    # Upgrades Java
-    - provision-tomcat  # Ensures Tomcat is present, no upgrade
-```
-
-**Command:**
-```bash
-ansible-playbook -i inventory playbook.yml --extra-vars "java_state=latest"
-```
-
-#### Scenario 4: Upgrade to Specific Versions
-
-**Recommended for:** Production environments requiring specific tested versions
-
-**Playbook:**
 ```yaml
 ---
 - hosts: windows
   gather_facts: yes
   vars:
     java_version: 21
-    java_package_version: "21.0.5"  # Specific Java build (if available)
-    tomcat_version: "9.0.95"        # Specific Tomcat version (if available)
+    tomcat_version: "9.0.120"
   roles:
     - windows-base
     - provision-java
     - provision-tomcat
-```
-
-**Important Notes:**
-- Chocolatey community repository typically only keeps the latest version
-- Verify versions are available first:
-  ```powershell
-  choco search microsoft-openjdk-21 --all-versions
-  choco search tomcat --all-versions
-  ```
-- For true version pinning, use an internal Chocolatey repository with cached versions
-
-**Command:**
-```bash
-ansible-playbook -i inventory playbook.yml \
-  --extra-vars "java_version=21 java_package_version=21.0.5 tomcat_version=9.0.95"
-```
-
-#### Scenario 5: Major Java Version Upgrade (e.g., Java 17 → Java 21)
-
-**Recommended for:** Planned major upgrades, after compatibility testing
-
-**Playbook:**
-```yaml
----
-- hosts: windows
-  gather_facts: yes
-  vars:
-    java_version: 21          # Change major version
-    java_state: latest        # Get latest build of Java 21
-    tomcat_state: latest      # Upgrade Tomcat to ensure compatibility
-  roles:
-    - windows-base
-    - provision-java
-    - provision-tomcat
-```
-
-**What happens:**
-1. Installs `microsoft-openjdk-21` (different package from `microsoft-openjdk-17`)
-2. Updates `JAVA_HOME` to point to new Java 21 installation
-3. Upgrades Tomcat to latest version (ensures compatibility with Java 21)
-4. Restarts Tomcat with new Java version
-
-**Command:**
-```bash
-ansible-playbook -i inventory playbook.yml \
-  --extra-vars "java_version=21 java_state=latest tomcat_state=latest"
 ```
 
 ### Verification After Upgrade
 
-After running upgrades, verify the versions:
-
-**Check Java version:**
 ```bash
-vagrant ssh -c "powershell.exe -Command 'java -version'"
-```
+# Check Tomcat service status
+ansible windows -m ansible.windows.win_service_info -a "name=Tomcat9"
 
-**Check Tomcat version:**
-```bash
-vagrant ssh -c "powershell.exe -Command 'choco list tomcat --local-only'"
-```
-
-**Check services are running:**
-```bash
-vagrant ssh -c "powershell.exe -Command 'Get-Service Tomcat9'"
-```
-
-**Check Tomcat is accessible:**
-```bash
+# Test HTTP accessibility
 curl http://localhost:8080
 ```
 
-### Upgrade Best Practices
+## Verification
 
-1. **Test in non-production first** - Always test upgrades in development/staging before production
-2. **Check compatibility** - Verify Java and Tomcat versions are compatible (Tomcat 9 requires Java 8+, Tomcat 10 requires Java 11+)
-3. **Backup configuration** - Although roles preserve configuration, backup `server.xml` and webapps before major upgrades
-4. **Monitor logs** - Check Tomcat logs after upgrade: `C:\Program Files\Apache Software Foundation\Tomcat 9.0\logs\`
-5. **Version pinning for production** - Use specific versions in production rather than `state: latest`
-6. **Coordinate Java/Tomcat upgrades** - When upgrading Java, consider upgrading Tomcat too for compatibility
+The role includes built-in verification tasks:
 
-### Rollback Procedure
+1. Verifies Java is installed (checks `java_home` fact from `provision-java` role)
+2. Confirms Tomcat files are extracted correctly
+3. Verifies Windows service is installed
+4. Checks service status
+5. Tests HTTP accessibility on port 8080 (200 or 404 response)
 
-If an upgrade causes issues:
-
-**Option 1: Re-run with previous versions**
-```bash
-ansible-playbook -i inventory playbook.yml \
-  --extra-vars "java_package_version=21.0.3 tomcat_version=9.0.90"
-```
-
-**Option 2: Manual rollback via Chocolatey**
-```powershell
-# On the Windows host
-choco uninstall tomcat --yes
-choco install tomcat --version=9.0.90 --yes
-
-choco uninstall microsoft-openjdk-21 --yes
-choco install microsoft-openjdk-21 --version=21.0.3 --yes
-```
-
-**Option 3: Restore from VM snapshot** (if using Vagrant/VirtualBox)
-```bash
-vagrant snapshot list
-vagrant snapshot restore <snapshot-name>
-```
-
-## Known Issues
-
-### Chocolatey Tomcat Package Bug
-
-The Chocolatey `tomcat` package (v9.0.113 and possibly other versions) has a bug in its installation script (`chocolateyInstall.ps1`) that can cause installation failures:
-
-**Symptom:**
-```
-ERROR: The running command stopped because the preference variable "ErrorActionPreference"
-or common parameter is set to Stop: The system cannot find the file specified.
-
-(32) The process cannot access the file because it is being used by another process:
-[\\?\C:\choco\lib\Tomcat\.chocolateyPending]
-```
-
-**Root Cause:**
-During installation, the Chocolatey package attempts to:
-1. Remove any existing Tomcat9 service
-2. Install new files
-3. Register the service again
-
-However, when reinstalling over an existing installation, the package's cleanup logic can create file locks (specifically the `.chocolateyPending` file) that prevent the installation from completing.
-
-**Workaround:**
-This role avoids triggering the bug by:
-- Detecting if Tomcat is already installed (service exists)
-- Skipping the Chocolatey install step if Tomcat is present
-- Only running installation on fresh systems (no existing Tomcat service)
-
-For forced upgrades, use `tomcat_force_install: true`, but be aware this may trigger the bug if the existing installation is in a certain state.
-
-### How Chocolatey Handles Tomcat Upgrades
-
-**Normal Chocolatey Upgrade Behavior:**
-```powershell
-choco upgrade tomcat
-```
-
-Chocolatey should perform an in-place upgrade:
-1. Download the new version
-2. Stop the Tomcat service
-3. Replace binaries in `C:\Program Files\Apache Software Foundation\Tomcat 9.0\`
-4. Update service configuration if needed
-5. Start the service
-
-**The Problem with Tomcat Package:**
-The Tomcat Chocolatey package's `chocolateyInstall.ps1` script attempts to:
-1. **Remove the Windows service** (`sc delete Tomcat9`)
-2. Extract new files
-3. **Re-register the service**
-
-This remove/re-register approach (instead of an in-place upgrade) is what triggers the file lock bug, especially when:
-- The service is running
-- Files are in use
-- Previous installations left orphaned state
-
-**Upgrade Strategies with This Role:**
-
-**Option 1: Use `tomcat_state: latest` (Recommended for Automation)**
-```yaml
-# In your playbook
-- hosts: windows
-  vars:
-    tomcat_state: latest
-  roles:
-    - provision-tomcat
-```
-
-Setting `tomcat_state: latest` tells the role to ensure the latest version:
-- Checks if Tomcat is installed
-- If not installed: Downloads and installs the latest version
-- If installed: Checks for newer version and upgrades if available
-- Always ensures service is running
-
-**How it works:**
-1. The role checks if Tomcat service exists
-2. Runs `win_chocolatey` with `state: latest`
-3. Chocolatey checks if a newer version exists on the repository
-4. If yes, downloads and upgrades in-place
-5. Service is restarted after upgrade
-
-**Note:** This may still trigger the package bug during upgrade since the Chocolatey package removes/re-registers the service. Test in a non-production environment first.
-
-**Option 2: Manual Upgrade (Safest for Production)**
-```bash
-# SSH into the Windows VM
-vagrant ssh
-
-# On the Windows machine
-powershell.exe
-Stop-Service Tomcat9
-choco upgrade tomcat --yes
-Start-Service Tomcat9
-```
-
-**Option 3: Uninstall/Reinstall (Causes Downtime)**
-```yaml
-# First playbook: Uninstall
-- hosts: windows
-  tasks:
-    - name: Uninstall Tomcat
-      win_chocolatey:
-        name: tomcat
-        state: absent
-
-# Second run: Install new version
-- hosts: windows
-  roles:
-    - provision-tomcat
-```
-
-**Recommendation:**
-- **Development/Testing:** Use `tomcat_state: latest` for automated upgrades
-- **Production:** Manual upgrades give you more control and allow testing before/after
-- **CI/CD:** Consider the uninstall/reinstall approach for predictable state
-
-**Clean Recovery from Corrupted State:**
-If you encounter this error, the cleanest solution is:
-```bash
-vagrant destroy -f
-vagrant up
-```
-
-Alternatively, manually clean the VM:
-```powershell
-# On the Windows VM
-Stop-Service Tomcat9 -Force -ErrorAction SilentlyContinue
-choco uninstall tomcat --yes --force
-Remove-Item -Path "C:\choco\lib\Tomcat" -Recurse -Force -ErrorAction SilentlyContinue
-```
-
-## Tasks Overview
-
-`tasks/install-Windows-tomcat.yml` performs the following steps:
-
-1. **Verify Java is installed** - Checks that `java_home` fact exists (from `provision-java` role)
-2. **Check for existing Tomcat** - Queries Windows service to see if Tomcat is already installed
-3. **Install Tomcat** - Runs `win_chocolatey` to install Tomcat (only if not already present or if `tomcat_force_install: true`)
-4. **Wait for service** - After installation, waits for the Tomcat service to exist
-5. **Ensure service is started** - Starts the Tomcat service with retries
-6. **Verify and report status** - Displays the final service state
-
-The tasks only run when `ansible_facts.os_family == 'Windows'`.
-
-## Example Playbook
-
-**Basic Installation (default behavior):**
-```yaml
----
-- hosts: windows
-  gather_facts: yes
-  roles:
-    - windows-base        # Installs Chocolatey
-    - provision-java      # Installs Java (required dependency)
-    - provision-tomcat    # Installs Tomcat (state: present)
-```
-
-**With Automatic Upgrades:**
-```yaml
----
-- hosts: windows
-  gather_facts: yes
-  vars:
-    tomcat_state: latest  # Ensure latest version is installed
-  roles:
-    - windows-base
-    - provision-java
-    - provision-tomcat
-```
-
-**With Specific Version (if available in repository):**
-```yaml
----
-- hosts: windows
-  gather_facts: yes
-  vars:
-    tomcat_version: "9.0.113"  # Install specific version (if available)
-  roles:
-    - windows-base
-    - provision-java
-    - provision-tomcat
-```
-
-**Note:** Check available versions first with `choco search tomcat --all-versions` to ensure the version exists in the repository.
-
-**With Verification:**
-```yaml
----
-- hosts: windows
-  gather_facts: yes
-  roles:
-    - windows-base
-    - provision-java
-    - provision-tomcat
-
-# Verify Tomcat is accessible from the host machine
-- name: Verify Tomcat accessibility
-  hosts: localhost
-  connection: local
-  gather_facts: no
-  tasks:
-    - name: Check Tomcat HTTP response
-      shell: curl -s -o /dev/null -w "%{http_code}" http://localhost:8080
-      register: http_check
-      failed_when: false
-
-    - name: Report status
-      debug:
-        msg: "Tomcat HTTP status: {{ http_check.stdout | default('no response') }}"
-```
-
-**Note:** Tomcat requires Java to be installed first. Always include the `provision-java` role before `provision-tomcat`.
+The test playbook (`tests/playbook.yml`) includes additional verification from the host machine.
 
 ## Local Testing
 
-This role uses Test Kitchen with the Vagrant driver for automated testing.
+This role uses Test Kitchen with Vagrant for automated testing.
 
 ### Test Suites
 
-Three test suites are available:
+| Suite | Description |
+| --- | --- |
+| `default` | Basic installation with auto-start enabled |
+| `upgrade` | Tests upgrade from one version to another |
+| `idempotence` | Verifies role is idempotent (no changes on second run) |
+| `no-autostart` | Tests installation with `tomcat_auto_start: false` |
 
-1. **default** - Tests basic installation with `tomcat_state: present`
-   - Verifies Tomcat service is running
-   - Verifies Tomcat responds on port 8080
-   - Confirms idempotent behavior (no changes on second run)
+### Quick Testing Commands
 
-2. **latest** - Tests automatic upgrades with `tomcat_state: latest`
-   - Installs/upgrades to latest version
-   - Verifies service is running
-   - Checks installed version matches Chocolatey repository
-
-3. **idempotence** - Tests that the role is truly idempotent
-   - Runs playbook twice (via `idempotency_test: true`)
-   - Verifies service remains running
-   - Ensures no changes on second run
-
-**Note on version pinning tests:**
-Version pinning (`tomcat_version: "x.y.z"`) is not included in automated tests because the Chocolatey community repository typically only keeps the latest version. To test version pinning:
-1. Set up an internal Chocolatey repository with multiple cached versions
-2. Modify the test suite to use your repository
-3. Add a suite with `tomcat_version` set to a known available version
-
-### Running Tests
-
-**Run all suites:**
 ```bash
-kitchen test
-```
+# List all test instances
+make list-kitchen-instances
 
-**Run specific suite:**
-```bash
-kitchen test default-win11
-kitchen test latest-win11
-kitchen test idempotence-win11
-```
-
-**Step-by-step testing:**
-```bash
-kitchen create default-win11    # Create VM
-kitchen converge default-win11  # Run Ansible
-kitchen verify default-win11    # Run tests
-kitchen destroy default-win11   # Clean up
-```
-
-**Using Make targets:**
-```bash
-# Test all suites on Windows 11
-make test-all-win11
+# Test default suite on Windows 11
+make test-win11
 
 # Test specific suite
 make test-default-win11
-make test-latest-win11
+make test-upgrade-win11
 make test-idempotence-win11
+make test-no-autostart-win11
 
-# Step-by-step
-make converge-win11           # Run Ansible provisioning
-make verify-win11             # Run verification tests
-make destroy-win11            # Destroy all win11 instances
+# Test all suites
+make test-all-win11
 
-# See all available targets
-make help
+# Step-by-step testing
+make converge-win11    # Run Ansible provisioning
+make verify-win11      # Run verification
+make destroy-win11     # Clean up
 ```
 
-**On Windows PowerShell:**
-```powershell
-$env:KITCHEN_YAML=".kitchen-win.yml"
-make test-all-win11
+### Manual Testing
+
+```bash
+# Create VM
+kitchen create default-win11
+
+# Run provisioning
+kitchen converge default-win11
+
+# Run verifier
+kitchen verify default-win11
+
+# Destroy VM
+kitchen destroy default-win11
+
+# Or do all at once
+kitchen test default-win11
+```
+
+### Supported Platforms
+
+- Windows 11 (`win11`)
+- Ubuntu 24.04 (`ubuntu-2404`)
+- Rocky Linux 9 (`rockylinux9`)
+
+Note: Tomcat installation is currently implemented for Windows only.
+
+## Architecture
+
+### Installation Flow
+
+1. **Verify Java** - Checks that Java is installed via `provision-java` role
+2. **Check existing installation** - Looks for existing Tomcat directories
+3. **Determine action** - Install new, upgrade existing, or skip
+4. **Download** (if needed) - Downloads Tomcat zip from Apache mirror
+5. **Extract** - Unzips to installation directory
+6. **Configure environment** - Sets `CATALINA_HOME` variable
+7. **Install service** - Uses `service.bat` with environment variables
+8. **Configure firewall** - Creates Windows Firewall rule for port 8080
+9. **Start service** - Starts Tomcat (if `tomcat_auto_start: true`)
+10. **Verify** - Confirms service is running and accessible
+
+### Service Installation
+
+The role uses Tomcat's native `service.bat install` command with the `environment` parameter to ensure `CATALINA_HOME` is set correctly:
+
+```yaml
+- name: Install Tomcat Windows service
+  ansible.windows.win_command: '"{{ tomcat_home }}/bin/service.bat" install'
+  environment:
+    CATALINA_HOME: "{{ tomcat_home }}"
+```
+
+This approach is more stable than PowerShell-based service installation.
+
+## Troubleshooting
+
+### Port 8080 Not Accessible
+
+The role automatically configures the Windows Firewall, but verify:
+
+1. **Check firewall rule exists:**
+   ```powershell
+   Get-NetFirewallRule -DisplayName "Tomcat Server"
+   ```
+
+2. **Check service is running:**
+   ```powershell
+   Get-Service Tomcat9
+   ```
+
+3. **Test from inside VM:**
+   ```powershell
+   curl http://localhost:8080
+   ```
+
+4. **Check port forwarding** (if using Vagrant):
+   ```bash
+   vagrant port
+   ```
+
+### Service Won't Start
+
+Check the Tomcat logs:
+```
+C:/Tomcat/Tomcat/apache-tomcat-{version}/logs/
+```
+
+Common issues:
+- Java not installed or `JAVA_HOME` not set
+- Port 8080 already in use
+- Insufficient permissions
+
+### Upgrade Issues
+
+If an upgrade fails:
+
+1. **Check backup exists:**
+   ```powershell
+   Get-ChildItem C:/Tomcat/Tomcat -Filter "*.bak.*"
+   ```
+
+2. **Manual rollback:**
+   ```powershell
+   Stop-Service Tomcat9
+   Remove-Item "C:/Tomcat/Tomcat/apache-tomcat-{new-version}" -Recurse
+   Rename-Item "C:/Tomcat/Tomcat/apache-tomcat-{old-version}.bak.{timestamp}" `
+               "C:/Tomcat/Tomcat/apache-tomcat-{old-version}"
+   # Re-run Ansible with old version
+   ```
+
+3. **Clean install:**
+   - Set `tomcat_version` to desired version
+   - Destroy and recreate VM
+   - Re-run playbook
+
+## Dependencies
+
+This role requires:
+
+1. **provision-java role** - Must run before this role to install Java and set `java_home` fact
+2. **windows-base role** (recommended) - Sets up Windows environment
+3. **Ansible collections:**
+   - `ansible.windows`
+   - `community.windows`
+
+Install collections:
+```bash
+ansible-galaxy collection install ansible.windows community.windows
 ```
 
 ## License
 
-Apache-2.0 (see `LICENSE`).
+MIT-0 (see `LICENSE`).
+
+## Author
+
+Created for automated Tomcat deployment on Windows environments.
