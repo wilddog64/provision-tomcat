@@ -2,8 +2,7 @@
 - block:
   - name: Normalize Tomcat chocolatey args
     set_fact:
-      tomcat_effective_choco_args: >-
-        {{ (tomcat_choco_args | default([])) + (['--force'] if tomcat_force_install | bool else []) }}
+      tomcat_effective_choco_args: "{{ tomcat_choco_args | default([]) }}"
 
   - name: Verify Java is installed (using fact from provision-java role)
     assert:
@@ -32,13 +31,14 @@
         Tomcat not found - will install
         {% endif %}
 
-  - name: Install Tomcat via Chocolatey
+  - name: Install or upgrade Tomcat via Chocolatey
     win_chocolatey:
       name: "{{ tomcat_package_name }}"
-      state: present
+      state: "{{ tomcat_state }}"
+      version: "{{ tomcat_version if tomcat_version else omit }}"
       choco_args: "{{ tomcat_effective_choco_args | join(' ') if (tomcat_effective_choco_args | length > 0) else omit }}"
     register: tomcat_installation
-    when: not tomcat_properly_installed or (tomcat_force_install | default(false))
+    when: not tomcat_properly_installed or tomcat_state == 'latest' or (tomcat_version is not none and tomcat_version)
 
   - name: Wait for Tomcat service to exist (initial install)
     ansible.windows.win_service_info:
