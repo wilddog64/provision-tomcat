@@ -7,7 +7,11 @@
       "Bash(kitchen list:*)",
       "Bash(rbenv exec kitchen:*)",
       "Bash(vagrant global-status:*)",
-      "Bash(vagrant destroy:*)"
+      "Bash(vagrant destroy:*)",
+      "Bash(jobs:*)",
+      "Bash(vagrant port:*)",
+      "Bash(make)",
+      "Bash(make list-kitchen-instances:*)"
     ],
     "deny": [],
     "ask": []
