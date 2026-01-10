@@ -1,9 +1,5 @@
 ---
 - block:
-  - name: Normalize Tomcat chocolatey args
-    set_fact:
-      tomcat_effective_choco_args: "{{ tomcat_choco_args | default([]) }}"
-
   - name: Verify Java is installed (using fact from provision-java role)
     assert:
       that:
@@ -11,68 +7,266 @@
         - java_home | length > 0
       fail_msg: "Java is not installed. Ensure provision-java role ran successfully."
       success_msg: "Java verified at {{ java_home }}"
+    tags:
+      - tomcat-install
+      - tomcat-verify
 
-  - name: Check if Tomcat service exists and is properly installed
-    ansible.windows.win_service_info:
-      name: "{{ tomcat_service_name }}"
-    register: tomcat_service_check
-
-  - name: Set fact for whether Tomcat is properly installed
+  - name: Set Tomcat home path
     set_fact:
-      tomcat_properly_installed: >-
-        {{ (tomcat_service_check.services | default([])) | length > 0 }}
+      tomcat_home: "{{ tomcat_install_dir }}/apache-tomcat-{{ tomcat_version }}"
+    tags:
+      - tomcat-install
+      - tomcat-restart
+      - tomcat-service
 
-  - name: Display current Tomcat installation status
+  - name: Check if target version is already installed
+    ansible.windows.win_stat:
+      path: "{{ tomcat_home }}/bin/catalina.bat"
+    register: tomcat_target_installed
+    tags:
+      - tomcat-install
+      - tomcat-restart
+      - tomcat-service
+
+  - name: Find any existing Tomcat installations
+    ansible.windows.win_find:
+      paths: "{{ tomcat_install_dir }}"
+      patterns: "apache-tomcat-*"
+      file_type: directory
+    register: existing_tomcat_dirs
+    tags:
+      - tomcat-install
+
+  - name: Set facts about existing installations
+    set_fact:
+      tomcat_already_installed: "{{ (existing_tomcat_dirs.files | length) > 0 }}"
+      tomcat_needs_upgrade: "{{ (existing_tomcat_dirs.files | length) > 0 and not tomcat_target_installed.stat.exists }}"
+      existing_tomcat_path: "{{ existing_tomcat_dirs.files[0].path if (existing_tomcat_dirs.files | length) > 0 else '' }}"
+    tags:
+      - tomcat-install
+
+  - name: Display Tomcat installation status
     debug:
       msg: >-
-        {% if tomcat_properly_installed %}
-        Tomcat service already exists - will ensure it is running (no reinstall)
+        {% if tomcat_target_installed.stat.exists %}
+        Tomcat {{ tomcat_version }} already installed at {{ tomcat_home }}
+        {% elif tomcat_needs_upgrade %}
+        Tomcat upgrade needed - existing installation found at {{ existing_tomcat_path }}
         {% else %}
         Tomcat not found - will install
         {% endif %}
+    tags:
+      - tomcat-install
 
-  - name: Install or upgrade Tomcat via Chocolatey
-    win_chocolatey:
-      name: "{{ tomcat_package_name }}"
-      state: "{{ tomcat_state }}"
-      version: "{{ tomcat_version if tomcat_version else omit }}"
-      choco_args: "{{ tomcat_effective_choco_args | join(' ') if (tomcat_effective_choco_args | length > 0) else omit }}"
-    register: tomcat_installation
-    when: not tomcat_properly_installed or tomcat_state == 'latest' or (tomcat_version is not none and tomcat_version)
+  # Upgrade logic - remove old version if upgrading
+  - name: Stop Tomcat service for upgrade
+    ansible.windows.win_service:
+      name: "{{ tomcat_service_name }}"
+      state: stopped
+    when: tomcat_needs_upgrade
+    failed_when: false
+    tags:
+      - tomcat-install
 
-  - name: Wait for Tomcat service to exist (initial install)
+  - name: Uninstall old Tomcat service for upgrade
+    ansible.windows.win_command: '"{{ existing_tomcat_path }}/bin/service.bat" uninstall'
+    when: tomcat_needs_upgrade
+    failed_when: false
+    tags:
+      - tomcat-install
+
+  - name: Backup old Tomcat directory
+    ansible.windows.win_command: 'powershell.exe -Command "Rename-Item -Path \"{{ existing_tomcat_path }}\" -NewName \"{{ existing_tomcat_path | basename }}.bak.{{ ansible_date_time.epoch }}\" -ErrorAction SilentlyContinue"'
+    when: tomcat_needs_upgrade
+    register: backup_result
+    failed_when: false
+    tags:
+      - tomcat-install
+
+  - name: Display backup result
+    debug:
+      msg: "Old Tomcat backed up to {{ existing_tomcat_path }}.bak.{{ ansible_date_time.epoch }}"
+    when: tomcat_needs_upgrade and backup_result.rc == 0
+    tags:
+      - tomcat-install
+
+  - name: Ensure temp directory exists
+    ansible.windows.win_file:
+      path: "{{ tomcat_temp_dir }}"
+      state: directory
+    when: not tomcat_target_installed.stat.exists
+    tags:
+      - tomcat-install
+
+  - name: Download Tomcat zip
+    ansible.windows.win_get_url:
+      url: "{{ tomcat_download_url }}"
+      dest: "{{ tomcat_temp_dir }}/apache-tomcat-{{ tomcat_version }}.zip"
+    register: tomcat_download
+    when: not tomcat_target_installed.stat.exists
+    tags:
+      - tomcat-install
+
+  - name: Ensure install directory exists
+    ansible.windows.win_file:
+      path: "{{ tomcat_install_dir }}"
+      state: directory
+    when: not tomcat_target_installed.stat.exists
+    tags:
+      - tomcat-install
+
+  - name: Set CATALINA_HOME environment variable
+    ansible.windows.win_environment:
+      name: CATALINA_HOME
+      value: "{{ tomcat_home }}"
+      state: present
+      level: machine
+    when: not tomcat_target_installed.stat.exists
+    tags:
+      - tomcat-install
+
+  - name: Extract Tomcat archive
+    community.windows.win_unzip:
+      src: "{{ tomcat_temp_dir }}/apache-tomcat-{{ tomcat_version }}.zip"
+      dest: "{{ tomcat_install_dir }}"
+    when: not tomcat_target_installed.stat.exists
+    register: tomcat_extract
+    tags:
+      - tomcat-install
+
+  - name: Verify Tomcat files were extracted
+    ansible.windows.win_stat:
+      path: "{{ tomcat_home }}/bin/catalina.bat"
+    register: tomcat_files_check
+    when: not tomcat_target_installed.stat.exists
+    tags:
+      - tomcat-install
+
+  - name: Assert Tomcat files exist after extraction
+    assert:
+      that:
+        - tomcat_files_check.stat.exists
+      fail_msg: "Tomcat files not found after extraction at {{ tomcat_home }}"
+      success_msg: "Tomcat files verified at {{ tomcat_home }}"
+    when: not tomcat_target_installed.stat.exists
+    tags:
+      - tomcat-install
+
+  - name: Check if Tomcat service exists
     ansible.windows.win_service_info:
       name: "{{ tomcat_service_name }}"
-    register: tomcat_service_after_install
-    retries: 10
-    delay: 5
-    until: (tomcat_service_after_install.services | default([])) | length > 0
-    when: tomcat_installation.changed | default(false)
+    register: tomcat_service_check
+    tags:
+      - tomcat-install
+      - tomcat-restart
+      - tomcat-service
 
-  - name: Ensure Tomcat service is started
+  - name: Install Tomcat Windows service
+    ansible.windows.win_command: '"{{ tomcat_home }}/bin/service.bat" install'
+    environment:
+      CATALINA_HOME: "{{ tomcat_home }}"
+    when:
+      - not tomcat_target_installed.stat.exists or (tomcat_service_check.services | default([])) | length == 0
+    register: service_install
+    tags:
+      - tomcat-install
+
+  - name: Add Windows Firewall rule for Tomcat
+    community.windows.win_firewall_rule:
+      name: Tomcat Server
+      localport: 8080
+      action: allow
+      direction: in
+      protocol: tcp
+      state: present
+      enabled: yes
+    tags:
+      - tomcat-install
+
+  - name: Configure service startup type
+    ansible.windows.win_service:
+      name: "{{ tomcat_service_name }}"
+      state: restarted
+      start_mode: auto
+    tags:
+      - tomcat-install
+      - tomcat-service
+    when: (tomcat_service_check.services | default([])) | length > 0
+
+  - name: Start Tomcat service (if auto_start enabled)
     ansible.windows.win_service:
       name: "{{ tomcat_service_name }}"
       state: started
-    retries: 5
-    delay: 10
+    when: tomcat_auto_start | bool
     register: tomcat_service_start
-    until: tomcat_service_start is succeeded
-    failed_when: false
+    tags:
+      - tomcat-install
+      - tomcat-service
 
-  - name: Verify Tomcat service status
+  - name: Restart Tomcat service
+    ansible.windows.win_service:
+      name: "{{ tomcat_service_name }}"
+      state: restarted
+    register: tomcat_service_restart
+    tags:
+      - never
+      - tomcat-restart
+
+  - name: Get Tomcat service status
     ansible.windows.win_service_info:
       name: "{{ tomcat_service_name }}"
-    register: tomcat_final_status
+    register: tomcat_service_status
+    tags:
+      - tomcat-install
+      - tomcat-restart
+      - tomcat-service
 
   - name: Display Tomcat service status
     debug:
-      msg: "Tomcat service state: {{ tomcat_final_status.services[0].state | default('unknown') }}, status: {{ tomcat_final_status.services[0].status | default('unknown') }}"
+      msg: "Tomcat service '{{ tomcat_service_name }}' - State: {{ tomcat_service_status.services[0].state | default('not found') }}, Start mode: {{ tomcat_service_status.services[0].start_mode | default('unknown') }}"
+    when: (tomcat_service_status.services | default([])) | length > 0
+    tags:
+      - tomcat-install
+      - tomcat-restart
+      - tomcat-service
+
+  - name: Verify Tomcat is accessible (if service is running)
+    ansible.windows.win_uri:
+      url: "http://localhost:8080"
+      method: GET
+      status_code: [200, 404]  # 404 is OK (default Tomcat page when no apps deployed)
+      timeout: 30
+    register: tomcat_http_check
+    failed_when: false
     when:
-      - tomcat_final_status is defined
-      - (tomcat_final_status.services | default([])) | length > 0
+      - (tomcat_service_status.services | default([])) | length > 0
+      - tomcat_service_status.services[0].state == 'running'
+    tags:
+      - tomcat-verify
+      - tomcat-service
+
+  - name: Display HTTP check result
+    debug:
+      msg: "Tomcat HTTP check - Status: {{ tomcat_http_check.status_code | default('not checked') }}"
+    when: tomcat_http_check is defined
+    tags:
+      - tomcat-verify
+
+  - name: Clean up downloaded zip
+    ansible.windows.win_file:
+      path: "{{ tomcat_temp_dir }}/apache-tomcat-{{ tomcat_version }}.zip"
+      state: absent
+    when: tomcat_download.changed | default(false)
+    tags:
+      - tomcat-install
 
   - name: Tomcat installation complete
     debug:
-      msg: "Tomcat installation complete. Access via http://localhost:8080 (check post_tasks for verification)"
+      msg: >-
+        Tomcat {{ tomcat_version }} installed at {{ tomcat_home }}.
+        Service: {{ tomcat_service_name }}
+        {% if tomcat_auto_start %}(started automatically){% else %}(not started - tomcat_auto_start is false){% endif %}
+    tags:
+      - tomcat-install
 
   become: no
