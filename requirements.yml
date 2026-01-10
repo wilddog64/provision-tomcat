@@ -8,8 +8,3 @@ roles:
     src: https://github.com/wilddog64/provision-java.git
     scm: git
     version: main
-
-  - name: provision-tomcat
-    src: https://github.com/wilddog64/provision-tomcat.git
-    scm: git
-    version: main
