@@ -1,8 +1,10 @@
 #SPDX-License-Identifier: MIT-0
 ---
 # defaults file for provision-tomcat
-tomcat_package_name: tomcat
-tomcat_service_name: Tomcat9
-tomcat_state: present  # Use 'latest' to ensure upgrades to newest version
-tomcat_version: null   # Set to specific version if available in repo (check with: choco search tomcat --all-versions)
-tomcat_choco_args: []
+tomcat_version: '9.0.113'  # Tomcat version to install
+tomcat_major_version: '9'   # Major version (used for service name and paths)
+tomcat_service_name: "Tomcat{{ tomcat_major_version }}"
+tomcat_install_dir: 'C:/Tomcat/Tomcat'
+tomcat_download_url: "https://dlcdn.apache.org/tomcat/tomcat-{{ tomcat_major_version }}/v{{ tomcat_version }}/bin/apache-tomcat-{{ tomcat_version }}-windows-x64.zip"
+tomcat_temp_dir: 'C:/temp'
+tomcat_auto_start: true  # Set to false if you want to start Tomcat manually
