@@ -24,18 +24,28 @@ SUITES := default latest idempotence
 help:
 	@echo "Available targets (auto KITCHEN_YAML=$(KITCHEN_YAML)):"
 	@echo ""
-	@echo "Test all suites on a platform:"
-	@$(foreach p,$(PLATFORMS),echo "  test-all-$(p)       # Run all test suites on $(p)" &&) true
+	@echo "Utility:"
+	@echo "  list-kitchen-instances  # List all kitchen instances"
+	@echo ""
+	@echo "Quick test (default suite):"
+	@$(foreach p,$(PLATFORMS),echo "  test-$(p)           # kitchen test default-$(p)" &&) true
 	@echo ""
 	@echo "Test specific suite on platform:"
 	@$(foreach p,$(PLATFORMS),$(foreach s,$(SUITES),echo "  test-$(s)-$(p)     # kitchen test $(s)-$(p)" &&)) true
 	@echo ""
-	@echo "Converge/Verify/Destroy:"
+	@echo "Test all suites on a platform:"
+	@$(foreach p,$(PLATFORMS),echo "  test-all-$(p)       # Run all test suites on $(p)" &&) true
+	@echo ""
+	@echo "Converge/Verify/Destroy (default suite):"
 	@$(foreach p,$(PLATFORMS),echo "  converge-$(p)       # kitchen converge default-$(p)" &&) true
 	@$(foreach p,$(PLATFORMS),echo "  verify-$(p)         # kitchen verify default-$(p)" &&) true
 	@$(foreach p,$(PLATFORMS),echo "  destroy-$(p)        # kitchen destroy all $(p) instances" &&) true
 	@echo ""
 	@echo "Override KITCHEN_YAML=/path/to/.kitchen.yml when needed."
+
+.PHONY: list-kitchen-instances
+list-kitchen-instances:
+	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) list
 
 # Test all suites on a platform
 define TEST_ALL_SUITES
@@ -59,8 +69,12 @@ verify-$(1)-$(2):
 	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) verify $(1)-$(2)
 endef
 
-# Platform-level targets
+# Platform-level targets (shortcuts for default suite)
 define KITCHEN_PLATFORM_TARGETS
+.PHONY: test-$(1)
+test-$(1):
+	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) test default-$(1)
+
 .PHONY: converge-$(1)
 converge-$(1):
 	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) converge default-$(1)
