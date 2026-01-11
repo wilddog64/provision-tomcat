@@ -1,0 +1,56 @@
+---
+# Playbook to test Tomcat upgrade scenarios
+# First run: Install older version
+# Second run: Upgrade to newer version
+- name: Test Tomcat/Java upgrade scenarios
+  hosts: all
+  become: no
+
+  tasks:
+    - name: Determine which version to install based on run number
+      set_fact:
+        # First converge (if upgrade_step not defined): install old version
+        # Second converge (upgrade_step=2): install new version
+        tomcat_version: "{{ '9.0.112' if (upgrade_step | default(1) | int) == 1 else '9.0.113' }}"
+        jdk_version: "{{ '21' if (upgrade_step | default(1) | int) == 1 else '21' }}"
+      tags:
+        - always
+
+    - name: Display installation plan
+      debug:
+        msg: |
+          Upgrade step: {{ upgrade_step | default(1) }}
+          Installing Tomcat: {{ tomcat_version }}
+          Installing Java: {{ jdk_version }}
+      tags:
+        - always
+
+    # Install/setup base requirements (Chocolatey for Windows)
+    - name: Include windows-base role
+      include_role:
+        name: windows-base
+      when: ansible_facts['os_family'] == 'Windows'
+
+    # Install Java
+    - name: Include provision-java role
+      include_role:
+        name: provision-java
+
+    # Install Tomcat
+    - name: Include provision-tomcat role
+      include_role:
+        name: provision-tomcat
+
+    - name: Display installation summary
+      debug:
+        msg: |
+          ✓ Installation complete for upgrade step {{ upgrade_step | default(1) }}
+          Tomcat version: {{ tomcat_version }}
+          Java version: {{ jdk_version }}
+          {% if (upgrade_step | default(1) | int) == 1 %}
+          Next: Run again with -e upgrade_step=2 to test upgrade
+          {% else %}
+          Upgrade test complete!
+          {% endif %}
+      tags:
+        - always
