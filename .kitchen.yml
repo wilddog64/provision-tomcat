@@ -81,7 +81,7 @@ suites:
       name: shell
       command: |
         # Verify port forwarding is working (Ansible playbook handles service verification)
-        curl -f http://localhost:8080 || curl -f http://localhost:8080 | grep -q "404"
+        curl --connect-timeout 5 --max-time 10 -f http://localhost:8080 || curl --connect-timeout 5 --max-time 10 http://localhost:8080 | grep -q "404"
 
   - name: upgrade
     driver:
@@ -96,7 +96,7 @@ suites:
       name: shell
       command: |
         # Verify port forwarding is working
-        curl -f http://localhost:8080 || curl -f http://localhost:8080 | grep -q "404"
+        curl --connect-timeout 5 --max-time 10 -f http://localhost:8080 || curl --connect-timeout 5 --max-time 10 http://localhost:8080 | grep -q "404"
 
   - name: idempotence
     driver:
@@ -111,7 +111,7 @@ suites:
       name: shell
       command: |
         # Verify port forwarding is working
-        curl -f http://localhost:8080 || curl -f http://localhost:8080 | grep -q "404"
+        curl --connect-timeout 5 --max-time 10 -f http://localhost:8080 || curl --connect-timeout 5 --max-time 10 http://localhost:8080 | grep -q "404"
 
   - name: no-autostart
     provisioner:
