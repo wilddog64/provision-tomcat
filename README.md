@@ -260,6 +260,11 @@ The test playbook (`tests/playbook.yml`) includes additional verification from t
 
 This role uses Test Kitchen with Vagrant for automated testing.
 
+**Documentation**:
+- **[Development Environment Setup](docs/DEVELOPMENT-SETUP.md)** - First-time setup and prerequisites
+- **[Test Kitchen Guide](docs/TEST-KITCHEN.md)** - Using Test Kitchen for testing
+- **[Testing Upgrades](docs/TESTING-UPGRADES.md)** - Upgrade and downgrade testing procedures
+
 ### Test Suites
 
 | Suite | Description |
