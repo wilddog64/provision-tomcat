@@ -240,7 +240,7 @@
     failed_when: false
     when:
       - (tomcat_service_status.services | default([])) | length > 0
-      - tomcat_service_status.services[0].state == 'running'
+      - tomcat_service_status.services[0].state == 'started'
     tags:
       - tomcat-verify
       - tomcat-service
