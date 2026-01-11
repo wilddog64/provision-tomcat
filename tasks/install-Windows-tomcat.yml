@@ -11,9 +11,10 @@
       - tomcat-install
       - tomcat-verify
 
-  - name: Set Tomcat home path
+  - name: Set Tomcat paths
     set_fact:
-      tomcat_home: "{{ tomcat_install_dir }}/apache-tomcat-{{ tomcat_version }}"
+      tomcat_home: "{{ tomcat_install_dir }}/{{ tomcat_symlink_name }}"
+      tomcat_versioned_dir: "{{ tomcat_install_dir }}/apache-tomcat-{{ tomcat_version }}"
     tags:
       - tomcat-install
       - tomcat-restart
@@ -21,8 +22,17 @@
 
   - name: Check if target version is already installed
     ansible.windows.win_stat:
-      path: "{{ tomcat_home }}/bin/catalina.bat"
+      path: "{{ tomcat_versioned_dir }}/bin/catalina.bat"
     register: tomcat_target_installed
+    tags:
+      - tomcat-install
+      - tomcat-restart
+      - tomcat-service
+
+  - name: Check if symlink exists
+    ansible.windows.win_stat:
+      path: "{{ tomcat_home }}"
+    register: tomcat_symlink_stat
     tags:
       - tomcat-install
       - tomcat-restart
@@ -58,35 +68,28 @@
     tags:
       - tomcat-install
 
-  # Upgrade logic - remove old version if upgrading
+  # Upgrade logic - stop service and remove old symlink
   - name: Stop Tomcat service for upgrade
     ansible.windows.win_service:
       name: "{{ tomcat_service_name }}"
       state: stopped
-    when: tomcat_needs_upgrade
+    when: tomcat_needs_upgrade or (tomcat_symlink_stat.stat.exists and tomcat_symlink_stat.stat.islnk)
     failed_when: false
     tags:
       - tomcat-install
 
   - name: Uninstall old Tomcat service for upgrade
-    ansible.windows.win_command: '"{{ existing_tomcat_path }}/bin/service.bat" uninstall'
-    when: tomcat_needs_upgrade
+    ansible.windows.win_command: '"{{ tomcat_home }}/bin/service.bat" uninstall'
+    when: tomcat_needs_upgrade and tomcat_symlink_stat.stat.exists
     failed_when: false
     tags:
       - tomcat-install
 
-  - name: Backup old Tomcat directory
-    ansible.windows.win_command: 'powershell.exe -Command "Rename-Item -Path \"{{ existing_tomcat_path }}\" -NewName \"{{ existing_tomcat_path | basename }}.bak.{{ ansible_date_time.epoch }}\" -ErrorAction SilentlyContinue"'
-    when: tomcat_needs_upgrade
-    register: backup_result
-    failed_when: false
-    tags:
-      - tomcat-install
-
-  - name: Display backup result
-    debug:
-      msg: "Old Tomcat backed up to {{ existing_tomcat_path }}.bak.{{ ansible_date_time.epoch }}"
-    when: tomcat_needs_upgrade and backup_result.rc == 0
+  - name: Remove old symlink
+    ansible.windows.win_file:
+      path: "{{ tomcat_home }}"
+      state: absent
+    when: tomcat_symlink_stat.stat.exists and (tomcat_needs_upgrade or not tomcat_target_installed.stat.exists)
     tags:
       - tomcat-install
 
@@ -107,7 +110,7 @@
     tags:
       - tomcat-install
 
-  - name: Ensure install directory exists
+  - name: Ensure Tomcat install directory exists
     ansible.windows.win_file:
       path: "{{ tomcat_install_dir }}"
       state: directory
@@ -136,7 +139,7 @@
 
   - name: Verify Tomcat files were extracted
     ansible.windows.win_stat:
-      path: "{{ tomcat_home }}/bin/catalina.bat"
+      path: "{{ tomcat_versioned_dir }}/bin/catalina.bat"
     register: tomcat_files_check
     when: not tomcat_target_installed.stat.exists
     tags:
@@ -146,9 +149,74 @@
     assert:
       that:
         - tomcat_files_check.stat.exists
-      fail_msg: "Tomcat files not found after extraction at {{ tomcat_home }}"
-      success_msg: "Tomcat files verified at {{ tomcat_home }}"
+      fail_msg: "Tomcat files not found after extraction at {{ tomcat_versioned_dir }}"
+      success_msg: "Tomcat files verified at {{ tomcat_versioned_dir }}"
     when: not tomcat_target_installed.stat.exists
+    tags:
+      - tomcat-install
+
+  - name: Create symlink to current Tomcat version
+    ansible.windows.win_command: 'cmd /c mklink /D "{{ tomcat_home }}" "{{ tomcat_versioned_dir }}"'
+    when: not tomcat_target_installed.stat.exists or tomcat_needs_upgrade
+    register: symlink_result
+    failed_when: symlink_result.rc != 0 and 'already exists' not in symlink_result.stderr
+    tags:
+      - tomcat-install
+
+  - name: Display symlink creation result
+    debug:
+      msg: "Symlink created: {{ tomcat_home }} -> {{ tomcat_versioned_dir }}"
+    when: symlink_result is changed
+    tags:
+      - tomcat-install
+
+  - name: Find all Tomcat version directories for cleanup
+    ansible.windows.win_find:
+      paths: "{{ tomcat_install_dir }}"
+      patterns: "apache-tomcat-*"
+      file_type: directory
+    register: all_tomcat_dirs
+    when: tomcat_keep_versions | int > 0
+    tags:
+      - tomcat-install
+
+  - name: Sort Tomcat directories by modification time (newest first)
+    set_fact:
+      sorted_tomcat_dirs: "{{ all_tomcat_dirs.files | sort(attribute='lastwritetime') | reverse | list }}"
+    when:
+      - tomcat_keep_versions | int > 0
+      - all_tomcat_dirs.files is defined
+      - all_tomcat_dirs.files | length > 0
+    tags:
+      - tomcat-install
+
+  - name: Identify old Tomcat versions to remove
+    set_fact:
+      tomcat_dirs_to_remove: "{{ sorted_tomcat_dirs[tomcat_keep_versions | int:] }}"
+    when:
+      - tomcat_keep_versions | int > 0
+      - sorted_tomcat_dirs is defined
+      - sorted_tomcat_dirs | length > (tomcat_keep_versions | int)
+    tags:
+      - tomcat-install
+
+  - name: Display versions to be removed
+    debug:
+      msg: "Removing old Tomcat version: {{ item.path }}"
+    loop: "{{ tomcat_dirs_to_remove | default([]) }}"
+    when: tomcat_dirs_to_remove is defined
+    tags:
+      - tomcat-install
+
+  - name: Remove old Tomcat versions beyond retention policy
+    ansible.windows.win_file:
+      path: "{{ item.path }}"
+      state: absent
+    loop: "{{ tomcat_dirs_to_remove | default([]) }}"
+    when:
+      - tomcat_keep_versions | int > 0
+      - tomcat_dirs_to_remove is defined
+      - tomcat_dirs_to_remove | length > 0
     tags:
       - tomcat-install
 
