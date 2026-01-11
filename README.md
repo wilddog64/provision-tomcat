@@ -17,14 +17,23 @@ Default variables (`defaults/main.yml`):
 | `tomcat_version` | `'9.0.113'` | Tomcat version to install |
 | `tomcat_major_version` | `'9'` | Major version (used for service name and paths) |
 | `tomcat_service_name` | `"Tomcat{{ tomcat_major_version }}"` | Windows service name (e.g., `Tomcat9`) |
-| `tomcat_install_dir` | `'C:/Tomcat/Tomcat'` | Base installation directory |
+| `tomcat_install_dir` | `'C:/Tomcat'` | Base installation directory |
+| `tomcat_symlink_name` | `'current'` | Symlink name pointing to active version |
 | `tomcat_download_url` | `"https://dlcdn.apache.org/tomcat/tomcat-{{ tomcat_major_version }}/v{{ tomcat_version }}/bin/apache-tomcat-{{ tomcat_version }}-windows-x64.zip"` | Apache mirror download URL |
 | `tomcat_temp_dir` | `'C:/temp'` | Temporary directory for downloads |
 | `tomcat_auto_start` | `true` | Whether to start Tomcat service automatically after installation |
+| `tomcat_keep_versions` | `10` | Number of old Tomcat versions to keep (0 = keep all) |
 
-The Tomcat installation will be located at: `{{ tomcat_install_dir }}/apache-tomcat-{{ tomcat_version }}/`
+The Tomcat installation uses a symlink structure:
 
-Example: `C:/Tomcat/Tomcat/apache-tomcat-9.0.113/`
+```
+C:/Tomcat/
+├── apache-tomcat-9.0.113/    # Actual installation
+├── apache-tomcat-9.0.120/    # After upgrade
+└── current -> apache-tomcat-9.0.120/  # Symlink (always points to active version)
+```
+
+The Tomcat service points to: `C:/Tomcat/current/`
 
 ## Features
 
@@ -37,17 +46,42 @@ Example: `C:/Tomcat/Tomcat/apache-tomcat-9.0.113/`
 
 ### Automatic Upgrades
 
-The role automatically detects and handles Tomcat upgrades:
+The role automatically detects and handles Tomcat upgrades using symlinks:
 
 1. **Detects existing installation** - Finds any `apache-tomcat-*` directory
 2. **Checks if upgrade needed** - Compares existing version to `tomcat_version` variable
 3. **Performs upgrade safely**:
    - Stops Tomcat service
    - Uninstalls old service
-   - Backs up old directory with timestamp (e.g., `apache-tomcat-9.0.100.bak.1736549230`)
-   - Downloads and extracts new version
-   - Installs new service with proper environment variables
+   - Removes old symlink
+   - Downloads and extracts new version to `apache-tomcat-{{ tomcat_version }}/`
+   - Creates new symlink: `current -> apache-tomcat-{{ tomcat_version }}/`
+   - Installs new service pointing to `C:/Tomcat/current/`
    - Starts new service
+
+**Benefits of symlink approach**:
+- Clean upgrades without renaming directories
+- Easy rollback (just repoint symlink)
+- Multiple versions can coexist
+- Service always points to same path (`C:/Tomcat/current/`)
+
+### Version Retention Policy
+
+The role automatically manages old Tomcat versions using the `tomcat_keep_versions` variable:
+
+- **Default retention**: Keeps the 10 most recent versions
+- **Automatic cleanup**: Removes older versions beyond the retention limit during installation/upgrade
+- **Sorting**: Versions are sorted by modification time (newest first)
+- **Disable cleanup**: Set `tomcat_keep_versions: 0` to keep all versions
+
+**Example:**
+- You have versions: 9.0.100, 9.0.105, 9.0.110, 9.0.113, 9.0.115, 9.0.117, 9.0.119, 9.0.120 (8 versions)
+- You upgrade to 9.0.125 (9 versions total)
+- Next upgrade to 9.0.130 (10 versions total)
+- Next upgrade to 9.0.135 (11 versions) - oldest version (9.0.100) is automatically removed
+- Result: You always have the current version plus 9 previous versions for rollback
+
+This ensures you have recent versions available for rollback while preventing unlimited disk usage growth.
 
 ### Service Management
 
