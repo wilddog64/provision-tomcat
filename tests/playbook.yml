@@ -6,7 +6,6 @@
     jdk_version: 21
 
   roles:
-    - windows-base
     - provision-java
     - provision-tomcat
 

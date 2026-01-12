@@ -18,6 +18,12 @@ endif
 PLATFORMS := win11 ubuntu-2404 rockylinux9
 SUITES := default latest idempotence
 
+# Version variables for upgrade/downgrade testing
+JAVA_OLD_VERSION ?= 17
+JAVA_NEW_VERSION ?= 21
+TOMCAT_OLD_VERSION ?= 9.0.112
+TOMCAT_NEW_VERSION ?= 9.0.113
+
 .DEFAULT_GOAL := help
 
 .PHONY: help
@@ -32,8 +38,10 @@ help:
 	@$(foreach p,$(PLATFORMS),echo "  test-$(p)           # kitchen test default-$(p)" &&) true
 	@echo ""
 	@echo "Upgrade/Downgrade Testing:"
-	@echo "  test-upgrade-win11      # Test Tomcat upgrade (9.0.112 → 9.0.113)"
+	@echo "  test-upgrade-win11      # Test Java (17→21) + Tomcat (9.0.112→9.0.113) upgrade"
 	@echo "  upgrade-cleanup-win11   # Cleanup upgrade test VM"
+	@echo "  test-downgrade-win11    # Test Java (21→17) + Tomcat (9.0.113→9.0.112) downgrade"
+	@echo "  downgrade-cleanup-win11 # Cleanup downgrade test VM"
 	@echo ""
 	@echo "Test specific suite on platform:"
 	@$(foreach p,$(PLATFORMS),$(foreach s,$(SUITES),echo "  test-$(s)-$(p)     # kitchen test $(s)-$(p)" &&)) true
@@ -106,13 +114,13 @@ update-roles:
 # Upgrade testing helpers
 .PHONY: test-upgrade-win11
 test-upgrade-win11: update-roles
-	@echo "=== Testing Tomcat upgrade on Windows 11 ==="
-	@echo "Step 1: Installing Tomcat 9.0.112..."
+	@echo "=== Testing Java + Tomcat upgrade on Windows 11 ==="
+	@echo "Step 1: Installing Java 17 + Tomcat 9.0.112..."
 	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) create upgrade-win11
 	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) converge upgrade-win11
 	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) verify upgrade-win11
 	@echo ""
-	@echo "Step 2: Upgrading to Tomcat 9.0.113..."
+	@echo "Step 2: Upgrading to Java 21 + Tomcat 9.0.113..."
 	@echo "Updating .kitchen.local.yml for step 2..."
 	@echo "---" > .kitchen.local.yml
 	@echo "suites:" >> .kitchen.local.yml
@@ -131,3 +139,31 @@ test-upgrade-win11: update-roles
 .PHONY: upgrade-cleanup-win11
 upgrade-cleanup-win11:
 	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) destroy upgrade-win11
+
+.PHONY: test-downgrade-win11
+test-downgrade-win11: update-roles
+	@echo "=== Testing Java + Tomcat downgrade on Windows 11 ==="
+	@echo "Step 1: Installing Java $(JAVA_NEW_VERSION) + Tomcat $(TOMCAT_NEW_VERSION)..."
+	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) create downgrade-win11
+	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) converge downgrade-win11
+	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) verify downgrade-win11
+	@echo ""
+	@echo "Step 2: Downgrading to Java $(JAVA_OLD_VERSION) + Tomcat $(TOMCAT_OLD_VERSION)..."
+	@echo "Updating .kitchen.local.yml for step 2..."
+	@echo "---" > .kitchen.local.yml
+	@echo "suites:" >> .kitchen.local.yml
+	@echo "  - name: downgrade" >> .kitchen.local.yml
+	@echo "    provisioner:" >> .kitchen.local.yml
+	@echo "      playbook: tests/playbook-downgrade.yml" >> .kitchen.local.yml
+	@echo "      extra_vars:" >> .kitchen.local.yml
+	@echo "        downgrade_step: 2" >> .kitchen.local.yml
+	@echo "        tomcat_auto_start: true" >> .kitchen.local.yml
+	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) converge downgrade-win11
+	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) verify downgrade-win11
+	@rm -f .kitchen.local.yml
+	@echo ""
+	@echo "✓ Downgrade test complete!"
+
+.PHONY: downgrade-cleanup-win11
+downgrade-cleanup-win11:
+	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) destroy downgrade-win11
