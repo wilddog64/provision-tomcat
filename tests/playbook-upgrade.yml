@@ -12,7 +12,7 @@
         # First converge (if upgrade_step not defined): install old version
         # Second converge (upgrade_step=2): install new version
         tomcat_version: "{{ '9.0.112' if (upgrade_step | default(1) | int) == 1 else '9.0.113' }}"
-        jdk_version: "{{ '21' if (upgrade_step | default(1) | int) == 1 else '21' }}"
+        jdk_version: "{{ '17' if (upgrade_step | default(1) | int) == 1 else '21' }}"
       tags:
         - always
 
@@ -24,12 +24,6 @@
           Installing Java: {{ jdk_version }}
       tags:
         - always
-
-    # Install/setup base requirements (Chocolatey for Windows)
-    - name: Include windows-base role
-      include_role:
-        name: windows-base
-      when: ansible_facts['os_family'] == 'Windows'
 
     # Install Java
     - name: Include provision-java role
