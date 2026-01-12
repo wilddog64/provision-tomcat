@@ -12,6 +12,7 @@ provisioner:
   roles_path: ..
   ansible_version: latest
   host_key_checking: false
+  ansible_galaxy_role_file: requirements.yml
   # vault_password_file: ./secrets/my_pass.txt
   idempotency_test: false
   chef_bootstrap_url: null
@@ -50,6 +51,7 @@ platforms:
       roles_path: ..
       ansible_version: latest
       ansible_host_key_checking: false
+      ansible_galaxy_role_file: requirements.yml
       idempotency_test: false
       chef_bootstrap_url: null
       ansible_verbosity: 2
