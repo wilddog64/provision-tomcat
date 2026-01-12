@@ -14,20 +14,36 @@ The roles support:
 
 ### Option 1: Using Makefile (Recommended)
 
-Test a complete upgrade scenario on Windows 11:
+**Test upgrade scenario** on Windows 11:
 
 ```bash
 make test-upgrade-win11
 ```
 
 This will:
-1. Install Tomcat 9.0.112 with Java 21
-2. Upgrade to Tomcat 9.0.113 (same Java version)
+1. Install Tomcat 9.0.112 with Java 17
+2. Upgrade to Tomcat 9.0.113 with Java 21 (tests both Java AND Tomcat upgrades)
 3. Verify both installations work correctly
 
 Cleanup when done:
 ```bash
 make upgrade-cleanup-win11
+```
+
+**Test downgrade scenario** on Windows 11:
+
+```bash
+make test-downgrade-win11
+```
+
+This will:
+1. Install Tomcat 9.0.113 with Java 21 (newer versions)
+2. Downgrade to Tomcat 9.0.112 with Java 17 (older versions)
+3. Verify downgrade works correctly
+
+Cleanup when done:
+```bash
+make downgrade-cleanup-win11
 ```
 
 ### Option 2: Using Kitchen Directly
@@ -68,20 +84,53 @@ Run the interactive test script:
 
 1. **Initial Install (Step 1)**:
    - Installs Tomcat 9.0.112
-   - Installs Java 21
+   - Installs Java 17
    - Creates symlinks: `C:/Tomcat/current` → `C:/Tomcat/apache-tomcat-9.0.112`
-   - Creates symlinks: `C:/java/current` → `C:/java/jdk-21`
+   - Creates symlinks: `C:/java/current` → `C:/java/jdk-17`
    - Installs and starts Windows service
 
 2. **Upgrade (Step 2)**:
-   - Stops existing Tomcat service
-   - Uninstalls old service registration
-   - Removes old symlink
-   - Downloads and extracts Tomcat 9.0.113
-   - Creates new symlink: `C:/Tomcat/current` → `C:/Tomcat/apache-tomcat-9.0.113`
-   - Reinstalls service with new version
-   - Starts service
-   - Both versions kept (9.0.112 and 9.0.113)
+   - **Java upgrade**: Upgrades from Java 17 to Java 21
+     - Stops Tomcat service (dependent on Java)
+     - Uninstalls old Java package
+     - Installs new Java package
+     - Updates symlink: `C:/java/current` → `C:/java/jdk-21`
+   - **Tomcat upgrade**: Upgrades from 9.0.112 to 9.0.113
+     - Stops existing Tomcat service
+     - Uninstalls old service registration
+     - Removes old symlink
+     - Downloads and extracts Tomcat 9.0.113
+     - Creates new symlink: `C:/Tomcat/current` → `C:/Tomcat/apache-tomcat-9.0.113`
+     - Reinstalls service with new version
+     - Starts service
+   - Both Java versions kept (17 and 21)
+   - Both Tomcat versions kept (9.0.112 and 9.0.113)
+
+### Downgrade Scenario
+
+1. **Initial Install (Step 1)**:
+   - Installs Tomcat 9.0.113 (newer version)
+   - Installs Java 21 (newer version)
+   - Creates symlinks: `C:/Tomcat/current` → `C:/Tomcat/apache-tomcat-9.0.113`
+   - Creates symlinks: `C:/java/current` → `C:/java/jdk-21`
+   - Installs and starts Windows service
+
+2. **Downgrade (Step 2)**:
+   - **Java downgrade**: Downgrades from Java 21 to Java 17
+     - Stops Tomcat service (dependent on Java)
+     - Uninstalls Java 21 package
+     - Installs Java 17 package
+     - Updates symlink: `C:/java/current` → `C:/java/jdk-17`
+   - **Tomcat downgrade**: Downgrades from 9.0.113 to 9.0.112
+     - Stops existing Tomcat service
+     - Uninstalls service registration
+     - Removes symlink
+     - Downloads and extracts Tomcat 9.0.112
+     - Creates new symlink: `C:/Tomcat/current` → `C:/Tomcat/apache-tomcat-9.0.112`
+     - Reinstalls service with older version
+     - Starts service
+   - Both Java versions kept (21 and 17)
+   - Both Tomcat versions kept (9.0.113 and 9.0.112)
 
 ### Version Retention
 
@@ -197,15 +246,16 @@ Upgrade testing is currently configured for:
 
 ## Files
 
-- `.kitchen.yml`: Test Kitchen configuration with upgrade suite
-- `tests/playbook-upgrade.yml`: Ansible playbook for upgrade scenarios
-- `Makefile`: Targets for automated testing
+- `.kitchen.yml`: Test Kitchen configuration with upgrade and downgrade suites
+- `tests/playbook-upgrade.yml`: Ansible playbook for upgrade scenarios (Java 17→21, Tomcat 9.0.112→9.0.113)
+- `tests/playbook-downgrade.yml`: Ansible playbook for downgrade scenarios (Java 21→17, Tomcat 9.0.113→9.0.112)
+- `Makefile`: Targets for automated upgrade/downgrade testing
 - `test-upgrade.sh`: Interactive test script
 
 ## Next Steps
 
 After testing upgrades, consider:
 1. Testing with different Tomcat major versions (8 → 9, 9 → 10)
-2. Testing Java major version upgrades (17 → 21)
-3. Testing rollback scenarios
+2. Testing different Java version combinations (17 → 21 is already tested)
+3. Testing rollback/downgrade scenarios (21 → 17, 9.0.113 → 9.0.112)
 4. Automating upgrade tests in CI/CD
