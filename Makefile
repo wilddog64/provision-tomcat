@@ -101,32 +101,7 @@ $(foreach platform,$(PLATFORMS),$(foreach suite,$(SUITES),$(eval $(call KITCHEN_
 # Update test roles from parent directory
 .PHONY: update-roles
 update-roles:
-	@echo "Updating test roles from parent directory..."
-	@if [ -d ../provision-java ]; then \
-		echo "  Syncing provision-java..."; \
-		rsync -av --delete \
-			--exclude='.git' \
-			--exclude='.kitchen' \
-			--exclude='.vagrant' \
-			--exclude='.direnv' \
-			--exclude='*.log' \
-			../provision-java/ tests/roles/provision-java/; \
-	else \
-		echo "  WARNING: ../provision-java not found"; \
-	fi
-	@if [ -d ../windows-base ]; then \
-		echo "  Syncing windows-base..."; \
-		rsync -av --delete \
-			--exclude='.git' \
-			--exclude='.kitchen' \
-			--exclude='.vagrant' \
-			--exclude='.direnv' \
-			--exclude='*.log' \
-			../windows-base/ tests/roles/windows-base/; \
-	else \
-		echo "  WARNING: ../windows-base not found"; \
-	fi
-	@echo "✓ Test roles updated"
+	@echo
 
 # Upgrade testing helpers
 .PHONY: test-upgrade-win11
