@@ -1,0 +1,50 @@
+---
+# Playbook to test Tomcat/Java downgrade scenarios
+# First run: Install newer version
+# Second run: Downgrade to older version
+- name: Test Tomcat/Java downgrade scenarios
+  hosts: all
+  become: no
+
+  tasks:
+    - name: Determine which version to install based on run number
+      set_fact:
+        # First converge (if downgrade_step not defined): install new version
+        # Second converge (downgrade_step=2): install old version (downgrade)
+        tomcat_version: "{{ '9.0.113' if (downgrade_step | default(1) | int) == 1 else '9.0.112' }}"
+        jdk_version: "{{ '21' if (downgrade_step | default(1) | int) == 1 else '17' }}"
+      tags:
+        - always
+
+    - name: Display installation plan
+      debug:
+        msg: |
+          Downgrade step: {{ downgrade_step | default(1) }}
+          Installing Tomcat: {{ tomcat_version }}
+          Installing Java: {{ jdk_version }}
+      tags:
+        - always
+
+    # Install Java
+    - name: Include provision-java role
+      include_role:
+        name: provision-java
+
+    # Install Tomcat
+    - name: Include provision-tomcat role
+      include_role:
+        name: provision-tomcat
+
+    - name: Display installation summary
+      debug:
+        msg: |
+          ✓ Installation complete for downgrade step {{ downgrade_step | default(1) }}
+          Tomcat version: {{ tomcat_version }}
+          Java version: {{ jdk_version }}
+          {% if (downgrade_step | default(1) | int) == 1 %}
+          Next: Run again with -e downgrade_step=2 to test downgrade
+          {% else %}
+          Downgrade test complete!
+          {% endif %}
+      tags:
+        - always
