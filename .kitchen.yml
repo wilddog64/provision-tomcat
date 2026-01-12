@@ -100,6 +100,21 @@ suites:
         # Verify port forwarding is working
         curl --connect-timeout 5 --max-time 10 -f http://localhost:8080 || curl --connect-timeout 5 --max-time 10 http://localhost:8080 | grep -q "404"
 
+  - name: downgrade
+    driver:
+      network:
+        - ["forwarded_port", {guest: 8080, host: 8080, auto_correct: true}]
+    provisioner:
+      playbook: tests/playbook-downgrade.yml
+      extra_vars:
+        downgrade_step: 1
+        tomcat_auto_start: true
+    verifier:
+      name: shell
+      command: |
+        # Verify port forwarding is working
+        curl --connect-timeout 5 --max-time 10 -f http://localhost:8080 || curl --connect-timeout 5 --max-time 10 http://localhost:8080 | grep -q "404"
+
   - name: idempotence
     driver:
       network:
