@@ -343,9 +343,8 @@ driver:
 ### tests/playbook.yml
 
 Default test playbook that:
-1. Includes `windows-base` role (Windows prerequisites)
-2. Includes `provision-java` role (Java installation)
-3. Includes `provision-tomcat` role (Tomcat installation)
+1. Includes `provision-java` role (Java installation)
+2. Includes `provision-tomcat` role (Tomcat installation)
 
 **Location**: `tests/playbook.yml`
 

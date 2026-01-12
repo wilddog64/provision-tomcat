@@ -154,7 +154,6 @@ ansible-playbook playbook.yml --skip-tags tomcat-install
 - hosts: windows
   gather_facts: yes
   roles:
-    - windows-base        # Sets up Windows prerequisites
     - provision-java      # Installs Java (required)
     - provision-tomcat    # Installs Tomcat
 ```
@@ -168,7 +167,6 @@ ansible-playbook playbook.yml --skip-tags tomcat-install
   vars:
     tomcat_version: "9.0.120"
   roles:
-    - windows-base
     - provision-java
     - provision-tomcat
 ```
@@ -183,7 +181,6 @@ ansible-playbook playbook.yml --skip-tags tomcat-install
     tomcat_version: "9.0.113"
     tomcat_auto_start: false
   roles:
-    - windows-base
     - provision-java
     - provision-tomcat
 ```
@@ -197,7 +194,6 @@ ansible-playbook playbook.yml --skip-tags tomcat-install
   vars:
     tomcat_version: "9.0.120"  # Change to new version
   roles:
-    - windows-base
     - provision-java
     - provision-tomcat
 ```
@@ -229,7 +225,6 @@ ansible-playbook -i inventory playbook.yml --extra-vars "tomcat_version=9.0.120"
     java_version: 21
     tomcat_version: "9.0.120"
   roles:
-    - windows-base
     - provision-java
     - provision-tomcat
 ```
@@ -419,8 +414,7 @@ If an upgrade fails:
 This role requires:
 
 1. **provision-java role** - Must run before this role to install Java and set `java_home` fact
-2. **windows-base role** (recommended) - Sets up Windows environment
-3. **Ansible collections:**
+2. **Ansible collections:**
    - `ansible.windows`
    - `community.windows`
 
