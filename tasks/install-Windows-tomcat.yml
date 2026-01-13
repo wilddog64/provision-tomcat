@@ -55,6 +55,12 @@
     tags:
       - tomcat-install
 
+  - name: Determine candidate upgrade mode
+    set_fact:
+      tomcat_candidate_active: "{{ (tomcat_candidate_enabled | bool) and (tomcat_needs_upgrade | bool) }}"
+    tags:
+      - tomcat-install
+
   - name: Display Tomcat installation status
     debug:
       msg: >-
@@ -73,14 +79,19 @@
     ansible.windows.win_service:
       name: "{{ tomcat_service_name }}"
       state: stopped
-    when: tomcat_needs_upgrade or (tomcat_symlink_stat.stat.exists and tomcat_symlink_stat.stat.islnk)
+    when:
+      - not (tomcat_candidate_active | default(false) | bool)
+      - tomcat_needs_upgrade or (tomcat_symlink_stat.stat.exists and tomcat_symlink_stat.stat.islnk)
     failed_when: false
     tags:
       - tomcat-install
 
   - name: Uninstall old Tomcat service for upgrade
     ansible.windows.win_command: '"{{ tomcat_home }}/bin/service.bat" uninstall'
-    when: tomcat_needs_upgrade and tomcat_symlink_stat.stat.exists
+    when:
+      - not (tomcat_candidate_active | default(false) | bool)
+      - tomcat_needs_upgrade
+      - tomcat_symlink_stat.stat.exists
     failed_when: false
     tags:
       - tomcat-install
@@ -89,7 +100,10 @@
     ansible.windows.win_file:
       path: "{{ tomcat_home }}"
       state: absent
-    when: tomcat_symlink_stat.stat.exists and (tomcat_needs_upgrade or not tomcat_target_installed.stat.exists)
+    when:
+      - not (tomcat_candidate_active | default(false) | bool)
+      - tomcat_symlink_stat.stat.exists
+      - tomcat_needs_upgrade or not tomcat_target_installed.stat.exists
     tags:
       - tomcat-install
 
@@ -155,18 +169,147 @@
     tags:
       - tomcat-install
 
+  - block:
+      - name: Configure candidate HTTP connector port
+        ansible.windows.win_shell: |
+          (Get-Content -Path "{{ tomcat_versioned_dir }}/conf/server.xml") `
+            -replace 'port="{{ tomcat_http_port }}"(\s+protocol="HTTP/1\.1")', 'port="{{ tomcat_candidate_port }}"$1' `
+            | Set-Content -Path "{{ tomcat_versioned_dir }}/conf/server.xml"
+
+      - name: Gather candidate service status
+        ansible.windows.win_service_info:
+          name: "{{ tomcat_candidate_service_name }}"
+        register: tomcat_candidate_service_info
+
+      - name: Install candidate Tomcat service
+        ansible.windows.win_command: 'cmd /c service.bat install //RS//{{ tomcat_candidate_service_name }}'
+        args:
+          chdir: "{{ tomcat_versioned_dir }}/bin"
+        environment:
+          CATALINA_HOME: "{{ tomcat_versioned_dir }}"
+        when: (tomcat_candidate_service_info.services | default([])) | length == 0
+
+      - name: Add Windows Firewall rule for candidate
+        community.windows.win_firewall_rule:
+          name: "{{ tomcat_candidate_firewall_rule }}"
+          localport: "{{ tomcat_candidate_port }}"
+          action: allow
+          direction: in
+          protocol: tcp
+          state: present
+          enabled: yes
+
+      - name: Start candidate Tomcat service
+        ansible.windows.win_service:
+          name: "{{ tomcat_candidate_service_name }}"
+          state: started
+
+      - name: Wait for candidate port on Windows host
+        ansible.windows.win_wait_for:
+          port: "{{ tomcat_candidate_port }}"
+          timeout: "{{ tomcat_candidate_wait_timeout }}"
+
+      - name: Verify candidate Tomcat locally
+        ansible.windows.win_uri:
+          url: "http://localhost:{{ tomcat_candidate_port }}"
+          method: GET
+          status_code: [200, 404]
+          timeout: 30
+        register: tomcat_candidate_http_local
+        failed_when: tomcat_candidate_http_local.status_code not in [200, 404]
+
+      - name: Run controller-side candidate checks
+        include_tasks: verify-candidate-controller.yml
+        when: tomcat_candidate_delegate | default('') | length > 0
+
+    when: tomcat_candidate_active | default(false) | bool
+    tags:
+      - tomcat-install
+      - tomcat-verify
+
   - name: Create symlink to current Tomcat version
     ansible.windows.win_command: 'cmd /c mklink /D "{{ tomcat_home }}" "{{ tomcat_versioned_dir }}"'
-    when: not tomcat_target_installed.stat.exists or tomcat_needs_upgrade
+    when:
+      - not (tomcat_candidate_active | default(false) | bool)
+      - not tomcat_symlink_stat.stat.exists or tomcat_needs_upgrade or not tomcat_target_installed.stat.exists
     register: symlink_result
     failed_when: symlink_result.rc != 0 and 'already exists' not in symlink_result.stderr
+    tags:
+      - tomcat-install
+
+  - block:
+      - name: Stop Tomcat service prior to promotion
+        ansible.windows.win_service:
+          name: "{{ tomcat_service_name }}"
+          state: stopped
+        failed_when: false
+
+      - name: Uninstall existing Tomcat service prior to promotion
+        ansible.windows.win_command: '"{{ tomcat_home }}/bin/service.bat" uninstall'
+        failed_when: false
+        when: tomcat_symlink_stat.stat.exists
+
+      - name: Remove old symlink before promotion
+        ansible.windows.win_file:
+          path: "{{ tomcat_home }}"
+          state: absent
+        when: tomcat_symlink_stat.stat.exists
+
+      - name: Reset HTTP connector to primary port
+        ansible.windows.win_shell: |
+          (Get-Content -Path "{{ tomcat_versioned_dir }}/conf/server.xml") `
+            -replace 'port="{{ tomcat_candidate_port }}"(\s+protocol="HTTP/1\.1")', 'port="{{ tomcat_http_port }}"$1' `
+            | Set-Content -Path "{{ tomcat_versioned_dir }}/conf/server.xml"
+
+      - name: Create symlink to promoted Tomcat version
+        ansible.windows.win_command: 'cmd /c mklink /D "{{ tomcat_home }}" "{{ tomcat_versioned_dir }}"'
+        register: tomcat_candidate_symlink
+        failed_when: tomcat_candidate_symlink.rc != 0 and 'already exists' not in tomcat_candidate_symlink.stderr
+
+      - name: Install Tomcat Windows service after promotion
+        ansible.windows.win_command: '"{{ tomcat_home }}/bin/service.bat" install'
+        environment:
+          CATALINA_HOME: "{{ tomcat_home }}"
+
+      - name: Configure promoted service startup type
+        ansible.windows.win_service:
+          name: "{{ tomcat_service_name }}"
+          state: restarted
+          start_mode: auto
+
+      - name: Start promoted Tomcat service (if auto_start enabled)
+        ansible.windows.win_service:
+          name: "{{ tomcat_service_name }}"
+          state: started
+        when: tomcat_auto_start | bool
+
+      - name: Stop candidate Tomcat service
+        ansible.windows.win_service:
+          name: "{{ tomcat_candidate_service_name }}"
+          state: stopped
+        failed_when: false
+
+      - name: Remove candidate Tomcat service
+        ansible.windows.win_command: 'cmd /c service.bat remove //RS//{{ tomcat_candidate_service_name }}'
+        args:
+          chdir: "{{ tomcat_versioned_dir }}/bin"
+        failed_when: false
+
+      - name: Remove candidate firewall rule
+        community.windows.win_firewall_rule:
+          name: "{{ tomcat_candidate_firewall_rule }}"
+          state: absent
+
+    when: tomcat_candidate_active | default(false) | bool
     tags:
       - tomcat-install
 
   - name: Display symlink creation result
     debug:
       msg: "Symlink created: {{ tomcat_home }} -> {{ tomcat_versioned_dir }}"
-    when: symlink_result is changed
+    when:
+      - symlink_result is defined
+      - symlink_result is changed
     tags:
       - tomcat-install
 
@@ -234,6 +377,7 @@
     environment:
       CATALINA_HOME: "{{ tomcat_home }}"
     when:
+      - not (tomcat_candidate_active | default(false) | bool)
       - not tomcat_target_installed.stat.exists or (tomcat_service_check.services | default([])) | length == 0
     register: service_install
     tags:
@@ -242,7 +386,7 @@
   - name: Add Windows Firewall rule for Tomcat
     community.windows.win_firewall_rule:
       name: Tomcat Server
-      localport: 8080
+      localport: "{{ tomcat_http_port }}"
       action: allow
       direction: in
       protocol: tcp
@@ -259,13 +403,17 @@
     tags:
       - tomcat-install
       - tomcat-service
-    when: (tomcat_service_check.services | default([])) | length > 0
+    when:
+      - not (tomcat_candidate_active | default(false) | bool)
+      - (tomcat_service_check.services | default([])) | length > 0
 
   - name: Start Tomcat service (if auto_start enabled)
     ansible.windows.win_service:
       name: "{{ tomcat_service_name }}"
       state: started
-    when: tomcat_auto_start | bool
+    when:
+      - not (tomcat_candidate_active | default(false) | bool)
+      - tomcat_auto_start | bool
     register: tomcat_service_start
     tags:
       - tomcat-install
@@ -300,7 +448,7 @@
 
   - name: Verify Tomcat is accessible (if service is running)
     ansible.windows.win_uri:
-      url: "http://localhost:8080"
+      url: "http://localhost:{{ tomcat_http_port }}"
       method: GET
       status_code: [200, 404]  # 404 is OK (default Tomcat page when no apps deployed)
       timeout: 30

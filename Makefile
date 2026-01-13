@@ -39,9 +39,12 @@ help:
 	@echo ""
 	@echo "Upgrade/Downgrade Testing:"
 	@echo "  test-upgrade-win11      # Test Java (17→21) + Tomcat (9.0.112→9.0.113) upgrade"
+	@echo "  test-upgrade-candidate-win11 # Same as above but exercises candidate workflow"
+	@echo "  candidate-cleanup-win11    # Remove candidate config + destroy upgrade VM"
 	@echo "  upgrade-cleanup-win11   # Cleanup upgrade test VM"
 	@echo "  test-downgrade-win11    # Test Java (21→17) + Tomcat (9.0.113→9.0.112) downgrade"
 	@echo "  downgrade-cleanup-win11 # Cleanup downgrade test VM"
+	@echo "  test-upgrade-candidate-stack # Run normal upgrade + candidate workflow + cleanup"
 	@echo ""
 	@echo "Test specific suite on platform:"
 	@$(foreach p,$(PLATFORMS),$(foreach s,$(SUITES),echo "  test-$(s)-$(p)     # kitchen test $(s)-$(p)" &&)) true
@@ -136,9 +139,69 @@ test-upgrade-win11: update-roles
 	@echo ""
 	@echo "✓ Upgrade test complete!"
 
+
+.PHONY: test-upgrade-candidate-win11
+test-upgrade-candidate-win11: test-upgrade-win11
+	@echo
+	@echo "=== Testing Java + Tomcat upgrade (candidate mode) on Windows 11 ==="
+	@echo "=== Testing Java + Tomcat upgrade (candidate mode) on Windows 11 ==="
+	@echo "Step 1: Installing Java 17 + Tomcat 9.0.112..."
+	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) create upgrade-win11
+	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) converge upgrade-win11
+	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) verify upgrade-win11
+	@echo ""
+	@echo "Step 2: Upgrading to Java 21 + Tomcat 9.0.113 with candidate workflow..."
+	@echo "Updating .kitchen.local.yml for candidate testing..."
+	@printf '%s\n' \
+		'---' \
+		'suites:' \
+		'  - name: upgrade' \
+		'    driver:' \
+		"      network:" \
+		"        - ['forwarded_port', {guest: 8080, host: 8080, auto_correct: true}]" \
+		"        - ['forwarded_port', {guest: 9080, host: 9080, auto_correct: true}]" \
+		'    provisioner:' \
+		'      playbook: tests/playbook-upgrade.yml' \
+		'      extra_vars:' \
+		'        upgrade_step: 2' \
+		'        tomcat_auto_start: true' \
+		'        tomcat_candidate_enabled: true' \
+		'        tomcat_candidate_delegate: localhost' \
+		'    verifier:' \
+		'      name: shell' \
+		'      command: |' \
+		'        echo "Waiting for Tomcat to respond on port 8080..."' \
+		'        for attempt in {1..10}; do' \
+		'          if curl --connect-timeout 5 --max-time 10 -f http://localhost:8080 >/dev/null 2>&1; then' \
+		'            exit 0' \
+		'          fi' \
+		'          if curl --connect-timeout 5 --max-time 10 http://localhost:8080 | grep -q "404"; then' \
+		'            exit 0' \
+		'          fi' \
+		'          echo "  attempt $${attempt}/10: still waiting..."' \
+		'          sleep 10' \
+		'        done' \
+		'        echo "Tomcat failed to respond on port 8080" >&2' \
+		'        exit 1' \
+		> .kitchen.local.yml
+	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) converge upgrade-win11
+	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) verify upgrade-win11
+	@rm -f .kitchen.local.yml
+	@echo ""
+	@echo "✓ Candidate upgrade test complete!"
+
 .PHONY: upgrade-cleanup-win11
 upgrade-cleanup-win11:
 	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) destroy upgrade-win11
+
+.PHONY: candidate-cleanup-win11
+candidate-cleanup-win11: upgrade-cleanup-win11
+	@rm -f .kitchen.local.yml
+
+.PHONY: test-upgrade-candidate-stack
+test-upgrade-candidate-stack: test-upgrade-candidate-win11 candidate-cleanup-win11
+	@echo ""
+	@echo "✓ Full candidate upgrade + cleanup complete!"
 
 .PHONY: test-downgrade-win11
 test-downgrade-win11: update-roles
