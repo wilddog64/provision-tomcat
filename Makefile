@@ -192,7 +192,7 @@ test-upgrade-candidate-win11: test-upgrade-win11
 
 .PHONY: upgrade-cleanup-win11
 upgrade-cleanup-win11:
-	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) destroy upgrade-win11
+	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) destroy upgrade-win11 || true
 
 .PHONY: candidate-cleanup-win11
 candidate-cleanup-win11: upgrade-cleanup-win11
