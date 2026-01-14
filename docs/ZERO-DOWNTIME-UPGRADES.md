@@ -24,9 +24,11 @@ Add the following variables (defaults shown) to `defaults/main.yml` so operators
 # Optional: host used for controller-side checks
  tomcat_candidate_delegate: localhost
  tomcat_candidate_delegate_host: 127.0.0.1
+ tomcat_candidate_delegate_connection: local
+ tomcat_candidate_delegate_python: null
 ```
 
-When `tomcat_candidate_enabled` is `false`, the role keeps its current behavior.
+When `tomcat_candidate_enabled` is `false`, the role keeps its current behavior **unless** you explicitly set `tomcat_candidate_delegate`. Defining a delegate host acts as an implicit opt‑in for the candidate workflow because controller-side checks only make sense once the side-by-side service exists. You can further customize how Ansible reaches that delegate via `tomcat_candidate_delegate_connection` (defaults to `local`) and `tomcat_candidate_delegate_python` if the controller needs a specific interpreter path.
 
 ## Installation Flow
 

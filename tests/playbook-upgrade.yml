@@ -38,7 +38,7 @@
     - name: Display installation summary
       debug:
         msg: |
-          ✓ Installation complete for upgrade step {{ upgrade_step | default(1) }}
+          Installation complete for upgrade step {{ upgrade_step | default(1) }}
           Tomcat version: {{ tomcat_version }}
           Java version: {{ jdk_version }}
           {% if (upgrade_step | default(1) | int) == 1 %}

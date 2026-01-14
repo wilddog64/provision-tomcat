@@ -57,7 +57,14 @@
 
   - name: Determine candidate upgrade mode
     set_fact:
-      tomcat_candidate_active: "{{ (tomcat_candidate_enabled | bool) and (tomcat_needs_upgrade | bool) }}"
+      tomcat_candidate_delegate_configured: >-
+        {{ (tomcat_candidate_delegate is defined)
+           and (tomcat_candidate_delegate is not none)
+           and ((tomcat_candidate_delegate | string | length) > 0) }}
+      tomcat_candidate_active: >-
+        {{ ((tomcat_candidate_enabled | default(false) | bool)
+            or (tomcat_candidate_delegate_configured | default(false)))
+           and (tomcat_needs_upgrade | bool) }}
     tags:
       - tomcat-install
 

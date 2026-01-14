@@ -137,7 +137,7 @@ test-upgrade-win11: update-roles
 	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) verify upgrade-win11
 	@rm -f .kitchen.local.yml
 	@echo ""
-	@echo "✓ Upgrade test complete!"
+	@echo "Upgrade test complete!"
 
 
 
@@ -188,7 +188,7 @@ test-upgrade-candidate-win11: update-roles
 	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) verify upgrade-win11
 	@rm -f .kitchen.local.yml
 	@echo ""
-	@echo "✓ Candidate upgrade test complete!"
+	@echo "Candidate upgrade test complete!"
 
 .PHONY: upgrade-cleanup-win11
 upgrade-cleanup-win11:
@@ -201,7 +201,7 @@ candidate-cleanup-win11: upgrade-cleanup-win11
 .PHONY: test-upgrade-candidate-stack
 test-upgrade-candidate-stack: test-upgrade-candidate-win11 candidate-cleanup-win11
 	@echo ""
-	@echo "✓ Full candidate upgrade + cleanup complete!"
+	@echo "Full candidate upgrade + cleanup complete!"
 
 .PHONY: test-downgrade-win11
 test-downgrade-win11: update-roles
@@ -225,7 +225,7 @@ test-downgrade-win11: update-roles
 	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) verify downgrade-win11
 	@rm -f .kitchen.local.yml
 	@echo ""
-	@echo "✓ Downgrade test complete!"
+	@echo "Downgrade test complete!"
 
 .PHONY: downgrade-cleanup-win11
 downgrade-cleanup-win11:

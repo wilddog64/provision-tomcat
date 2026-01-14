@@ -5,6 +5,9 @@
     timeout: "{{ tomcat_candidate_wait_timeout }}"
     delay: "{{ tomcat_candidate_wait_delay }}"
   delegate_to: "{{ tomcat_candidate_delegate }}"
+  vars:
+    ansible_connection: "{{ tomcat_candidate_delegate_connection | default('local') }}"
+    ansible_python_interpreter: "{{ tomcat_candidate_delegate_python | default(omit, true) }}"
   run_once: true
 
 - name: Verify candidate HTTP response from controller
@@ -14,4 +17,7 @@
     status_code: [200, 404]
     timeout: 30
   delegate_to: "{{ tomcat_candidate_delegate }}"
+  vars:
+    ansible_connection: "{{ tomcat_candidate_delegate_connection | default('local') }}"
+    ansible_python_interpreter: "{{ tomcat_candidate_delegate_python | default(omit, true) }}"
   run_once: true

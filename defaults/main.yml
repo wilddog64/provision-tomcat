@@ -22,6 +22,8 @@ tomcat_candidate_firewall_rule: Tomcat Candidate Server
 tomcat_candidate_delegate: null
 tomcat_candidate_delegate_host: 127.0.0.1
 tomcat_candidate_delegate_port: "{{ tomcat_candidate_port }}"
+tomcat_candidate_delegate_connection: local
+tomcat_candidate_delegate_python: null
 tomcat_candidate_wait_timeout: 120
 tomcat_candidate_wait_delay: 5
 

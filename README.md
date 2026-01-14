@@ -25,10 +25,13 @@ Default variables (`defaults/main.yml`):
 | `tomcat_keep_versions` | `10` | Number of old Tomcat versions to keep (0 = keep all) |
 | `tomcat_http_port` | `8080` | Primary HTTP connector + firewall port |
 | `tomcat_shutdown_port` | `8005` | Shutdown port used by the main Tomcat service |
-| `tomcat_candidate_enabled` | `false` | Enable side-by-side candidate installs for zero downtime (override in playbooks/tests) |
+| `tomcat_candidate_enabled` | `false` | Enable side-by-side candidate installs for zero downtime (automatically flips on when `tomcat_candidate_delegate` is set) |
 | `tomcat_candidate_port` | `9080` | HTTP port used by the temporary candidate service |
 | `tomcat_candidate_shutdown_port` | `9005` | Shutdown port used by the temporary candidate service |
 | `tomcat_candidate_service_name` | `Tomcat{{ tomcat_major_version }}Candidate` | Windows service name for the candidate instance |
+| `tomcat_candidate_delegate` | `null` | Controller host to run port checks from; also forces candidate workflow when defined |
+| `tomcat_candidate_delegate_connection` | `'local'` | Connection plugin used for delegated checks (set to `ssh`, `paramiko`, `winrm`, etc. when needed) |
+| `tomcat_candidate_delegate_python` | `null` | Optional Python interpreter path for the delegate (useful for non-default controllers) |
 | `tomcat_service_account_username` | `LocalSystem` | Windows service account for Tomcat service (set to domain/user to override) |
 | `tomcat_service_account_password` | `''` | Password for the custom service account (ignored for LocalSystem) |
 

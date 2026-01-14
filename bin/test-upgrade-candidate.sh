@@ -15,4 +15,4 @@ echo "2) Running upgrade (step 1) + candidate workflow (step 2)..."
 direnv exec . make test-upgrade-candidate-stack
 
 echo ""
-echo "✓ Candidate workflow complete. Review scratch/ for logs."
+echo "Candidate workflow complete. Review scratch/ for logs."
