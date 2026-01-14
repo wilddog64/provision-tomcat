@@ -8,3 +8,4 @@ secrets/
 .direnv/
 .venv/
 roles/
+scratch/
