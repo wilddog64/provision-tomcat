@@ -27,6 +27,8 @@ Default variables (`defaults/main.yml`):
 | `tomcat_candidate_enabled` | `false` | Enable side-by-side candidate installs for zero downtime (override in playbooks/tests) |
 | `tomcat_candidate_port` | `9080` | HTTP port used by the temporary candidate service |
 | `tomcat_candidate_service_name` | `Tomcat{{ tomcat_major_version }}Candidate` | Windows service name for the candidate instance |
+| `tomcat_service_account_username` | `LocalSystem` | Windows service account for Tomcat service (set to domain/user to override) |
+| `tomcat_service_account_password` | `''` | Password for the custom service account (ignored for LocalSystem) |
 
 The Tomcat installation uses a symlink structure:
 
@@ -440,3 +442,5 @@ MIT-0 (see `LICENSE`).
 ## Author
 
 Created for automated Tomcat deployment on Windows environments.
+- Supports custom service accounts via `tomcat_service_account_username` / `tomcat_service_account_password`
+- **[Service Accounts](docs/SERVICE-ACCOUNTS.md)** - How to provide Windows service credentials securely

@@ -22,3 +22,7 @@ tomcat_candidate_delegate_host: 127.0.0.1
 tomcat_candidate_delegate_port: "{{ tomcat_candidate_port }}"
 tomcat_candidate_wait_timeout: 120
 tomcat_candidate_wait_delay: 5
+
+# Windows service account configuration
+tomcat_service_account_username: LocalSystem
+tomcat_service_account_password: ''
