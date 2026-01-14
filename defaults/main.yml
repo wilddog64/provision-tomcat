@@ -11,10 +11,12 @@ tomcat_temp_dir: C:/temp
 tomcat_auto_start: true  # Set to false if you want to start Tomcat manually
 tomcat_keep_versions: 10  # Number of old Tomcat versions to keep (0 = keep all)
 tomcat_http_port: 8080
+tomcat_shutdown_port: 8005
 
 # Candidate (zero-downtime) testing options
 tomcat_candidate_enabled: false
 tomcat_candidate_port: 9080
+tomcat_candidate_shutdown_port: 9005
 tomcat_candidate_service_name: "{{ tomcat_service_name }}Candidate"
 tomcat_candidate_firewall_rule: Tomcat Candidate Server
 tomcat_candidate_delegate: null

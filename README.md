@@ -24,8 +24,10 @@ Default variables (`defaults/main.yml`):
 | `tomcat_auto_start` | `true` | Whether to start Tomcat service automatically after installation |
 | `tomcat_keep_versions` | `10` | Number of old Tomcat versions to keep (0 = keep all) |
 | `tomcat_http_port` | `8080` | Primary HTTP connector + firewall port |
+| `tomcat_shutdown_port` | `8005` | Shutdown port used by the main Tomcat service |
 | `tomcat_candidate_enabled` | `false` | Enable side-by-side candidate installs for zero downtime (override in playbooks/tests) |
 | `tomcat_candidate_port` | `9080` | HTTP port used by the temporary candidate service |
+| `tomcat_candidate_shutdown_port` | `9005` | Shutdown port used by the temporary candidate service |
 | `tomcat_candidate_service_name` | `Tomcat{{ tomcat_major_version }}Candidate` | Windows service name for the candidate instance |
 | `tomcat_service_account_username` | `LocalSystem` | Windows service account for Tomcat service (set to domain/user to override) |
 | `tomcat_service_account_password` | `''` | Password for the custom service account (ignored for LocalSystem) |

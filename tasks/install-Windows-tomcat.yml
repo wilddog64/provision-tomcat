@@ -170,11 +170,25 @@
       - tomcat-install
 
   - block:
-      - name: Configure candidate HTTP connector port
+      - name: Configure candidate HTTP connector
         ansible.windows.win_shell: |
-          (Get-Content -Path "{{ tomcat_versioned_dir }}/conf/server.xml") `
-            -replace 'port="{{ tomcat_http_port }}"(\s+protocol="HTTP/1\.1")', 'port="{{ tomcat_candidate_port }}"$1' `
-            | Set-Content -Path "{{ tomcat_versioned_dir }}/conf/server.xml"
+          $file = "{{ tomcat_versioned_dir }}/conf/server.xml"
+          $xml = [xml](Get-Content -Path $file)
+          foreach ($service in $xml.Server.Service) {
+            foreach ($connector in $service.Connector) {
+              if ($connector.port -eq "{{ tomcat_http_port }}" -and $connector.protocol -eq "HTTP/1.1") {
+                $connector.port = "{{ tomcat_candidate_port }}"
+              }
+            }
+          }
+          $xml.Save($file)
+
+      - name: Configure candidate shutdown port
+        ansible.windows.win_shell: |
+          $file = "{{ tomcat_versioned_dir }}/conf/server.xml"
+          $xml = [xml](Get-Content -Path $file)
+          $xml.Server.port = "{{ tomcat_candidate_shutdown_port }}"
+          $xml.Save($file)
 
       - name: Gather candidate service status
         ansible.windows.win_service_info:
@@ -257,9 +271,23 @@
 
       - name: Reset HTTP connector to primary port
         ansible.windows.win_shell: |
-          (Get-Content -Path "{{ tomcat_versioned_dir }}/conf/server.xml") `
-            -replace 'port="{{ tomcat_candidate_port }}"(\s+protocol="HTTP/1\.1")', 'port="{{ tomcat_http_port }}"$1' `
-            | Set-Content -Path "{{ tomcat_versioned_dir }}/conf/server.xml"
+          $file = "{{ tomcat_versioned_dir }}/conf/server.xml"
+          $xml = [xml](Get-Content -Path $file)
+          foreach ($service in $xml.Server.Service) {
+            foreach ($connector in $service.Connector) {
+              if ($connector.port -eq "{{ tomcat_candidate_port }}" -and $connector.protocol -eq "HTTP/1.1") {
+                $connector.port = "{{ tomcat_http_port }}"
+              }
+            }
+          }
+          $xml.Save($file)
+
+      - name: Reset shutdown port to primary value
+        ansible.windows.win_shell: |
+          $file = "{{ tomcat_versioned_dir }}/conf/server.xml"
+          $xml = [xml](Get-Content -Path $file)
+          $xml.Server.port = "{{ tomcat_shutdown_port }}"
+          $xml.Save($file)
 
       - name: Create symlink to promoted Tomcat version
         ansible.windows.win_command: 'cmd /c mklink /D "{{ tomcat_home }}" "{{ tomcat_versioned_dir }}"'
