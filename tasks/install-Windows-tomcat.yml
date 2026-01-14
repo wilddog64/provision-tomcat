@@ -189,15 +189,6 @@
           CATALINA_HOME: "{{ tomcat_versioned_dir }}"
         when: (tomcat_candidate_service_info.services | default([])) | length == 0
 
-      - name: Configure candidate service account
-        ansible.windows.win_service:
-          name: "{{ tomcat_candidate_service_name }}"
-          username: "{{ tomcat_service_account_username }}"
-          password: "{{ tomcat_service_account_password | default(omit) }}"
-        when:
-          - tomcat_service_account_username | default('') | trim | length > 0
-          - (tomcat_service_account_username | lower) != 'localsystem'
-
       - name: Add Windows Firewall rule for candidate
         community.windows.win_firewall_rule:
           name: "{{ tomcat_candidate_firewall_rule }}"
@@ -279,15 +270,6 @@
         ansible.windows.win_command: '"{{ tomcat_home }}/bin/service.bat" install'
         environment:
           CATALINA_HOME: "{{ tomcat_home }}"
-
-      - name: Configure promoted service account
-        ansible.windows.win_service:
-          name: "{{ tomcat_service_name }}"
-          username: "{{ tomcat_service_account_username }}"
-          password: "{{ tomcat_service_account_password | default(omit) }}"
-        when:
-          - tomcat_service_account_username | default('') | trim | length > 0
-          - (tomcat_service_account_username | lower) != 'localsystem'
 
       - name: Configure promoted service startup type
         ansible.windows.win_service:
@@ -401,17 +383,6 @@
     tags:
       - tomcat-install
 
-  - name: Configure Tomcat service account
-    ansible.windows.win_service:
-      name: "{{ tomcat_service_name }}"
-      username: "{{ tomcat_service_account_username }}"
-      password: "{{ tomcat_service_account_password | default(omit) }}"
-    when:
-      - not (tomcat_candidate_active | default(false) | bool)
-      - tomcat_service_account_username | default('') | trim | length > 0
-      - (tomcat_service_account_username | lower) != 'localsystem'
-    tags:
-      - tomcat-install
 
   - name: Add Windows Firewall rule for Tomcat
     community.windows.win_firewall_rule:
