@@ -239,6 +239,8 @@ ansible-playbook -i inventory playbook.yml --extra-vars "tomcat_version=9.0.120"
 
 If you need to run the new Tomcat/Java build side-by-side before switching the `current` symlink, see `docs/ZERO-DOWNTIME-UPGRADES.md`. It describes how to install a temporary service on an alternate port, run smoke tests from both inside the VM and from the controller, and promote (or roll back) entirely within Ansible.
 
+For a one-command automated test run (including cleanup), execute `bin/test-upgrade-candidate.sh` from the repo root. It chains together `make candidate-cleanup-win11` and `make test-upgrade-candidate-stack` so step 1, step 2, and teardown all happen sequentially.
+
 ### Verification After Upgrade
 
 ```bash
