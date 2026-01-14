@@ -182,7 +182,7 @@
         register: tomcat_candidate_service_info
 
       - name: Install candidate Tomcat service
-        ansible.windows.win_command: 'cmd /c service.bat install //RS//{{ tomcat_candidate_service_name }}'
+        ansible.windows.win_command: 'cmd /c service.bat install {{ tomcat_candidate_service_name }}'
         args:
           chdir: "{{ tomcat_versioned_dir }}/bin"
         environment:
@@ -308,7 +308,7 @@
         failed_when: false
 
       - name: Remove candidate Tomcat service
-        ansible.windows.win_command: 'cmd /c service.bat remove //RS//{{ tomcat_candidate_service_name }}'
+        ansible.windows.win_command: 'cmd /c service.bat remove {{ tomcat_candidate_service_name }}'
         args:
           chdir: "{{ tomcat_versioned_dir }}/bin"
         failed_when: false
