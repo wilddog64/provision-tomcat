@@ -10,3 +10,26 @@ tomcat_download_url: "https://dlcdn.apache.org/tomcat/tomcat-{{ tomcat_major_ver
 tomcat_temp_dir: C:/temp
 tomcat_auto_start: true  # Set to false if you want to start Tomcat manually
 tomcat_keep_versions: 10  # Number of old Tomcat versions to keep (0 = keep all)
+tomcat_http_port: 8080
+tomcat_shutdown_port: 8005
+
+# Candidate (zero-downtime) testing options
+tomcat_candidate_enabled: false
+tomcat_candidate_port: 9080
+tomcat_candidate_shutdown_port: 9005
+tomcat_candidate_service_name: "{{ tomcat_service_name }}Candidate"
+tomcat_candidate_firewall_rule: Tomcat Candidate Server
+tomcat_candidate_delegate: null
+tomcat_candidate_delegate_host: 127.0.0.1
+tomcat_candidate_delegate_port: "{{ tomcat_candidate_port }}"
+tomcat_candidate_delegate_connection: local
+tomcat_candidate_delegate_python: null
+tomcat_candidate_wait_timeout: 120
+tomcat_candidate_wait_delay: 5
+tomcat_candidate_delegate_status_codes:
+  - 200
+  - 404
+
+# Windows service account configuration
+tomcat_service_account_username: LocalSystem
+tomcat_service_account_password: ''

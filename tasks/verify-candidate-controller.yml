@@ -1,0 +1,39 @@
+- name: Calculate controller check timing
+  ansible.builtin.set_fact:
+    tomcat_candidate_controller_delay: "{{ [tomcat_candidate_wait_delay | int, 1] | max }}"
+    tomcat_candidate_controller_attempts: >-
+      {{ (((tomcat_candidate_wait_timeout | int) + (tomcat_candidate_controller_delay | int) - 1)
+          // (tomcat_candidate_controller_delay | int)) | int }}
+  run_once: true
+  changed_when: false
+  vars:
+    # Ensure both expressions use the same computed delay by inlining here
+    tomcat_candidate_controller_delay: "{{ [tomcat_candidate_wait_delay | int, 1] | max }}"
+
+- name: Wait for candidate port from controller
+  ansible.builtin.set_fact:
+    tomcat_candidate_controller_port_check: >-
+      {{ lookup('controller_port',
+                host=tomcat_candidate_delegate_host,
+                port=tomcat_candidate_delegate_port,
+                timeout=tomcat_candidate_controller_delay) }}
+  register: tomcat_candidate_controller_port_result
+  until: tomcat_candidate_controller_port_result.ansible_facts.tomcat_candidate_controller_port_check.reachable | bool
+  retries: "{{ [tomcat_candidate_controller_attempts, 1] | max }}"
+  delay: "{{ tomcat_candidate_controller_delay }}"
+  run_once: true
+  changed_when: false
+  failed_when: not tomcat_candidate_controller_port_result.ansible_facts.tomcat_candidate_controller_port_check.reachable | bool
+
+- name: Verify candidate HTTP response from controller
+  ansible.builtin.set_fact:
+    tomcat_candidate_controller_http_check: >-
+      {{ lookup('controller_http',
+                host=tomcat_candidate_delegate_host,
+                port=tomcat_candidate_delegate_port,
+                timeout=30,
+                allowed_status=tomcat_candidate_delegate_status_codes | default([200, 404])) }}
+  register: tomcat_candidate_controller_http_result
+  run_once: true
+  changed_when: false
+  failed_when: not tomcat_candidate_controller_http_result.ansible_facts.tomcat_candidate_controller_http_check.ok | bool

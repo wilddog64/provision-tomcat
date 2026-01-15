@@ -8,3 +8,5 @@ secrets/
 .direnv/
 .venv/
 roles/
+scratch/
+__pycache__/

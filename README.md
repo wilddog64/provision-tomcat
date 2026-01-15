@@ -23,6 +23,18 @@ Default variables (`defaults/main.yml`):
 | `tomcat_temp_dir` | `'C:/temp'` | Temporary directory for downloads |
 | `tomcat_auto_start` | `true` | Whether to start Tomcat service automatically after installation |
 | `tomcat_keep_versions` | `10` | Number of old Tomcat versions to keep (0 = keep all) |
+| `tomcat_http_port` | `8080` | Primary HTTP connector + firewall port |
+| `tomcat_shutdown_port` | `8005` | Shutdown port used by the main Tomcat service |
+| `tomcat_candidate_enabled` | `false` | Enable side-by-side candidate installs for zero downtime (automatically flips on when `tomcat_candidate_delegate` is set) |
+| `tomcat_candidate_port` | `9080` | HTTP port used by the temporary candidate service |
+| `tomcat_candidate_shutdown_port` | `9005` | Shutdown port used by the temporary candidate service |
+| `tomcat_candidate_service_name` | `Tomcat{{ tomcat_major_version }}Candidate` | Windows service name for the candidate instance |
+| `tomcat_candidate_delegate` | `null` | Controller host to run port checks from; also forces candidate workflow when defined |
+| `tomcat_candidate_delegate_connection` | `'local'` | Connection plugin used for delegated checks (set to `ssh`, `paramiko`, `winrm`, etc. when needed) |
+| `tomcat_candidate_delegate_python` | `null` | Optional Python interpreter path for the delegate (useful for non-default controllers) |
+| `tomcat_candidate_delegate_status_codes` | `[200, 404]` | HTTP status codes that count as success for controller-side checks |
+| `tomcat_service_account_username` | `LocalSystem` | Windows service account for Tomcat service (set to domain/user to override) |
+| `tomcat_service_account_password` | `''` | Password for the custom service account (ignored for LocalSystem) |
 
 The Tomcat installation uses a symlink structure:
 
@@ -42,7 +54,7 @@ The Tomcat service points to: `C:/Tomcat/current/`
 - Downloads Tomcat directly from Apache mirrors (no dependency on Chocolatey)
 - Extracts to configured installation directory
 - Installs Windows service using Tomcat's `service.bat` script
-- Automatically configures Windows Firewall to allow port 8080
+- Automatically configures Windows Firewall to allow port `tomcat_http_port` (8080 by default)
 
 ### Automatic Upgrades
 
@@ -93,7 +105,7 @@ This ensures you have recent versions available for rollback while preventing un
 ### Firewall Configuration
 
 - Automatically creates Windows Firewall rule named "Tomcat Server"
-- Allows inbound TCP connections on port 8080
+- Allows inbound TCP connections on `tomcat_http_port` (8080 default)
 - Ensures Tomcat is accessible from host machine via port forwarding
 
 ## Behavior
@@ -229,6 +241,12 @@ ansible-playbook -i inventory playbook.yml --extra-vars "tomcat_version=9.0.120"
     - provision-tomcat
 ```
 
+### Zero-Downtime Candidate Testing
+
+If you need to run the new Tomcat/Java build side-by-side before switching the `current` symlink, see `docs/ZERO-DOWNTIME-UPGRADES.md`. It describes how to install a temporary service on an alternate port, run smoke tests from both inside the VM and from the controller, and promote (or roll back) entirely within Ansible. For recurring problems we have hit during this process (candidate tasks skipping, controller waits failing, or port 9080 never opening), refer to `docs/CANDIDATE-TROUBLESHOOTING.md`.
+
+For a one-command automated test run (including cleanup), execute `bin/test-upgrade-candidate.sh` from the repo root. It chains together `make candidate-cleanup-win11` and `make test-upgrade-candidate-stack` so step 1, step 2, and teardown all happen sequentially.
+
 ### Verification After Upgrade
 
 ```bash
@@ -236,6 +254,7 @@ ansible-playbook -i inventory playbook.yml --extra-vars "tomcat_version=9.0.120"
 ansible windows -m ansible.windows.win_service_info -a "name=Tomcat9"
 
 # Test HTTP accessibility
+# Replace 8080 with tomcat_http_port if you override the default
 curl http://localhost:8080
 ```
 
@@ -259,6 +278,9 @@ This role uses Test Kitchen with Vagrant for automated testing.
 - **[Development Environment Setup](docs/DEVELOPMENT-SETUP.md)** - First-time setup and prerequisites
 - **[Test Kitchen Guide](docs/TEST-KITCHEN.md)** - Using Test Kitchen for testing
 - **[Testing Upgrades](docs/TESTING-UPGRADES.md)** - Upgrade and downgrade testing procedures
+- **[Zero-Downtime Upgrades](docs/ZERO-DOWNTIME-UPGRADES.md)** - Candidate workflow details
+- **[Candidate Troubleshooting](docs/CANDIDATE-TROUBLESHOOTING.md)** - Common issues and fixes while exercising the candidate workflow
+- **[Controller Lookup Plugins](docs/plugins/CONTROLLER-LOOKUP-PLUGINS.md)** - How the controller-side port/HTTP checks work
 
 ### Test Suites
 
@@ -430,3 +452,5 @@ MIT-0 (see `LICENSE`).
 ## Author
 
 Created for automated Tomcat deployment on Windows environments.
+- Supports custom service accounts via `tomcat_service_account_username` / `tomcat_service_account_password`
+- **[Service Accounts](docs/SERVICE-ACCOUNTS.md)** - How to provide Windows service credentials securely
