@@ -33,6 +33,8 @@ help:
 	@echo "Utility:"
 	@echo "  list-kitchen-instances  # List all kitchen instances"
 	@echo "  update-roles            # Update test roles from parent directory"
+	@echo "  vagrant-update-baseline # Rebuild baseline Win11 + Tomcat 9.0.112 box"
+	@echo "  vagrant-upgrade-demo    # Run upgrade-only demo via Vagrantfile-upgrade"
 	@echo ""
 	@echo "Quick test (default suite):"
 	@$(foreach p,$(PLATFORMS),echo "  test-$(p)           # kitchen test default-$(p)" &&) true
@@ -63,6 +65,14 @@ help:
 .PHONY: list-kitchen-instances
 list-kitchen-instances:
 	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) list
+
+.PHONY: vagrant-update-baseline
+vagrant-update-baseline:
+	./bin/vagrant-update-baseline.sh
+
+.PHONY: vagrant-upgrade-demo
+vagrant-upgrade-demo:
+	./bin/vagrant-upgrade-demo.sh
 
 # Test all suites on a platform
 define TEST_ALL_SUITES
