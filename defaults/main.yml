@@ -29,6 +29,7 @@ tomcat_candidate_wait_delay: 5
 tomcat_candidate_delegate_status_codes:
   - 200
   - 404
+tomcat_candidate_manual_control: false
 
 # Windows service account configuration
 tomcat_service_account_username: LocalSystem

@@ -247,6 +247,15 @@
       - tomcat-install
       - tomcat-verify
 
+  - name: Candidate promotion deferred notice
+    debug:
+      msg: >-
+        Candidate Tomcat remains running on port {{ tomcat_candidate_port }}.
+        Re-run the role with tomcat_candidate_manual_control=false to promote and clean up.
+    when:
+      - tomcat_candidate_active | default(false) | bool
+      - tomcat_candidate_manual_control | default(false) | bool
+
   - name: Create symlink to current Tomcat version
     ansible.windows.win_command: 'cmd /c mklink /D "{{ tomcat_home }}" "{{ tomcat_versioned_dir }}"'
     when:
@@ -334,7 +343,9 @@
           name: "{{ tomcat_candidate_firewall_rule }}"
           state: absent
 
-    when: tomcat_candidate_active | default(false) | bool
+    when:
+      - tomcat_candidate_active | default(false) | bool
+      - not (tomcat_candidate_manual_control | default(false) | bool)
     tags:
       - tomcat-install
 

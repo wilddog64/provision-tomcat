@@ -1,14 +1,17 @@
 - name: Calculate controller check timing
   ansible.builtin.set_fact:
-    tomcat_candidate_controller_delay: "{{ [tomcat_candidate_wait_delay | int, 1] | max }}"
+    tomcat_candidate_controller_delay: >-
+      {{ [tomcat_candidate_wait_delay | int, 1] | max | int }}
     tomcat_candidate_controller_attempts: >-
-      {{ (((tomcat_candidate_wait_timeout | int) + (tomcat_candidate_controller_delay | int) - 1)
-          // (tomcat_candidate_controller_delay | int)) | int }}
+      {{ (((tomcat_candidate_wait_timeout | int)
+            + (tomcat_candidate_controller_delay | int)
+            - 1)
+           // (tomcat_candidate_controller_delay | int)) | int }}
   run_once: true
   changed_when: false
   vars:
-    # Ensure both expressions use the same computed delay by inlining here
-    tomcat_candidate_controller_delay: "{{ [tomcat_candidate_wait_delay | int, 1] | max }}"
+    tomcat_candidate_controller_delay: >-
+      {{ [tomcat_candidate_wait_delay | int, 1] | max | int }}
 
 - name: Wait for candidate port from controller
   ansible.builtin.set_fact:
@@ -19,8 +22,8 @@
                 timeout=tomcat_candidate_controller_delay) }}
   register: tomcat_candidate_controller_port_result
   until: tomcat_candidate_controller_port_result.ansible_facts.tomcat_candidate_controller_port_check.reachable | bool
-  retries: "{{ [tomcat_candidate_controller_attempts, 1] | max }}"
-  delay: "{{ tomcat_candidate_controller_delay }}"
+  retries: "{{ [tomcat_candidate_controller_attempts | int, 1] | max }}"
+  delay: "{{ tomcat_candidate_controller_delay | int }}"
   run_once: true
   changed_when: false
   failed_when: not tomcat_candidate_controller_port_result.ansible_facts.tomcat_candidate_controller_port_check.reachable | bool

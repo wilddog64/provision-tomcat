@@ -33,6 +33,7 @@ Default variables (`defaults/main.yml`):
 | `tomcat_candidate_delegate_connection` | `'local'` | Connection plugin used for delegated checks (set to `ssh`, `paramiko`, `winrm`, etc. when needed) |
 | `tomcat_candidate_delegate_python` | `null` | Optional Python interpreter path for the delegate (useful for non-default controllers) |
 | `tomcat_candidate_delegate_status_codes` | `[200, 404]` | HTTP status codes that count as success for controller-side checks |
+| `tomcat_candidate_manual_control` | `false` | Leave the candidate service running on port 9080 (skip promotion/cleanup) so you can promote later |
 | `tomcat_service_account_username` | `LocalSystem` | Windows service account for Tomcat service (set to domain/user to override) |
 | `tomcat_service_account_password` | `''` | Password for the custom service account (ignored for LocalSystem) |
 
@@ -314,6 +315,22 @@ make converge-win11    # Run Ansible provisioning
 make verify-win11      # Run verification
 make destroy-win11     # Clean up
 ```
+
+### Vagrant Candidate Helper
+
+For a direct Vagrant workflow (outside Test Kitchen), use `bin/vagrant-port-check.sh`. It:
+
+1. Brings up the Windows 11 guest without provisioning.
+2. Runs step 1 of the upgrade playbook (Tomcat 9.0.112 / Java 17).
+3. Runs step 2 with `tomcat_candidate_manual_control=true`, which leaves the candidate service running on port 9080.
+4. Verifies ports 8080/9080 from the controller and waits for user confirmation.
+5. After you press Enter, reruns step 2 with `tomcat_candidate_manual_control=false` to promote and clean up.
+
+Ensure port forwarding for 8080 and 9080 is available in `Vagrantfile` (already defined) before running the script.
+
+#### Pre-built baseline box (optional)
+
+If you want to skip the "install Tomcat 9.0.112 / Java 17" phase entirely, run `bin/vagrant-build-baseline.sh`. It provisions the stock Windows 11 box with step 1 of the upgrade playbook and packages it into `boxes/windows11-tomcat9.0.112-java17.box`. You can then `vagrant box add windows11-tomcat112 boxes/windows11-tomcat9.0.112-java17.box` and point your Vagrantfile to that box for demos where you only want to exercise the upgrade/candidate workflow.
 
 ### Manual Testing
 
