@@ -38,6 +38,7 @@ help:
 	@echo "Utility:"
 	@echo "  list-kitchen-instances  # List all kitchen instances"
 	@echo "  update-roles            # Update test roles from parent directory"
+	@echo "  vagrant-up              # Bring up Vagrant VM using default Vagrantfile"
 	@echo "  vagrant-update-baseline # Rebuild baseline Win11 + Tomcat 9.0.112 box"
 	@echo "  vagrant-upgrade-demo    # Run upgrade-only demo via Vagrantfile-upgrade (append KEEP to skip destroy)"
 	@echo "  vagrant-destroy         # Destroy current Vagrant VM (default Vagrantfile)"
@@ -72,6 +73,10 @@ help:
 .PHONY: list-kitchen-instances
 list-kitchen-instances:
 	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) list
+
+.PHONY: vagrant-up
+vagrant-up:
+	vagrant up
 
 .PHONY: vagrant-update-baseline
 vagrant-update-baseline:
