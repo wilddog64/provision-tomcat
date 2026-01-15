@@ -22,7 +22,7 @@ run_vagrant() {
 
 get_host_port() {
   local guest_port="$1"
-  run_vagrant vagrant port --guest "$guest_port" 2>/dev/null | awk '{print $3}'
+  run_vagrant vagrant port --guest "$guest_port" 2>/dev/null | awk 'NF {print $NF; exit}'
 }
 
 curl_check() {
