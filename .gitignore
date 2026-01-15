@@ -10,5 +10,4 @@ secrets/
 roles/
 scratch/
 boxes/
-Vagrantfile-upgrade
 __pycache__/
