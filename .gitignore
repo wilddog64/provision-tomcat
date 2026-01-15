@@ -9,3 +9,4 @@ secrets/
 .venv/
 roles/
 scratch/
+__pycache__/
