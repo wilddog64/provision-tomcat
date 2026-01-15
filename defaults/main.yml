@@ -26,6 +26,9 @@ tomcat_candidate_delegate_connection: local
 tomcat_candidate_delegate_python: null
 tomcat_candidate_wait_timeout: 120
 tomcat_candidate_wait_delay: 5
+tomcat_candidate_delegate_status_codes:
+  - 200
+  - 404
 
 # Windows service account configuration
 tomcat_service_account_username: LocalSystem

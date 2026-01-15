@@ -26,6 +26,7 @@ Add the following variables (defaults shown) to `defaults/main.yml` so operators
  tomcat_candidate_delegate_host: 127.0.0.1
  tomcat_candidate_delegate_connection: local
  tomcat_candidate_delegate_python: null
+ tomcat_candidate_delegate_status_codes: [200, 404]
 ```
 
 When `tomcat_candidate_enabled` is `false`, the role keeps its current behavior **unless** you explicitly set `tomcat_candidate_delegate`. Defining a delegate host acts as an implicit opt‑in for the candidate workflow because controller-side checks only make sense once the side-by-side service exists. You can further customize how Ansible reaches that delegate via `tomcat_candidate_delegate_connection` (defaults to `local`) and `tomcat_candidate_delegate_python` if the controller needs a specific interpreter path.
@@ -83,6 +84,15 @@ verifier:
 ```
 
 Alternatively, keep the verifier unchanged and rely solely on Ansible’s delegated `wait_for` task.
+
+### Controller-side verification details
+
+When `tomcat_candidate_delegate` (or `tomcat_candidate_enabled`) is set, `tasks/verify-candidate-controller.yml` runs two lookups from the controller:
+
+1. `controller_port` polls the candidate port until the TCP handshake succeeds.
+2. `controller_http` issues an HTTP request and requires a `200` or `404` response by default.
+
+Both lookups are described in depth in `docs/plugins/CONTROLLER-LOOKUP-PLUGINS.md`. If you run Kitchen manually, make sure the 9080 port is forwarded before `kitchen create` so these controller probes can reach the guest.
 
 ## Live Node Considerations
 

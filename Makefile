@@ -117,6 +117,7 @@ update-roles:
 # Upgrade testing helpers
 .PHONY: test-upgrade-win11
 test-upgrade-win11: update-roles
+	@rm -f .kitchen.local.yml
 	@echo "=== Testing Java + Tomcat upgrade on Windows 11 ==="
 	@echo "Step 1: Installing Java 17 + Tomcat 9.0.112..."
 	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) create upgrade-win11
@@ -143,6 +144,17 @@ test-upgrade-win11: update-roles
 
 .PHONY: test-upgrade-candidate-win11
 test-upgrade-candidate-win11: update-roles
+	@rm -f .kitchen.local.yml
+	@echo "Preparing .kitchen.local.yml with candidate port forwarding..."
+	@printf '%s\n' \
+		'---' \
+		'suites:' \
+		'  - name: upgrade' \
+		'    driver:' \
+		"      network:" \
+		"        - ['forwarded_port', {guest: 8080, host: 8080, auto_correct: true}]" \
+		"        - ['forwarded_port', {guest: 9080, host: 9080, auto_correct: true}]" \
+	> .kitchen.local.yml
 	@echo
 	@echo "=== Testing Java + Tomcat upgrade (candidate mode) on Windows 11 ==="
 	@echo "Step 1: Installing Java 17 + Tomcat 9.0.112..."
