@@ -22,7 +22,12 @@ run_vagrant() {
 
 get_host_port() {
   local guest_port="$1"
-  run_vagrant vagrant port --guest "$guest_port" 2>/dev/null | awk 'NF {print $NF; exit}'
+  local host_port
+  host_port=$(run_vagrant vagrant port --machine-readable 2>/dev/null | awk -F, -v gp="$guest_port" '$3=="forwarded_port" && $4==gp {print $5; exit}')
+  if [[ -z "$host_port" ]]; then
+    host_port="$guest_port"
+  fi
+  printf '%s' "$host_port"
 }
 
 curl_check() {
