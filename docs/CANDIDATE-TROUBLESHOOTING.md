@@ -36,5 +36,6 @@ Check the log for `tomcat_candidate_active: true` before the candidate block. If
 - Unicode checkmarks (`✓ ... complete!`) made it hard to search logs; we removed them.
 - `tomcat_candidate_delegate_python` should be left undefined unless you need a specific interpreter path; don’t set it to `null`.
 - Always run `make candidate-cleanup-win11` between full test runs to avoid stale `.kitchen.local.yml` and VirtualBox state.
+- Use `tomcat_candidate_manual_control: true` if you want to keep the candidate service running on port 9080 for manual tests. Remember to rerun the playbook with that flag set to `false` (or omitted) when you’re ready to promote and clean up.
 
 Update this doc as new edge cases are found.

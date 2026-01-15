@@ -94,6 +94,10 @@ When `tomcat_candidate_delegate` (or `tomcat_candidate_enabled`) is set, `tasks/
 
 Both lookups are described in depth in `docs/plugins/CONTROLLER-LOOKUP-PLUGINS.md`. If you run Kitchen manually, make sure the 9080 port is forwarded before `kitchen create` so these controller probes can reach the guest.
 
+### Leaving the candidate running for manual approval
+
+By default, the role promotes and tears down the candidate service immediately after the checks succeed. Set `tomcat_candidate_manual_control: true` to skip the promotion/cleanup block so the candidate instance continues listening on port 9080. Once you have finished manual validation, rerun the role (or the Vagrant provisioner) with `tomcat_candidate_manual_control: false` to perform the promotion and remove the temporary service.
+
 ## Live Node Considerations
 
 - Ensure your load balancer or network path exposes the candidate port temporarily so the controller-side check can reach it. You can restrict access to a jump host or monitoring node.

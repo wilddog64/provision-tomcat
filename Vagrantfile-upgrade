@@ -1,0 +1,48 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.configure("2") do |config|
+  config.vm.box = 'windows11-tomcat112'
+
+  config.vm.communicator = "winrm"
+  config.winrm.username = "vagrant"
+  config.winrm.password = "vagrant"
+  config.winrm.transport = :plaintext
+  config.winrm.basic_auth_only = true
+
+  common_env = {
+    'ansible_connection'                   => 'winrm',
+    'ansible_winrm_transport'              => 'basic',
+    'ansible_winrm_server_cert_validation' => 'ignore',
+    'ansible_winrm_scheme'                 => 'http',
+  }
+
+  config.vm.network "forwarded_port", guest: 8080, host: 8080
+  config.vm.network "forwarded_port", guest: 9080, host: 9080
+
+  config.vm.provision 'ansible_upgrade_step2_prepare', type: :ansible, run: 'never' do |ansible|
+    ansible.limit = 'all'
+    ansible.galaxy_role_file = 'requirements.yml'
+    ansible.playbook = 'tests/playbook-upgrade.yml'
+    ansible.extra_vars = common_env.merge(
+      'upgrade_step' => 2,
+      'tomcat_auto_start' => true,
+      'tomcat_candidate_enabled' => true,
+      'tomcat_candidate_delegate' => 'localhost',
+      'tomcat_candidate_manual_control' => true
+    )
+  end
+
+  config.vm.provision 'ansible_upgrade_step2_finalize', type: :ansible, run: 'never' do |ansible|
+    ansible.limit = 'all'
+    ansible.galaxy_role_file = 'requirements.yml'
+    ansible.playbook = 'tests/playbook-upgrade.yml'
+    ansible.extra_vars = common_env.merge(
+      'upgrade_step' => 2,
+      'tomcat_auto_start' => true,
+      'tomcat_candidate_enabled' => true,
+      'tomcat_candidate_delegate' => 'localhost',
+      'tomcat_candidate_manual_control' => false
+    )
+  end
+end

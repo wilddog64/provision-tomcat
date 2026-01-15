@@ -21,21 +21,71 @@ Vagrant.configure("2") do |config|
   config.winrm.transport = :plaintext
   config.winrm.basic_auth_only = true
 
-  # configure ansible provisioner
-  config.vm.provision :ansible do | ansible |
-    ansible.limit    = 'all'                # apply to a Vagrant host
-    # ansible.install_mode      = :pip
-    ansible.galaxy_role_file  = 'requirements.yml'
-    # ansible.galaxy_roles_path = 'roles'
-    ansible.playbook = 'tests/playbook.yml' # point to local playbook for easy testing
+  common_env = {
+    'ansible_connection'                   => 'winrm',
+    'ansible_winrm_transport'              => 'basic',
+    'ansible_winrm_server_cert_validation' => 'ignore',
+    'ansible_winrm_scheme'                 => 'http',
+  }
 
-    # ansible.verbose  = 'vv'                # minimum verbose
-    ansible.extra_vars = {
-      'ansible_connection'                   => 'winrm',
-      'ansible_winrm_transport'              => 'basic',
-      'ansible_winrm_server_cert_validation' => 'ignore',
-      'ansible_winrm_scheme'                 => 'http',
-    }
+  # default playbook for simple testing
+  config.vm.provision :ansible do |ansible|
+    ansible.limit = 'all'
+    ansible.galaxy_role_file = 'requirements.yml'
+    ansible.playbook = 'tests/playbook.yml'
+    ansible.extra_vars = common_env
+  end
+
+  # Upgrade step 1 (install older Java/Tomcat)
+  config.vm.provision 'ansible_upgrade_step1', type: :ansible, run: 'never' do |ansible|
+    ansible.limit = 'all'
+    ansible.galaxy_role_file = 'requirements.yml'
+    ansible.playbook = 'tests/playbook-upgrade.yml'
+    ansible.extra_vars = common_env.merge(
+      'upgrade_step' => 1,
+      'tomcat_auto_start' => true
+    )
+  end
+
+  # Upgrade step 2 with candidate workflow enabled (auto promote)
+  config.vm.provision 'ansible_upgrade_step2', type: :ansible, run: 'never' do |ansible|
+    ansible.limit = 'all'
+    ansible.galaxy_role_file = 'requirements.yml'
+    ansible.playbook = 'tests/playbook-upgrade.yml'
+    ansible.extra_vars = common_env.merge(
+      'upgrade_step' => 2,
+      'tomcat_auto_start' => true,
+      'tomcat_candidate_enabled' => true,
+      'tomcat_candidate_delegate' => 'localhost'
+    )
+  end
+
+  # Upgrade step 2 (prepare only – leaves candidate running)
+  config.vm.provision 'ansible_upgrade_step2_prepare', type: :ansible, run: 'never' do |ansible|
+    ansible.limit = 'all'
+    ansible.galaxy_role_file = 'requirements.yml'
+    ansible.playbook = 'tests/playbook-upgrade.yml'
+    ansible.extra_vars = common_env.merge(
+      'upgrade_step' => 2,
+      'tomcat_auto_start' => true,
+      'tomcat_candidate_enabled' => true,
+      'tomcat_candidate_delegate' => 'localhost',
+      'tomcat_candidate_manual_control' => true
+    )
+  end
+
+  # Upgrade step 2 finalization (promote + cleanup)
+  config.vm.provision 'ansible_upgrade_step2_finalize', type: :ansible, run: 'never' do |ansible|
+    ansible.limit = 'all'
+    ansible.galaxy_role_file = 'requirements.yml'
+    ansible.playbook = 'tests/playbook-upgrade.yml'
+    ansible.extra_vars = common_env.merge(
+      'upgrade_step' => 2,
+      'tomcat_auto_start' => true,
+      'tomcat_candidate_enabled' => true,
+      'tomcat_candidate_delegate' => 'localhost',
+      'tomcat_candidate_manual_control' => false
+    )
   end
   # Disable automatic box update checking. If you disable this, then
   # boxes will only be checked for updates when the user runs
@@ -46,6 +96,7 @@ Vagrant.configure("2") do |config|
   # within the machine from a port on the host machine. In the example below,
   # accessing "localhost:8080" will access port 80 on the guest machine.
   config.vm.network "forwarded_port", guest: 8080, host: 8080
+  config.vm.network "forwarded_port", guest: 9080, host: 9080
 
   # Create a private network, which allows host-only access to the machine
   # using a specific IP.

@@ -1,4 +1,9 @@
 SHELL := /bin/bash
+
+ifeq ($(filter KEEP,$(MAKECMDGOALS)),KEEP)
+KEEP := 1
+MAKECMDGOALS := $(filter-out KEEP,$(MAKECMDGOALS))
+endif
 export DISABLE_BUNDLER_SETUP := 1
 
 ifeq ($(OS),Windows_NT)
@@ -33,6 +38,11 @@ help:
 	@echo "Utility:"
 	@echo "  list-kitchen-instances  # List all kitchen instances"
 	@echo "  update-roles            # Update test roles from parent directory"
+	@echo "  vagrant-up              # Bring up Vagrant VM using default Vagrantfile"
+	@echo "  vagrant-update-baseline # Rebuild baseline Win11 + Tomcat 9.0.112 box"
+	@echo "  vagrant-upgrade-demo    # Run upgrade-only demo via Vagrantfile-upgrade (append KEEP to skip destroy)"
+	@echo "  vagrant-destroy         # Destroy current Vagrant VM (default Vagrantfile)"
+	@echo "  vagrant-destroy-upgrade # Destroy VM defined by Vagrantfile-upgrade"
 	@echo ""
 	@echo "Quick test (default suite):"
 	@$(foreach p,$(PLATFORMS),echo "  test-$(p)           # kitchen test default-$(p)" &&) true
@@ -40,6 +50,7 @@ help:
 	@echo "Upgrade/Downgrade Testing:"
 	@echo "  test-upgrade-win11      # Test Java (17→21) + Tomcat (9.0.112→9.0.113) upgrade"
 	@echo "  test-upgrade-candidate-win11 # Same as above but exercises candidate workflow"
+	@echo "  test-upgrade-baseline-win11 # Run upgrade step 2 on baseline box (candidate workflow only)"
 	@echo "  candidate-cleanup-win11    # Remove candidate config + destroy upgrade VM"
 	@echo "  upgrade-cleanup-win11   # Cleanup upgrade test VM"
 	@echo "  test-downgrade-win11    # Test Java (21→17) + Tomcat (9.0.113→9.0.112) downgrade"
@@ -63,6 +74,26 @@ help:
 .PHONY: list-kitchen-instances
 list-kitchen-instances:
 	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) list
+
+.PHONY: vagrant-up
+vagrant-up:
+	vagrant up
+
+.PHONY: vagrant-update-baseline
+vagrant-update-baseline:
+	./bin/vagrant-update-baseline.sh
+
+.PHONY: vagrant-upgrade-demo
+vagrant-upgrade-demo:
+	./bin/vagrant-upgrade-demo.sh $(if $(KEEP),--keep,)
+
+.PHONY: vagrant-destroy
+vagrant-destroy:
+	vagrant destroy -f
+
+.PHONY: vagrant-destroy-upgrade
+vagrant-destroy-upgrade:
+	VAGRANT_VAGRANTFILE=Vagrantfile-upgrade vagrant destroy -f
 
 # Test all suites on a platform
 define TEST_ALL_SUITES
@@ -205,6 +236,10 @@ test-upgrade-candidate-win11: update-roles
 .PHONY: upgrade-cleanup-win11
 upgrade-cleanup-win11:
 	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) destroy upgrade-win11 || true
+
+.PHONY: test-upgrade-baseline-win11
+test-upgrade-baseline-win11: update-roles
+	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) test upgrade-baseline-win11-baseline
 
 .PHONY: candidate-cleanup-win11
 candidate-cleanup-win11: upgrade-cleanup-win11
