@@ -30,15 +30,15 @@ get_host_port() {
   printf '%s' "$host_port"
 }
 
-curl_check() {
+port_check() {
   local port="$1"
   local desc="$2"
-  echo "Checking ${desc} on http://localhost:${port} ..."
+  echo "Checking ${desc} on localhost:${port} ..."
   local attempts=0
-  until curl --verbose --connect-timeout 5 --max-time 15 -f "http://localhost:${port}" >/dev/null 2>&1; do
+  until nc -z localhost "$port" >/dev/null 2>&1; do
     attempts=$((attempts+1))
     if (( attempts >= 3 )); then
-      echo "ERROR: ${desc} on port ${port} is not responding." >&2
+      echo "ERROR: ${desc} on port ${port} is not accepting TCP connections." >&2
       exit 1
     fi
     echo "  retry ${attempts}/3 ..."
@@ -58,24 +58,29 @@ run_vagrant vagrant up --no-provision
 echo "[2/5] Preparing candidate (step 2 with manual control) ..."
 run_vagrant vagrant provision --provision-with ansible_upgrade_step2_prepare
 
-echo "[3/5] Verifying from controller ports ..."
+echo "[3/5] Verifying candidate ports from controller ..."
 PRIMARY_PORT=$(get_host_port 8080)
 [[ -z "$PRIMARY_PORT" ]] && PRIMARY_PORT=8080
 CANDIDATE_PORT=$(get_host_port 9080)
 [[ -z "$CANDIDATE_PORT" ]] && CANDIDATE_PORT=9080
-curl_check "$PRIMARY_PORT" "primary Tomcat"
-curl_check "$CANDIDATE_PORT" "candidate Tomcat"
+port_check "$PRIMARY_PORT" "primary Tomcat"
+port_check "$CANDIDATE_PORT" "candidate Tomcat"
 
-read -r -p "Candidate port (9080) is live. Press Enter to promote and clean up..." _
+echo "Candidate port (9080) is live. Press Enter to promote and re-check..."
+read -r _
 
-echo "[4/5] Finalizing upgrade (promote + cleanup) ..."
+echo "[4/6] Finalizing upgrade (promote + cleanup) ..."
 run_vagrant vagrant provision --provision-with ansible_upgrade_step2_finalize
 
+echo "[5/6] Verifying primary port after promotion ..."
+PRIMARY_PORT=$(get_host_port 8080)
+port_check "$PRIMARY_PORT" "primary Tomcat"
+
+echo "[6/6] Final cleanup ..."
 if ! $KEEP_VM; then
-  echo "[5/5] Destroying VM (pass --keep to skip) ..."
   run_vagrant vagrant destroy -f
 else
-  echo "[5/5] Skipping destroy because --keep was passed."
+  echo "Skipping destroy because --keep was passed."
 fi
 
 echo "Upgrade demo complete."
