@@ -20,6 +20,11 @@ run_vagrant() {
   fi
 }
 
+get_host_port() {
+  local guest_port="$1"
+  run_vagrant vagrant port --guest "$guest_port" 2>/dev/null | awk '{print $3}'
+}
+
 curl_check() {
   local port="$1"
   local desc="$2"
@@ -43,8 +48,12 @@ echo "[2/5] Preparing candidate (step 2 with manual control) ..."
 run_vagrant vagrant provision --provision-with ansible_upgrade_step2_prepare
 
 echo "[3/5] Verifying from controller ports ..."
-curl_check 8080 "primary Tomcat"
-curl_check 9080 "candidate Tomcat"
+PRIMARY_PORT=$(get_host_port 8080)
+[[ -z "$PRIMARY_PORT" ]] && PRIMARY_PORT=8080
+CANDIDATE_PORT=$(get_host_port 9080)
+[[ -z "$CANDIDATE_PORT" ]] && CANDIDATE_PORT=9080
+curl_check "$PRIMARY_PORT" "primary Tomcat"
+curl_check "$CANDIDATE_PORT" "candidate Tomcat"
 
 read -r -p "Candidate port (9080) is live. Press Enter to promote and clean up..." _
 
