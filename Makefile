@@ -50,6 +50,7 @@ help:
 	@echo "Upgrade/Downgrade Testing:"
 	@echo "  test-upgrade-win11      # Test Java (17→21) + Tomcat (9.0.112→9.0.113) upgrade"
 	@echo "  test-upgrade-candidate-win11 # Same as above but exercises candidate workflow"
+	@echo "  test-upgrade-baseline-win11 # Run upgrade step 2 on baseline box (candidate workflow only)"
 	@echo "  candidate-cleanup-win11    # Remove candidate config + destroy upgrade VM"
 	@echo "  upgrade-cleanup-win11   # Cleanup upgrade test VM"
 	@echo "  test-downgrade-win11    # Test Java (21→17) + Tomcat (9.0.113→9.0.112) downgrade"
@@ -235,6 +236,10 @@ test-upgrade-candidate-win11: update-roles
 .PHONY: upgrade-cleanup-win11
 upgrade-cleanup-win11:
 	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) destroy upgrade-win11 || true
+
+.PHONY: test-upgrade-baseline-win11
+test-upgrade-baseline-win11: update-roles
+	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) test upgrade-baseline-win11-baseline
 
 .PHONY: candidate-cleanup-win11
 candidate-cleanup-win11: upgrade-cleanup-win11

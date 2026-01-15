@@ -304,6 +304,7 @@ make test-win11
 # Test specific suite
 make test-default-win11
 make test-upgrade-win11
+make test-upgrade-baseline-win11
 make test-idempotence-win11
 make test-no-autostart-win11
 
