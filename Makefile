@@ -1,4 +1,9 @@
 SHELL := /bin/bash
+
+ifeq ($(filter KEEP,$(MAKECMDGOALS)),KEEP)
+KEEP := 1
+MAKECMDGOALS := $(filter-out KEEP,$(MAKECMDGOALS))
+endif
 export DISABLE_BUNDLER_SETUP := 1
 
 ifeq ($(OS),Windows_NT)
