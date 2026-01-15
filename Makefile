@@ -40,6 +40,8 @@ help:
 	@echo "  update-roles            # Update test roles from parent directory"
 	@echo "  vagrant-update-baseline # Rebuild baseline Win11 + Tomcat 9.0.112 box"
 	@echo "  vagrant-upgrade-demo    # Run upgrade-only demo via Vagrantfile-upgrade (append KEEP to skip destroy)"
+	@echo "  vagrant-destroy         # Destroy current Vagrant VM (default Vagrantfile)"
+	@echo "  vagrant-destroy-upgrade # Destroy VM defined by Vagrantfile-upgrade"
 	@echo ""
 	@echo "Quick test (default suite):"
 	@$(foreach p,$(PLATFORMS),echo "  test-$(p)           # kitchen test default-$(p)" &&) true
@@ -78,6 +80,14 @@ vagrant-update-baseline:
 .PHONY: vagrant-upgrade-demo
 vagrant-upgrade-demo:
 	./bin/vagrant-upgrade-demo.sh $(if $(KEEP),--keep,)
+
+.PHONY: vagrant-destroy
+vagrant-destroy:
+	vagrant destroy -f
+
+.PHONY: vagrant-destroy-upgrade
+vagrant-destroy-upgrade:
+	VAGRANT_VAGRANTFILE=Vagrantfile-upgrade vagrant destroy -f
 
 # Test all suites on a platform
 define TEST_ALL_SUITES
