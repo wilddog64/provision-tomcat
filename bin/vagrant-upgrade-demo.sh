@@ -34,10 +34,16 @@ curl_check() {
   local port="$1"
   local desc="$2"
   echo "Checking ${desc} on http://localhost:${port} ..."
-  curl --connect-timeout 5 --max-time 10 -f "http://localhost:${port}" >/dev/null 2>&1 || {
-    echo "ERROR: ${desc} on port ${port} is not responding." >&2
-    exit 1
-  }
+  local attempts=0
+  until curl --verbose --connect-timeout 5 --max-time 15 -f "http://localhost:${port}" >/dev/null 2>&1; do
+    attempts=$((attempts+1))
+    if (( attempts >= 3 )); then
+      echo "ERROR: ${desc} on port ${port} is not responding." >&2
+      exit 1
+    fi
+    echo "  retry ${attempts}/3 ..."
+    sleep 5
+  done
 }
 
 KEEP_VM=false
