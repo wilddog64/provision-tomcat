@@ -332,6 +332,18 @@ Ensure port forwarding for 8080 and 9080 is available in `Vagrantfile` (already 
 
 If you want to skip the "install Tomcat 9.0.112 / Java 17" phase entirely, run `bin/vagrant-build-baseline.sh`. It provisions the stock Windows 11 box with step 1 of the upgrade playbook and packages it into `boxes/windows11-tomcat9.0.112-java17.box`. You can then `vagrant box add windows11-tomcat112 boxes/windows11-tomcat9.0.112-java17.box` and point your Vagrantfile to that box for demos where you only want to exercise the upgrade/candidate workflow.
 
+#### Upgrade-only script
+
+Once the baseline box is installed (`windows11-tomcat112`), `bin/vagrant-upgrade-demo.sh` drives the rest of the demo using `Vagrantfile-upgrade`:
+
+1. Brings the baseline box up (no provisioning).
+2. Runs the candidate prepare pass (manual control enabled).
+3. Verifies ports 8080/9080.
+4. Promotes/cleans up after you press Enter.
+5. Destroys the VM unless you pass `--keep`.
+
+That script is the quickest way to show the candidate workflow without replaying step 1.
+
 ### Manual Testing
 
 ```bash
