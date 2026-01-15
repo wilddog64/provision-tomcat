@@ -342,7 +342,7 @@ Once the baseline box is installed (`windows11-tomcat112`), `bin/vagrant-upgrade
 4. Promotes/cleans up after you press Enter.
 5. Destroys the VM unless you pass `--keep`.
 
-That script is the quickest way to show the candidate workflow without replaying step 1.
+Run it directly or via `make vagrant-upgrade-demo`. Add `KEEP=1 make vagrant-upgrade-demo` (or `./bin/vagrant-upgrade-demo.sh --keep`) if you want to leave the VM running after the demo.
 
 ### Manual Testing
 

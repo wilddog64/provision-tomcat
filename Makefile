@@ -72,7 +72,7 @@ vagrant-update-baseline:
 
 .PHONY: vagrant-upgrade-demo
 vagrant-upgrade-demo:
-	./bin/vagrant-upgrade-demo.sh
+	./bin/vagrant-upgrade-demo.sh $(if $(KEEP),--keep,)
 
 # Test all suites on a platform
 define TEST_ALL_SUITES
