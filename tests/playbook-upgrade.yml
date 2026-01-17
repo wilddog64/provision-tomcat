@@ -6,6 +6,14 @@
   hosts: all
   become: no
 
+  vars:
+    # Install paths - override with install_drive to use D: drive
+    install_drive: "{{ install_drive | default('C:') }}"
+    java_install_base_dir: "{{ install_drive }}/java"
+    tomcat_install_dir: "{{ install_drive }}/Tomcat"
+    java_temp_dir: "{{ install_drive }}/temp"
+    tomcat_temp_dir: "{{ install_drive }}/temp"
+
   tasks:
     - name: Determine which version to install based on run number
       set_fact:

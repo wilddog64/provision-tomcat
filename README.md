@@ -292,6 +292,55 @@ This role uses Test Kitchen with Vagrant for automated testing.
 | `idempotence` | Verifies role is idempotent (no changes on second run) |
 | `no-autostart` | Tests installation with `tomcat_auto_start: false` |
 
+### D: Drive Installation
+
+Install Tomcat and Java on D: drive instead of C: drive. This requires a baseline box with a pre-formatted D: drive.
+
+#### Build the D: Drive Baseline Box
+
+```bash
+# Build minimal box with D: drive only (no Tomcat/Java)
+make vagrant-build-baseline-minimal
+
+# Add the box to Vagrant
+vagrant box add windows11-disk boxes/windows11-disk.box
+```
+
+#### Test with D: Drive
+
+```bash
+# Test Kitchen with D: drive
+make test-win11-disk
+
+# Or with Vagrant
+JDK_VERSION=21 install_drive=D: vagrant up
+vagrant provision --provision-with disk_setup
+vagrant provision
+```
+
+#### Ansible Variables for D: Drive
+
+Set `install_drive` to change the installation path:
+
+```yaml
+# In playbook or extra_vars
+install_drive: "D:"
+# This sets:
+#   java_install_base_dir: D:/java
+#   tomcat_install_dir: D:/Tomcat
+#   java_temp_dir: D:/temp
+#   tomcat_temp_dir: D:/temp
+```
+
+Or set paths individually:
+
+```bash
+ansible-playbook -i inventory playbook.yml \
+  -e 'java_install_base_dir=D:/java' \
+  -e 'tomcat_install_dir=D:/Tomcat' \
+  -e 'tomcat_temp_dir=D:/temp'
+```
+
 ### Quick Testing Commands
 
 ```bash
