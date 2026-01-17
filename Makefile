@@ -41,6 +41,7 @@ help:
 	@echo "  vagrant-up              # Bring up Vagrant VM using default Vagrantfile"
 	@echo "  vagrant-disk-setup      # Initialize and format D: drive"
 	@echo "  vagrant-build-baseline  # Build baseline box with D: drive + Tomcat + Java"
+	@echo "  vagrant-build-baseline-minimal # Build minimal box with D: drive only"
 	@echo "  vagrant-update-baseline # Rebuild baseline Win11 + Tomcat 9.0.112 box"
 	@echo "  vagrant-upgrade-demo    # Run upgrade-only demo via Vagrantfile-upgrade (append KEEP to skip destroy)"
 	@echo "  vagrant-destroy         # Destroy current Vagrant VM (default Vagrantfile)"
@@ -104,6 +105,10 @@ vagrant-disk-setup:
 .PHONY: vagrant-build-baseline
 vagrant-build-baseline:
 	./bin/vagrant-build-baseline.sh
+
+.PHONY: vagrant-build-baseline-minimal
+vagrant-build-baseline-minimal:
+	./bin/vagrant-build-baseline.sh --disk-only
 
 # Test all suites on a platform
 define TEST_ALL_SUITES
