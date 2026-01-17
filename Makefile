@@ -38,7 +38,9 @@ help:
 	@echo "Utility:"
 	@echo "  list-kitchen-instances  # List all kitchen instances"
 	@echo "  update-roles            # Update test roles from parent directory"
-	@echo "  vagrant-up              # Bring up Vagrant VM using default Vagrantfile"
+	@echo "  vagrant-up              # Bring up Vagrant VM (default: stromweld/windows-11)"
+	@echo "  vagrant-up-disk         # Bring up VM with windows11-disk box (D: drive)"
+	@echo "  vagrant-up-baseline     # Bring up VM with windows11-tomcat112 box"
 	@echo "  vagrant-disk-setup      # Initialize and format D: drive"
 	@echo "  vagrant-build-baseline  # Build baseline box with D: drive + Tomcat + Java"
 	@echo "  vagrant-build-baseline-minimal # Build minimal box with D: drive only"
@@ -81,6 +83,14 @@ list-kitchen-instances:
 .PHONY: vagrant-up
 vagrant-up:
 	vagrant up
+
+.PHONY: vagrant-up-disk
+vagrant-up-disk:
+	VAGRANT_BOX=windows11-disk vagrant up
+
+.PHONY: vagrant-up-baseline
+vagrant-up-baseline:
+	VAGRANT_BOX=windows11-tomcat112 vagrant up
 
 .PHONY: vagrant-update-baseline
 vagrant-update-baseline:

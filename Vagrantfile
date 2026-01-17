@@ -12,8 +12,10 @@ Vagrant.configure("2") do |config|
 
   # Every Vagrant development environment requires a box. You can search for
   # boxes at https://atlas.hashicorp.com/search.
-  config.vm.box = 'stromweld/windows-11'
-  # config.vm.box = 'gusztavvargadr/windows-11'
+  # Use VAGRANT_BOX env var to switch boxes:
+  #   VAGRANT_BOX=windows11-disk vagrant up    # Minimal box with D: drive
+  #   VAGRANT_BOX=windows11-tomcat112 vagrant up  # Full baseline box
+  config.vm.box = ENV.fetch('VAGRANT_BOX', 'stromweld/windows-11')
 
   config.vm.communicator = "winrm"
   config.winrm.username = "vagrant"
