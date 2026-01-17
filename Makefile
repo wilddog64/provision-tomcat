@@ -39,6 +39,8 @@ help:
 	@echo "  list-kitchen-instances  # List all kitchen instances"
 	@echo "  update-roles            # Update test roles from parent directory"
 	@echo "  vagrant-up              # Bring up Vagrant VM using default Vagrantfile"
+	@echo "  vagrant-disk-setup      # Initialize and format D: drive"
+	@echo "  vagrant-build-baseline  # Build baseline box with D: drive + Tomcat + Java"
 	@echo "  vagrant-update-baseline # Rebuild baseline Win11 + Tomcat 9.0.112 box"
 	@echo "  vagrant-upgrade-demo    # Run upgrade-only demo via Vagrantfile-upgrade (append KEEP to skip destroy)"
 	@echo "  vagrant-destroy         # Destroy current Vagrant VM (default Vagrantfile)"
@@ -94,6 +96,14 @@ vagrant-destroy:
 .PHONY: vagrant-destroy-upgrade
 vagrant-destroy-upgrade:
 	VAGRANT_VAGRANTFILE=Vagrantfile-upgrade vagrant destroy -f
+
+.PHONY: vagrant-disk-setup
+vagrant-disk-setup:
+	vagrant provision --provision-with disk_setup
+
+.PHONY: vagrant-build-baseline
+vagrant-build-baseline:
+	./bin/vagrant-build-baseline.sh
 
 # Test all suites on a platform
 define TEST_ALL_SUITES
