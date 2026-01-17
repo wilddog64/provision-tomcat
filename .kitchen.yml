@@ -69,6 +69,47 @@ platforms:
         ansible_user: vagrant
         ansible_password: vagrant
         ansible_host: 127.0.0.1
+  - name: win11-disk
+    driver_config:
+      box: windows11-disk
+      communicator: winrm
+    transport:
+      name: winrm
+      elevated: true
+      ssl_peer_verification: false
+      port: 5985
+      winrm_transport: :plaintext
+      ssl: false
+      connection_retries: 5
+      connection_retry_sleep: 10
+    provisioner:
+      name: ansible_push
+      hosts: test-kitchen
+      require_ansible_repo: true
+      playbook: tests/playbook.yml
+      roles_path: ..
+      ansible_version: latest
+      ansible_host_key_checking: false
+      ansible_galaxy_role_file: requirements.yml
+      idempotency_test: false
+      chef_bootstrap_url: null
+      ansible_verbosity: 2
+      require_windows_support: true
+      extra_vars:
+        env: stage2
+        extract_build_number: 16
+        extract_debug: 'False'
+        skip_migration: yes
+        ansible_connection: winrm
+        ansible_winrm_transport: basic
+        ansible_port: 5985
+        ansible_winrm_scheme: http
+        ansible_winrm_server_cert_validation: ignore
+        ansible_user: vagrant
+        ansible_password: vagrant
+        ansible_host: 127.0.0.1
+        install_drive: "D:"
+
   - name: win11-baseline
     driver_config:
       box: windows11-tomcat112
