@@ -20,7 +20,7 @@ else
   KITCHEN_CMD ?= kitchen
 endif
 
-PLATFORMS := win11 ubuntu-2404 rockylinux9
+PLATFORMS := win11 win11-disk ubuntu-2404 rockylinux9
 SUITES := default latest idempotence
 
 # Version variables for upgrade/downgrade testing
