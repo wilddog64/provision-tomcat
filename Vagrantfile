@@ -21,6 +21,33 @@ Vagrant.configure("2") do |config|
   config.winrm.transport = :plaintext
   config.winrm.basic_auth_only = true
 
+  # Add secondary disk for D: drive (default 50GB, override with VAGRANT_DISK_SIZE_GB)
+  disk_size_gb = ENV.fetch('VAGRANT_DISK_SIZE_GB', '50').to_i
+  config.vm.provider "virtualbox" do |vb|
+    disk_file = File.join(File.dirname(__FILE__), ".vagrant", "data_disk.vdi")
+    unless File.exist?(disk_file)
+      vb.customize ['createhd', '--filename', disk_file, '--size', disk_size_gb * 1024]
+    end
+    vb.customize ['storageattach', :id, '--storagectl', 'SATA Controller',
+                  '--port', 1, '--device', 0, '--type', 'hdd', '--medium', disk_file]
+  end
+
+  # Initialize and format D: drive (runs once on first boot)
+  config.vm.provision "disk_setup", type: "shell", run: "never" do |s|
+    s.inline = <<-POWERSHELL
+      $disk = Get-Disk | Where-Object PartitionStyle -eq 'RAW'
+      if ($disk) {
+        Write-Host "Initializing and formatting D: drive..."
+        $disk | Initialize-Disk -PartitionStyle GPT -PassThru |
+          New-Partition -DriveLetter D -UseMaximumSize |
+          Format-Volume -FileSystem NTFS -NewFileSystemLabel "Data" -Confirm:$false
+        Write-Host "D: drive created successfully"
+      } else {
+        Write-Host "No RAW disk found or D: drive already exists"
+      }
+    POWERSHELL
+  end
+
   common_env = {
     'ansible_connection'                   => 'winrm',
     'ansible_winrm_transport'              => 'basic',
