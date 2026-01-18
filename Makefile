@@ -219,7 +219,7 @@ test-upgrade-win11: update-roles
 
 
 .PHONY: test-upgrade-candidate-win11
-test-upgrade-candidate-win11: update-roles
+test-upgrade-candidate-win11: upgrade-cleanup-win11 update-roles
 	@rm -f .kitchen.local.yml
 	@echo "Preparing .kitchen.local.yml with candidate port forwarding..."
 	@printf '%s\n' \
