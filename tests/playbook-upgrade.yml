@@ -14,6 +14,49 @@
     java_temp_dir: "{{ install_drive }}/temp"
     tomcat_temp_dir: "{{ install_drive }}/temp"
 
+  pre_tasks:
+    - name: Gather facts
+      ansible.builtin.setup:
+      tags:
+        - always
+
+    - name: Debug install_drive value
+      debug:
+        msg: "install_drive = '{{ install_drive }}', ansible_os_family = '{{ ansible_os_family | default('unknown') }}'"
+      tags:
+        - always
+
+    # Initialize D: drive if needed (for win11-disk platform)
+    - name: "Initialize D: drive if RAW disk exists"
+      ansible.windows.win_powershell:
+        script: |
+          # First check if D: already exists
+          if (Test-Path "D:\") {
+            Write-Host "D: drive already exists"
+            $Ansible.Changed = $false
+            return
+          }
+
+          $disk = Get-Disk | Where-Object PartitionStyle -eq 'RAW'
+          if ($disk) {
+            Write-Host "Initializing and formatting D: drive..."
+            $disk | Initialize-Disk -PartitionStyle GPT -PassThru |
+              New-Partition -DriveLetter D -UseMaximumSize |
+              Format-Volume -FileSystem NTFS -NewFileSystemLabel "Data" -Confirm:$false
+            Write-Host "D: drive created successfully"
+            $Ansible.Changed = $true
+          } else {
+            Write-Host "No RAW disk found - listing all disks for debugging:"
+            Get-Disk | Format-Table -AutoSize
+            $Ansible.Changed = $false
+          }
+      when:
+        - ansible_os_family == 'Windows'
+        - install_drive is defined
+        - install_drive == 'D:'
+      tags:
+        - always
+
   tasks:
     - name: Determine which version to install based on run number
       set_fact:
