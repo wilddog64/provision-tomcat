@@ -228,8 +228,8 @@ test-upgrade-candidate-win11: upgrade-cleanup-win11 update-roles
 		'  - name: upgrade' \
 		'    driver:' \
 		"      network:" \
-		"        - ['forwarded_port', {guest: 8080, host: 8080, auto_correct: true}]" \
-		"        - ['forwarded_port', {guest: 9080, host: 9080, auto_correct: true}]" \
+		"        - ['forwarded_port', {guest: 8080, host: 18080, auto_correct: true}]" \
+		"        - ['forwarded_port', {guest: 9080, host: 19080, auto_correct: true}]" \
 	> .kitchen.local.yml
 	@echo
 	@echo "=== Testing Java + Tomcat upgrade (candidate mode) on Windows 11 (D: drive) ==="
@@ -246,8 +246,8 @@ test-upgrade-candidate-win11: upgrade-cleanup-win11 update-roles
 		'  - name: upgrade' \
 		'    driver:' \
 		"      network:" \
-		"        - ['forwarded_port', {guest: 8080, host: 8080, auto_correct: true}]" \
-		"        - ['forwarded_port', {guest: 9080, host: 9080, auto_correct: true}]" \
+		"        - ['forwarded_port', {guest: 8080, host: 18080, auto_correct: true}]" \
+		"        - ['forwarded_port', {guest: 9080, host: 19080, auto_correct: true}]" \
 		'    provisioner:' \
 		'      playbook: tests/playbook-upgrade.yml' \
 		'      extra_vars:' \
@@ -255,21 +255,24 @@ test-upgrade-candidate-win11: upgrade-cleanup-win11 update-roles
 		'        tomcat_auto_start: true' \
 		'        tomcat_candidate_enabled: true' \
 		'        tomcat_candidate_delegate: localhost' \
+		'        tomcat_candidate_delegate_port: 19080' \
 		'    verifier:' \
 		'      name: shell' \
 		'      command: |' \
-		'        echo "Waiting for Tomcat to respond on port 8080..."' \
-		'        for attempt in {1..10}; do' \
-		'          if curl --connect-timeout 5 --max-time 10 -f http://localhost:8080 >/dev/null 2>&1; then' \
+		'        echo "=== Verifying Tomcat from controller (localhost:18080) ===" ' \
+		'        echo "Testing port 18080 accessibility..." ' \
+		'        for attempt in 1 2 3 4 5 6 7 8 9 10; do' \
+		'          echo "Attempt $${attempt}/10: curl http://localhost:18080" ' \
+		'          HTTP_CODE=$$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 --max-time 10 http://localhost:18080 2>&1) ' \
+		'          echo "  HTTP response code: $${HTTP_CODE}" ' \
+		'          if [ "$${HTTP_CODE}" = "200" ] || [ "$${HTTP_CODE}" = "404" ]; then' \
+		'            echo "SUCCESS: Tomcat responded with $${HTTP_CODE}" ' \
 		'            exit 0' \
 		'          fi' \
-		'          if curl --connect-timeout 5 --max-time 10 http://localhost:8080 | grep -q "404"; then' \
-		'            exit 0' \
-		'          fi' \
-		'          echo "  attempt $${attempt}/10: still waiting..."' \
+		'          echo "  Waiting 10 seconds before retry..." ' \
 		'          sleep 10' \
 		'        done' \
-		'        echo "Tomcat failed to respond on port 8080" >&2' \
+		'        echo "FAILED: Tomcat did not respond on port 18080 after 10 attempts" >&2' \
 		'        exit 1' \
 		> .kitchen.local.yml
 	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) converge upgrade-win11-disk
