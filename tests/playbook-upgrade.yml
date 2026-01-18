@@ -22,7 +22,7 @@
 
     - name: Debug install_drive value
       debug:
-        msg: "install_drive = '{{ install_drive }}', ansible_os_family = '{{ ansible_os_family | default('unknown') }}'"
+        msg: "install_drive = '{{ install_drive }}', os_family = '{{ ansible_facts['os_family'] | default('unknown') }}'"
       tags:
         - always
 
@@ -51,7 +51,7 @@
             $Ansible.Changed = $false
           }
       when:
-        - ansible_os_family == 'Windows'
+        - ansible_facts['os_family'] == 'Windows'
         - install_drive is defined
         - install_drive == 'D:'
       tags:
