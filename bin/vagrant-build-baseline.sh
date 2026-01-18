@@ -86,16 +86,48 @@ fi
 echo "==> Packaging box..."
 run_cmd vagrant halt
 
+# Detach secondary disk before packaging (it's not included in the box anyway)
+# This prevents "VERR_FILE_NOT_FOUND" errors during export
+echo "    Detaching secondary disk from VM..."
+VM_ID=$(cat .vagrant/machines/default/virtualbox/id 2>/dev/null || true)
+if [[ -n "$VM_ID" ]]; then
+  VBoxManage storageattach "$VM_ID" --storagectl "SATA Controller" --port 1 --device 0 --medium none 2>/dev/null || true
+fi
+
+# Clean up the disk file and VirtualBox registration
+DISK_FILE="$ROOT_DIR/.vagrant/data_disk.vdi"
+if [[ -f "$DISK_FILE" ]]; then
+  # Get UUID and close medium
+  DISK_UUID=$(VBoxManage showmediuminfo "$DISK_FILE" 2>/dev/null | grep "^UUID:" | awk '{print $2}' || true)
+  if [[ -n "$DISK_UUID" ]]; then
+    VBoxManage closemedium disk "$DISK_UUID" --delete 2>/dev/null || true
+  else
+    rm -f "$DISK_FILE"
+  fi
+fi
+# Also clean up any stale registration without file
+./bin/vbox-cleanup-disks.sh 2>/dev/null || true
+
 # Note: The secondary disk is NOT included in the packaged box by default.
 # The box will have the D: drive configured but empty on first use.
 run_cmd vagrant package --output "$OUTPUT_BOX"
 
+echo "==> Adding box to Vagrant..."
+# Remove existing box if present (cleanup stale box)
+if vagrant box list | grep -q "^${BOX_NAME} "; then
+  echo "    Removing existing box: $BOX_NAME"
+  vagrant box remove "$BOX_NAME" --all --force 2>/dev/null || true
+fi
+
+# Add the new box
+vagrant box add "$BOX_NAME" "$OUTPUT_BOX"
+
 cat <<MSG
 
-Baseline box created: $OUTPUT_BOX
+Baseline box created and added: $BOX_NAME
 
-Add it via:
-  vagrant box add $BOX_NAME "$OUTPUT_BOX"
+The box is now ready to use. You can verify with:
+  vagrant box list | grep $BOX_NAME
 
 Note: The D: drive configuration is included, but the disk itself is created
 fresh on first 'vagrant up'. Run 'vagrant provision --provision-with disk_setup'
