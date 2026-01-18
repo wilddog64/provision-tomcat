@@ -260,18 +260,19 @@ test-upgrade-candidate-win11: upgrade-cleanup-win11 update-roles
 		'      name: shell' \
 		'      command: |' \
 		'        echo "=== Verifying Tomcat from controller (localhost:18080) ===" ' \
-		'        echo "Testing port 18080 accessibility..." ' \
 		'        for attempt in 1 2 3 4 5 6 7 8 9 10; do' \
-		'          echo "Attempt $${attempt}/10: curl http://localhost:18080" ' \
-		'          HTTP_CODE=$$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 --max-time 10 http://localhost:18080 2>&1) ' \
-		'          echo "  HTTP response code: $${HTTP_CODE}" ' \
-		'          if [ "$${HTTP_CODE}" = "200" ] || [ "$${HTTP_CODE}" = "404" ]; then' \
-		'            echo "SUCCESS: Tomcat responded with $${HTTP_CODE}" ' \
+		'          echo "" ' \
+		'          echo "--- Attempt $${attempt}/10 ---" ' \
+		'          echo "curl -v --connect-timeout 5 --max-time 10 http://localhost:18080" ' \
+		'          if curl -v --connect-timeout 5 --max-time 10 http://localhost:18080 2>&1; then' \
+		'            echo "" ' \
+		'            echo "SUCCESS: Tomcat responded on port 18080" ' \
 		'            exit 0' \
 		'          fi' \
 		'          echo "  Waiting 10 seconds before retry..." ' \
 		'          sleep 10' \
 		'        done' \
+		'        echo "" ' \
 		'        echo "FAILED: Tomcat did not respond on port 18080 after 10 attempts" >&2' \
 		'        exit 1' \
 		> .kitchen.local.yml
