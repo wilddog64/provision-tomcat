@@ -42,12 +42,16 @@ help:
 	@echo "  vagrant-up-disk         # Bring up VM with windows11-disk box (D: drive)"
 	@echo "  vagrant-up-baseline     # Bring up VM with windows11-tomcat112 box"
 	@echo "  vagrant-disk-setup      # Initialize and format D: drive"
+	@echo "  vagrant-provision       # Provision Tomcat + Java (default playbook)"
+	@echo "  vagrant-provision-step1 # Provision older Tomcat 9.0.112 + Java 17"
+	@echo "  vagrant-provision-step2 # Provision newer Tomcat 9.0.113 + Java 21"
 	@echo "  vagrant-build-baseline  # Build baseline box with D: drive + Tomcat + Java"
 	@echo "  vagrant-build-baseline-minimal # Build minimal box with D: drive only"
 	@echo "  vagrant-update-baseline # Rebuild baseline Win11 + Tomcat 9.0.112 box"
 	@echo "  vagrant-upgrade-demo    # Run upgrade-only demo via Vagrantfile-upgrade (append KEEP to skip destroy)"
 	@echo "  vagrant-destroy         # Destroy current Vagrant VM (default Vagrantfile)"
 	@echo "  vagrant-destroy-upgrade # Destroy VM defined by Vagrantfile-upgrade"
+	@echo "  vbox-cleanup-disks      # Clean up stale VirtualBox disk registrations"
 	@echo ""
 	@echo "Quick test (default suite):"
 	@$(foreach p,$(PLATFORMS),echo "  test-$(p)           # kitchen test default-$(p)" &&) true
@@ -81,7 +85,7 @@ list-kitchen-instances:
 	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) list
 
 .PHONY: vagrant-up
-vagrant-up:
+vagrant-up: vbox-cleanup-disks
 	vagrant up
 
 .PHONY: vagrant-up-disk
@@ -108,16 +112,32 @@ vagrant-destroy:
 vagrant-destroy-upgrade:
 	VAGRANT_VAGRANTFILE=Vagrantfile-upgrade vagrant destroy -f
 
+.PHONY: vbox-cleanup-disks
+vbox-cleanup-disks:
+	./bin/vbox-cleanup-disks.sh
+
 .PHONY: vagrant-disk-setup
 vagrant-disk-setup:
 	vagrant provision --provision-with disk_setup
 
+.PHONY: vagrant-provision
+vagrant-provision:
+	vagrant provision --provision-with ansible
+
+.PHONY: vagrant-provision-step1
+vagrant-provision-step1:
+	vagrant provision --provision-with ansible_upgrade_step1
+
+.PHONY: vagrant-provision-step2
+vagrant-provision-step2:
+	vagrant provision --provision-with ansible_upgrade_step2
+
 .PHONY: vagrant-build-baseline
-vagrant-build-baseline:
+vagrant-build-baseline: vbox-cleanup-disks
 	./bin/vagrant-build-baseline.sh
 
 .PHONY: vagrant-build-baseline-minimal
-vagrant-build-baseline-minimal:
+vagrant-build-baseline-minimal: vbox-cleanup-disks
 	./bin/vagrant-build-baseline.sh --disk-only
 
 # Test all suites on a platform
@@ -212,11 +232,11 @@ test-upgrade-candidate-win11: update-roles
 		"        - ['forwarded_port', {guest: 9080, host: 9080, auto_correct: true}]" \
 	> .kitchen.local.yml
 	@echo
-	@echo "=== Testing Java + Tomcat upgrade (candidate mode) on Windows 11 ==="
+	@echo "=== Testing Java + Tomcat upgrade (candidate mode) on Windows 11 (D: drive) ==="
 	@echo "Step 1: Installing Java 17 + Tomcat 9.0.112..."
-	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) create upgrade-win11
-	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) converge upgrade-win11
-	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) verify upgrade-win11 || true
+	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) create upgrade-win11-disk
+	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) converge upgrade-win11-disk
+	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) verify upgrade-win11-disk || true
 	@echo ""
 	@echo "Step 2: Upgrading to Java 21 + Tomcat 9.0.113 with candidate workflow..."
 	@echo "Updating .kitchen.local.yml for candidate testing..."
@@ -252,15 +272,15 @@ test-upgrade-candidate-win11: update-roles
 		'        echo "Tomcat failed to respond on port 8080" >&2' \
 		'        exit 1' \
 		> .kitchen.local.yml
-	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) converge upgrade-win11
-	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) verify upgrade-win11
+	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) converge upgrade-win11-disk
+	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) verify upgrade-win11-disk
 	@rm -f .kitchen.local.yml
 	@echo ""
 	@echo "Candidate upgrade test complete!"
 
 .PHONY: upgrade-cleanup-win11
 upgrade-cleanup-win11:
-	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) destroy upgrade-win11 || true
+	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) destroy upgrade-win11-disk || true
 
 .PHONY: test-upgrade-baseline-win11
 test-upgrade-baseline-win11: update-roles
