@@ -7,8 +7,8 @@
   become: no
 
   vars:
-    # Install paths - override with install_drive to use D: drive
-    install_drive: "{{ install_drive | default('C:') }}"
+    # Install paths - override with -e install_drive=D: to use D: drive
+    install_drive: "D:"
     java_install_base_dir: "{{ install_drive }}/java"
     tomcat_install_dir: "{{ install_drive }}/Tomcat"
     java_temp_dir: "{{ install_drive }}/temp"
