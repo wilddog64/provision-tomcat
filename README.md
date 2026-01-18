@@ -281,6 +281,7 @@ This role uses Test Kitchen with Vagrant for automated testing.
 - **[Testing Upgrades](docs/TESTING-UPGRADES.md)** - Upgrade and downgrade testing procedures
 - **[Zero-Downtime Upgrades](docs/ZERO-DOWNTIME-UPGRADES.md)** - Candidate workflow details
 - **[Candidate Troubleshooting](docs/CANDIDATE-TROUBLESHOOTING.md)** - Common issues and fixes while exercising the candidate workflow
+- **[VirtualBox Stale Disks](docs/issues/VIRTUALBOX-STALE-DISKS.md)** - Fix for `VERR_ALREADY_EXISTS` errors when creating disks
 - **[Controller Lookup Plugins](docs/plugins/CONTROLLER-LOOKUP-PLUGINS.md)** - How the controller-side port/HTTP checks work
 
 ### Test Suites
@@ -509,6 +510,17 @@ If an upgrade fails:
    - Set `tomcat_version` to desired version
    - Destroy and recreate VM
    - Re-run playbook
+
+### VirtualBox Disk Errors
+
+If you see `VERR_ALREADY_EXISTS` when creating VMs with D: drive:
+
+```bash
+# Clean up stale disk registrations
+make vbox-cleanup-disks
+```
+
+See **[VirtualBox Stale Disks](docs/issues/VIRTUALBOX-STALE-DISKS.md)** for details.
 
 ## Dependencies
 
