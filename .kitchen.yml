@@ -45,6 +45,7 @@ platforms:
       connection_retry_sleep: 10
     provisioner:
       name: ansible_push
+      ansible_playbook_bin: <%= Dir.glob("#{Dir.pwd}/.direnv/python-*/bin/ansible-playbook").first %>
       hosts: test-kitchen
       require_ansible_repo: true
       playbook: tests/playbook.yml
@@ -70,9 +71,13 @@ platforms:
         ansible_password: vagrant
         ansible_host: 127.0.0.1
   - name: win11-disk
+    driver:
+      provision: true  # Run Vagrant provisioners (disk_setup) during kitchen create
     driver_config:
-      box: windows11-disk
+      box: stromweld/windows-11
       communicator: winrm
+      vagrantfiles:
+        - /Users/cliang/src/gitrepo/personal/ansible/provision-tomcat/vagrant/Vagrantfile-disk.rb
     transport:
       name: winrm
       elevated: true
@@ -84,6 +89,7 @@ platforms:
       connection_retry_sleep: 10
     provisioner:
       name: ansible_push
+      ansible_playbook_bin: <%= Dir.glob("#{Dir.pwd}/.direnv/python-*/bin/ansible-playbook").first %>
       hosts: test-kitchen
       require_ansible_repo: true
       playbook: tests/playbook.yml
@@ -125,6 +131,7 @@ platforms:
       connection_retry_sleep: 10
     provisioner:
       name: ansible_push
+      ansible_playbook_bin: <%= Dir.glob("#{Dir.pwd}/.direnv/python-*/bin/ansible-playbook").first %>
       hosts: test-kitchen
       require_ansible_repo: true
       playbook: tests/playbook.yml
