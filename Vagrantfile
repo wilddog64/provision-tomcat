@@ -27,15 +27,26 @@ Vagrant.configure("2") do |config|
   disk_size_gb = ENV.fetch('VAGRANT_DISK_SIZE_GB', '50').to_i
   config.vm.provider "virtualbox" do |vb|
     disk_file = File.join(File.dirname(__FILE__), ".vagrant", "data_disk.vdi")
+
+    # Clean up stale VirtualBox registration if file doesn't exist but is still registered
     unless File.exist?(disk_file)
+      # Check if disk is registered in VirtualBox and remove stale entry
+      vbox_list = `VBoxManage list hdds 2>/dev/null`
+      if vbox_list.include?(disk_file)
+        # Extract UUID and close the medium
+        uuid_match = vbox_list.match(/UUID:\s+([a-f0-9-]+).*?Location:\s+#{Regexp.escape(disk_file)}/m)
+        if uuid_match
+          system("VBoxManage closemedium disk #{uuid_match[1]} --delete 2>/dev/null")
+        end
+      end
       vb.customize ['createhd', '--filename', disk_file, '--size', disk_size_gb * 1024]
     end
     vb.customize ['storageattach', :id, '--storagectl', 'SATA Controller',
                   '--port', 1, '--device', 0, '--type', 'hdd', '--medium', disk_file]
   end
 
-  # Initialize and format D: drive (runs once on first boot)
-  config.vm.provision "disk_setup", type: "shell", run: "never" do |s|
+  # Initialize and format D: drive (runs automatically on first boot)
+  config.vm.provision "disk_setup", type: "shell" do |s|
     s.inline = <<-POWERSHELL
       $disk = Get-Disk | Where-Object PartitionStyle -eq 'RAW'
       if ($disk) {
@@ -55,6 +66,7 @@ Vagrant.configure("2") do |config|
     'ansible_winrm_transport'              => 'basic',
     'ansible_winrm_server_cert_validation' => 'ignore',
     'ansible_winrm_scheme'                 => 'http',
+    'install_drive'                        => 'D:',
   }
 
   # default playbook for simple testing
