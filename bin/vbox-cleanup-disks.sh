@@ -1,0 +1,97 @@
+#!/bin/bash
+# Clean up stale VirtualBox disk registrations
+# Usage: ./bin/vbox-cleanup-disks.sh [--dry-run]
+
+set -e
+
+DRY_RUN=false
+if [[ "$1" == "--dry-run" ]]; then
+  DRY_RUN=true
+  echo "=== DRY RUN MODE ==="
+fi
+
+echo "Checking for stale VirtualBox disk registrations..."
+
+# Get list of registered hard disks
+disks_output=$(VBoxManage list hdds 2>/dev/null || true)
+
+if [[ -z "$disks_output" ]]; then
+  echo "No disks registered in VirtualBox."
+  exit 0
+fi
+
+# Parse disk entries
+current_uuid=""
+current_location=""
+current_state=""
+found_stale=false
+
+while IFS= read -r line; do
+  if [[ "$line" =~ ^UUID:\ +(.+) ]]; then
+    current_uuid="${BASH_REMATCH[1]}"
+  elif [[ "$line" =~ ^Location:\ +(.+) ]]; then
+    current_location="${BASH_REMATCH[1]}"
+  elif [[ "$line" =~ ^State:\ +(.+) ]]; then
+    current_state="${BASH_REMATCH[1]}"
+
+    # Check if this disk is stale (inaccessible or file doesn't exist)
+    if [[ "$current_state" == "inaccessible" ]] || [[ ! -f "$current_location" ]]; then
+      found_stale=true
+      echo ""
+      echo "Found stale disk:"
+      echo "  UUID: $current_uuid"
+      echo "  Location: $current_location"
+      echo "  State: $current_state"
+
+      if [[ "$DRY_RUN" == "true" ]]; then
+        echo "  [DRY RUN] Would remove this disk"
+      else
+        # Try to close the medium
+        if VBoxManage closemedium disk "$current_uuid" --delete 2>/dev/null; then
+          echo "  ✓ Removed successfully"
+        else
+          # If that fails, it might be attached to a VM - try to find and detach
+          echo "  Disk is attached to a VM, attempting to detach..."
+
+          # Find which VM has this disk
+          for vm in $(VBoxManage list vms 2>/dev/null | grep -o '"\K[^"]+(?=")'); do
+            vm_info=$(VBoxManage showvminfo "$vm" 2>/dev/null || true)
+            if echo "$vm_info" | grep -q "$current_uuid"; then
+              echo "  Found attached to VM: $vm"
+
+              # Find the port number
+              port=$(echo "$vm_info" | grep -B1 "$current_uuid" | grep -o 'Port \K\d+' | head -1)
+              if [[ -n "$port" ]]; then
+                echo "  Detaching from SATA Controller port $port..."
+                if VBoxManage storageattach "$vm" --storagectl "SATA Controller" --port "$port" --device 0 --medium none 2>/dev/null; then
+                  echo "  ✓ Detached from VM"
+                else
+                  echo "  ⚠ Failed to detach (VM might be running)"
+                fi
+              fi
+            fi
+          done
+
+          # Try again to close the medium
+          if VBoxManage closemedium disk "$current_uuid" --delete 2>/dev/null; then
+            echo "  ✓ Removed successfully"
+          else
+            echo "  ✗ Failed to remove. You may need to stop the VM first."
+          fi
+        fi
+      fi
+    fi
+
+    # Reset for next entry
+    current_uuid=""
+    current_location=""
+    current_state=""
+  fi
+done <<< "$disks_output"
+
+if [[ "$found_stale" == "false" ]]; then
+  echo "No stale disks found."
+fi
+
+echo ""
+echo "Done."
