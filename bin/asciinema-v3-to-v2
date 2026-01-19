@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Wrapper script for asciinema-v3-to-v2.py
+# Converts asciinema v3 format to v2 for use with svg-term-cli
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+exec python3 "${SCRIPT_DIR}/asciinema-v3-to-v2.py" "$@"
