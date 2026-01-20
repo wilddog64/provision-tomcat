@@ -273,17 +273,30 @@ The role includes built-in verification tasks:
 
 The test playbook (`tests/playbook.yml`) includes additional verification from the host machine.
 
-## Local Testing
+## Makefile Targets
 
-This role uses Test Kitchen with Vagrant for automated testing.
+Run `make help` for all available targets:
 
 ### Validation
 
-Run validation checks (linting, syntax):
+```bash
+make setup          # Verify and setup development environment
+make lint           # Run ansible-lint
+make syntax         # Check playbook syntax
+make check          # Run all validation checks
+```
+
+### Utilities
 
 ```bash
-make check
+make deps             # Install Ansible collections
+make list-kitchen-instances  # List kitchen instances
+make destroy-all      # Destroy all kitchen instances
 ```
+
+## Local Testing
+
+This role uses Test Kitchen with Vagrant for automated testing.
 
 **Documentation**:
 - **[Development Environment Setup](docs/DEVELOPMENT-SETUP.md)** - First-time setup and prerequisites
