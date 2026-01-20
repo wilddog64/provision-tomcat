@@ -11,3 +11,4 @@ roles/
 scratch/
 boxes/
 __pycache__/
+.claude/
