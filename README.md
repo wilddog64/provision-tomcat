@@ -277,6 +277,14 @@ The test playbook (`tests/playbook.yml`) includes additional verification from t
 
 This role uses Test Kitchen with Vagrant for automated testing.
 
+### Validation
+
+Run validation checks (linting, syntax):
+
+```bash
+make check
+```
+
 **Documentation**:
 - **[Development Environment Setup](docs/DEVELOPMENT-SETUP.md)** - First-time setup and prerequisites
 - **[Test Kitchen Guide](docs/TEST-KITCHEN.md)** - Using Test Kitchen for testing
@@ -533,9 +541,13 @@ This role requires:
    - `ansible.windows`
    - `community.windows`
 
-Install collections:
+Install collections (installs to `./collections`):
 ```bash
-ansible-galaxy collection install ansible.windows community.windows
+# Use Make (recommended)
+make deps
+
+# Or manually
+ansible-galaxy collection install ansible.windows community.windows -p ./collections
 ```
 
 ## License
