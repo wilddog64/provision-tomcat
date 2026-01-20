@@ -31,9 +31,43 @@ TOMCAT_NEW_VERSION ?= 9.0.113
 
 .DEFAULT_GOAL := help
 
+# ============================================================================ 
+# Validation Targets
+# ============================================================================ 
+.PHONY: lint
+lint:
+	@echo "Running ansible-lint..."
+	ansible-lint .
+
+.PHONY: syntax
+syntax:
+	@echo "Checking playbook syntax..."
+	ansible-playbook --syntax-check tests/playbook.yml -i tests/inventory
+
+.PHONY: check
+check: lint syntax
+	@echo "All validation checks passed."
+
+# ============================================================================ 
+# Utility Targets
+# ============================================================================ 
+.PHONY: deps
+deps:
+	@echo "Installing Ansible collections..."
+	ansible-galaxy collection install ansible.windows chocolatey.chocolatey -p ./collections --force
+
+# ============================================================================ 
+# Help
+# ============================================================================ 
 .PHONY: help
 help:
 	@echo "Available targets (auto KITCHEN_YAML=$(KITCHEN_YAML)):"
+	@echo ""
+	@echo "Validation:"
+	@echo "  lint                # Run ansible-lint"
+	@echo "  syntax              # Check playbook syntax"
+	@echo "  check               # Run all validation checks"
+	@echo "  deps                # Install Ansible collections to ./collections"
 	@echo ""
 	@echo "Utility:"
 	@echo "  list-kitchen-instances  # List all kitchen instances"
@@ -217,7 +251,6 @@ test-upgrade-win11: update-roles
 	@echo "Upgrade test complete!"
 
 
-
 .PHONY: test-upgrade-candidate-win11
 test-upgrade-candidate-win11: upgrade-cleanup-win11 update-roles
 	@rm -f .kitchen.local.yml
@@ -228,8 +261,8 @@ test-upgrade-candidate-win11: upgrade-cleanup-win11 update-roles
 		'  - name: upgrade' \
 		'    driver:' \
 		"      network:" \
-		"        - ['forwarded_port', {guest: 8080, host: 18080, auto_correct: true}]" \
-		"        - ['forwarded_port', {guest: 9080, host: 19080, auto_correct: true}]" \
+		"        - [\'forwarded_port\', {guest: 8080, host: 18080, auto_correct: true}]" \
+		"        - [\'forwarded_port\', {guest: 9080, host: 19080, auto_correct: true}]" \
 	> .kitchen.local.yml
 	@echo
 	@echo "=== Testing Java + Tomcat upgrade (candidate mode) on Windows 11 (D: drive) ==="
@@ -246,8 +279,8 @@ test-upgrade-candidate-win11: upgrade-cleanup-win11 update-roles
 		'  - name: upgrade' \
 		'    driver:' \
 		"      network:" \
-		"        - ['forwarded_port', {guest: 8080, host: 18080, auto_correct: true}]" \
-		"        - ['forwarded_port', {guest: 9080, host: 19080, auto_correct: true}]" \
+		"        - [\'forwarded_port\', {guest: 8080, host: 18080, auto_correct: true}]" \
+		"        - [\'forwarded_port\', {guest: 9080, host: 19080, auto_correct: true}]" \
 		'    provisioner:' \
 		'      playbook: tests/playbook-upgrade.yml' \
 		'      extra_vars:' \
@@ -275,7 +308,7 @@ test-upgrade-candidate-win11: upgrade-cleanup-win11 update-roles
 		'        echo "" ' \
 		'        echo "FAILED: Tomcat did not respond on port 18080 after 10 attempts" >&2' \
 		'        exit 1' \
-		> .kitchen.local.yml
+	> .kitchen.local.yml
 	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) converge upgrade-win11-disk
 	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) verify upgrade-win11-disk
 	@rm -f .kitchen.local.yml
