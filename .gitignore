@@ -18,3 +18,8 @@ Gemfile.lock
 .direnv/
 collections/
 .ansible/
+.vagrant.d/
+boxes/
+__pycache__/
+scratch/
+tests/roles/
