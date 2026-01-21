@@ -44,7 +44,17 @@ install_ruby_deps() {
     log_info "Installing Ruby dependencies (for Test Kitchen)..."
     if [[ -f "$PROJECT_DIR/Gemfile" ]]; then
         cd "$PROJECT_DIR"
-        bundle install
+        if command -v rbenv &> /dev/null; then
+             log_info "Using rbenv..."
+             # Ensure bundler is installed in the current ruby version
+             if ! rbenv exec command -v bundle &> /dev/null; then
+                 log_info "Installing bundler..."
+                 rbenv exec gem install bundler
+             fi
+             rbenv exec bundle install
+        else
+             bundle install
+        fi
     fi
 }
 
