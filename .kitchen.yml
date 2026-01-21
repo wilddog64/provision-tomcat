@@ -29,7 +29,7 @@ platforms:
       box: hashicorp-education/ubuntu-24-04
   - name: rockylinux9
     driver_config:
-      box: rockylinux/9
+      box: bento/rockylinux-9
   - name: win11
     driver_config:
       box: stromweld/windows-11
