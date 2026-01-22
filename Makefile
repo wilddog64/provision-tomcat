@@ -85,9 +85,11 @@ help:
 	@echo "Utility:"
 	@echo "  list-kitchen-instances  # List all kitchen instances"
 	@echo "  update-roles            # Update test roles from parent directory"
-	@echo "  vagrant-up              # Bring up Vagrant VM (default: stromweld/windows-11)"
+	@echo "  vagrant-up              # Re-create and start Vagrant VM (default: stromweld/windows-11)"
 	@echo "  vagrant-up-disk         # Bring up VM with windows11-disk box (D: drive)"
 	@echo "  vagrant-up-baseline     # Bring up VM with windows11-tomcat112 box"
+	@echo "  vagrant-login           # PowerShell into Vagrant VM"
+	@echo "  vagrant-ssh             # Alias for vagrant-login"
 	@echo "  vagrant-disk-setup      # Initialize and format D: drive"
 	@echo "  vagrant-provision       # Provision Tomcat + Java (default playbook)"
 	@echo "  vagrant-provision-step1 # Provision older Tomcat 9.0.112 + Java 17"
@@ -99,6 +101,7 @@ help:
 	@echo "  vagrant-destroy         # Destroy current Vagrant VM (default Vagrantfile)"
 	@echo "  vagrant-destroy-upgrade # Destroy VM defined by Vagrantfile-upgrade"
 	@echo "  vbox-cleanup-disks      # Clean up stale VirtualBox disk registrations"
+	@echo "  fix-vbox-locks          # Fix locked/stuck VirtualBox VMs"
 	@echo ""
 	@echo "Quick test (default suite):"
 	@$(foreach p,$(PLATFORMS),echo "  test-$(p)           # kitchen test default-$(p)" &&) true
@@ -132,8 +135,15 @@ list-kitchen-instances:
 	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) list
 
 .PHONY: vagrant-up
-vagrant-up: vbox-cleanup-disks
+vagrant-up: vagrant-destroy vbox-cleanup-disks
 	vagrant up
+
+.PHONY: vagrant-login
+vagrant-login:
+	vagrant powershell
+
+.PHONY: vagrant-ssh
+vagrant-ssh: vagrant-login
 
 .PHONY: vagrant-up-disk
 vagrant-up-disk:
@@ -162,6 +172,29 @@ vagrant-destroy-upgrade:
 .PHONY: vbox-cleanup-disks
 vbox-cleanup-disks:
 	./bin/vbox-cleanup-disks.sh
+
+.PHONY: fix-vbox-locks
+fix-vbox-locks:
+	@echo "Checking for locked VirtualBox VMs..."
+	@pids=$$(ps aux | grep VBoxHeadless | grep "provision-tomcat" | grep -v grep | awk '{print $$2}'); \
+	if [ -n "$$pids" ]; then \
+		echo "Found hung VBoxHeadless process(es): $$pids"; \
+		echo "Killing..."; \
+		kill -9 $$pids; \
+	else \
+		echo "No hung VBox processes found."; \
+	fi
+	@echo "Cleaning up stuck VMs..."
+	@vms=$$(VBoxManage list vms | grep "provision-tomcat" | grep -o '{\(.*\)}' | tr -d '{}'); \
+	for uuid in $$vms; do \
+		echo "Checking VM: $$uuid"; \
+		state=$$(VBoxManage showvminfo $$uuid --machinereadable | grep '^VMState=' | cut -d'"' -f2); \
+		if [ "$$state" = "aborted" ] || [ "$$state" = "stopping" ]; then \
+			echo "  VM in bad state ($$state). Unregistering..."; \
+			VBoxManage unregistervm $$uuid --delete || true; \
+		fi; \
+	done
+	@echo "Done."
 
 .PHONY: vagrant-disk-setup
 vagrant-disk-setup:
