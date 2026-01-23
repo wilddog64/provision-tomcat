@@ -2,10 +2,7 @@
 
 ![Demo](docs/recordings/provision-tmcat.gif)
 
-## Recordings
-
-### Building Baseline Box
-![Building Baseline](docs/recordings/building-basebox.gif)
+[View more recordings and demos](docs/recordings/README.md)
 
 This Ansible role installs Apache Tomcat on Windows hosts by downloading the official Tomcat zip archive directly from Apache mirrors. It handles installation, upgrades, Windows service configuration, and firewall rules.
 
