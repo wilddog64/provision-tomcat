@@ -31,16 +31,65 @@ TOMCAT_NEW_VERSION ?= 9.0.113
 
 .DEFAULT_GOAL := help
 
+# ============================================================================ 
+# Validation Targets
+# ============================================================================ 
+.PHONY: lint
+lint: deps
+	@echo "Running ansible-lint..."
+	ansible-lint .
+
+.PHONY: syntax
+syntax: deps
+	@echo "Checking playbook syntax..."
+	ansible-playbook --syntax-check tests/playbook.yml -i tests/inventory
+
+.PHONY: check
+check: lint syntax
+	@echo "All validation checks passed."
+
+# ============================================================================
+
+# Utility Targets
+
+# ============================================================================ 
+
+.PHONY: setup
+
+setup:
+
+	@./scripts/setup.sh all
+
+
+
+.PHONY: deps
+
+
+deps:
+	@echo "Installing Ansible collections..."
+	ansible-galaxy collection install ansible.windows chocolatey.chocolatey -p ./collections
+
+# ============================================================================ 
+# Help
+# ============================================================================ 
 .PHONY: help
 help:
-	@echo "Available targets (auto KITCHEN_YAML=$(KITCHEN_YAML)):"
+	@echo "Available targets (auto KITCHEN_YAML=$(KITCHEN_YAML)):".
+	@echo ""
+	@echo "Validation:"
+	@echo "  lint                # Run ansible-lint"
+	@echo "  syntax              # Check playbook syntax"
+	@echo "  check               # Run all validation checks"
+	@echo "  deps                # Install Ansible collections to ./collections"
 	@echo ""
 	@echo "Utility:"
 	@echo "  list-kitchen-instances  # List all kitchen instances"
 	@echo "  update-roles            # Update test roles from parent directory"
-	@echo "  vagrant-up              # Bring up Vagrant VM (default: stromweld/windows-11)"
+	@echo "  vagrant-up              # Re-create and start Vagrant VM (default: stromweld/windows-11)"
 	@echo "  vagrant-up-disk         # Bring up VM with windows11-disk box (D: drive)"
 	@echo "  vagrant-up-baseline     # Bring up VM with windows11-tomcat112 box"
+	@echo "  vagrant-login           # PowerShell into Vagrant VM"
+	@echo "  vagrant-ssh             # Alias for vagrant-login"
 	@echo "  vagrant-disk-setup      # Initialize and format D: drive"
 	@echo "  vagrant-provision       # Provision Tomcat + Java (default playbook)"
 	@echo "  vagrant-provision-step1 # Provision older Tomcat 9.0.112 + Java 17"
@@ -52,6 +101,7 @@ help:
 	@echo "  vagrant-destroy         # Destroy current Vagrant VM (default Vagrantfile)"
 	@echo "  vagrant-destroy-upgrade # Destroy VM defined by Vagrantfile-upgrade"
 	@echo "  vbox-cleanup-disks      # Clean up stale VirtualBox disk registrations"
+	@echo "  fix-vbox-locks          # Fix locked/stuck VirtualBox VMs"
 	@echo ""
 	@echo "Quick test (default suite):"
 	@$(foreach p,$(PLATFORMS),echo "  test-$(p)           # kitchen test default-$(p)" &&) true
@@ -80,13 +130,23 @@ help:
 	@echo "Override KITCHEN_YAML=/path/to/.kitchen.yml when needed."
 	@echo "See TESTING-UPGRADES.md for detailed upgrade testing documentation."
 
+# Build extra vars for Ansible
+EXTRA_VARS := $(if $(ADO_PAT_TOKEN),ado_pat_token=$(ADO_PAT_TOKEN),)
+
 .PHONY: list-kitchen-instances
 list-kitchen-instances:
 	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) list
 
 .PHONY: vagrant-up
-vagrant-up: vbox-cleanup-disks
+vagrant-up: vagrant-destroy vbox-cleanup-disks
 	vagrant up
+
+.PHONY: vagrant-login
+vagrant-login:
+	vagrant powershell
+
+.PHONY: vagrant-ssh
+vagrant-ssh: vagrant-login
 
 .PHONY: vagrant-up-disk
 vagrant-up-disk:
@@ -98,11 +158,11 @@ vagrant-up-baseline:
 
 .PHONY: vagrant-update-baseline
 vagrant-update-baseline:
-	./bin/vagrant-update-baseline.sh
+	./bin/vagrant-update-baseline
 
 .PHONY: vagrant-upgrade-demo
 vagrant-upgrade-demo:
-	./bin/vagrant-upgrade-demo.sh $(if $(KEEP),--keep,)
+	./bin/vagrant-upgrade-demo $(if $(KEEP),--keep,)
 
 .PHONY: vagrant-destroy
 vagrant-destroy:
@@ -114,43 +174,66 @@ vagrant-destroy-upgrade:
 
 .PHONY: vbox-cleanup-disks
 vbox-cleanup-disks:
-	./bin/vbox-cleanup-disks.sh
+	./bin/vbox-cleanup-disks
+
+.PHONY: fix-vbox-locks
+fix-vbox-locks:
+	@echo "Checking for locked VirtualBox VMs..."
+	@pids=$$(ps aux | grep VBoxHeadless | grep "provision-tomcat" | grep -v grep | awk '{print $$2}'); \
+	if [ -n "$$pids" ]; then \
+		echo "Found hung VBoxHeadless process(es): $$pids"; \
+		echo "Killing..."; \
+		kill -9 $$pids; \
+	else \
+		echo "No hung VBox processes found."; \
+	fi
+	@echo "Cleaning up stuck VMs..."
+	@vms=$$(VBoxManage list vms | grep "provision-tomcat" | grep -o '{\(.*\)}' | tr -d '{}'); \
+	for uuid in $$vms; do \
+		echo "Checking VM: $$uuid"; \
+		state=$$(VBoxManage showvminfo $$uuid --machinereadable | grep '^VMState=' | cut -d'"' -f2); \
+		if [ "$$state" = "aborted" ] || [ "$$state" = "stopping" ]; then \
+			echo "  VM in bad state ($$state). Unregistering..."; \
+			VBoxManage unregistervm $$uuid --delete || true; \
+		fi; \
+	done
+	@echo "Done."
 
 .PHONY: vagrant-disk-setup
 vagrant-disk-setup:
-	vagrant provision --provision-with disk_setup
+	$(if $(EXTRA_VARS),ansible_extra_vars="$(EXTRA_VARS)" ,)vagrant provision --provision-with disk_setup
 
 .PHONY: vagrant-provision
 vagrant-provision:
-	vagrant provision --provision-with ansible
+	$(if $(EXTRA_VARS),ansible_extra_vars="$(EXTRA_VARS)" ,)vagrant provision --provision-with ansible
 
 .PHONY: vagrant-provision-step1
 vagrant-provision-step1:
-	vagrant provision --provision-with ansible_upgrade_step1
+	$(if $(EXTRA_VARS),ansible_extra_vars="$(EXTRA_VARS)" ,)vagrant provision --provision-with ansible_upgrade_step1
 
 .PHONY: vagrant-provision-step2
 vagrant-provision-step2:
-	vagrant provision --provision-with ansible_upgrade_step2
+	$(if $(EXTRA_VARS),ansible_extra_vars="$(EXTRA_VARS)" ,)vagrant provision --provision-with ansible_upgrade_step2
 
 .PHONY: vagrant-build-baseline
 vagrant-build-baseline: vbox-cleanup-disks
-	./bin/vagrant-build-baseline.sh
+	./bin/vagrant-build-baseline
 
 .PHONY: vagrant-build-baseline-minimal
 vagrant-build-baseline-minimal: vbox-cleanup-disks
-	./bin/vagrant-build-baseline.sh --disk-only
+	./bin/vagrant-build-baseline --disk-only
 
 # Test all suites on a platform
 define TEST_ALL_SUITES
 .PHONY: test-all-$(1)
-test-all-$(1): update-roles
+test-all-$(1): update-roles destroy-$(1)
 	@$(foreach s,$(SUITES),echo "=== Testing suite: $(s)-$(1) ===" && KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) test $(s)-$(1) &&) true
 endef
 
 # Test specific suite on platform
 define KITCHEN_SUITE_PLATFORM_TARGETS
 .PHONY: test-$(1)-$(2)
-test-$(1)-$(2): update-roles
+test-$(1)-$(2): update-roles destroy-$(1)-$(2)
 	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) test $(1)-$(2)
 
 .PHONY: converge-$(1)-$(2)
@@ -165,7 +248,7 @@ endef
 # Platform-level targets (shortcuts for default suite)
 define KITCHEN_PLATFORM_TARGETS
 .PHONY: test-$(1)
-test-$(1): update-roles
+test-$(1): update-roles destroy-$(1)
 	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) test default-$(1)
 
 .PHONY: converge-$(1)
@@ -217,7 +300,6 @@ test-upgrade-win11: update-roles
 	@echo "Upgrade test complete!"
 
 
-
 .PHONY: test-upgrade-candidate-win11
 test-upgrade-candidate-win11: upgrade-cleanup-win11 update-roles
 	@rm -f .kitchen.local.yml
@@ -228,8 +310,8 @@ test-upgrade-candidate-win11: upgrade-cleanup-win11 update-roles
 		'  - name: upgrade' \
 		'    driver:' \
 		"      network:" \
-		"        - ['forwarded_port', {guest: 8080, host: 18080, auto_correct: true}]" \
-		"        - ['forwarded_port', {guest: 9080, host: 19080, auto_correct: true}]" \
+		"        - [\'forwarded_port\', {guest: 8080, host: 18080, auto_correct: true}]" \
+		"        - [\'forwarded_port\', {guest: 9080, host: 19080, auto_correct: true}]" \
 	> .kitchen.local.yml
 	@echo
 	@echo "=== Testing Java + Tomcat upgrade (candidate mode) on Windows 11 (D: drive) ==="
@@ -246,8 +328,8 @@ test-upgrade-candidate-win11: upgrade-cleanup-win11 update-roles
 		'  - name: upgrade' \
 		'    driver:' \
 		"      network:" \
-		"        - ['forwarded_port', {guest: 8080, host: 18080, auto_correct: true}]" \
-		"        - ['forwarded_port', {guest: 9080, host: 19080, auto_correct: true}]" \
+		"        - [\'forwarded_port\', {guest: 8080, host: 18080, auto_correct: true}]" \
+		"        - [\'forwarded_port\', {guest: 9080, host: 19080, auto_correct: true}]" \
 		'    provisioner:' \
 		'      playbook: tests/playbook-upgrade.yml' \
 		'      extra_vars:' \
@@ -275,7 +357,7 @@ test-upgrade-candidate-win11: upgrade-cleanup-win11 update-roles
 		'        echo "" ' \
 		'        echo "FAILED: Tomcat did not respond on port 18080 after 10 attempts" >&2' \
 		'        exit 1' \
-		> .kitchen.local.yml
+	> .kitchen.local.yml
 	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) converge upgrade-win11-disk
 	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) verify upgrade-win11-disk
 	@rm -f .kitchen.local.yml
@@ -326,3 +408,18 @@ test-downgrade-win11: update-roles
 .PHONY: downgrade-cleanup-win11
 downgrade-cleanup-win11:
 	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) destroy downgrade-win11
+
+# ============================================================================ 
+# Recording Tools
+# ============================================================================ 
+.PHONY: gif
+gif:
+	@command -v agg >/dev/null 2>&1 || { echo >&2 "agg is not installed. Install with: brew install agg"; exit 1; }
+	@echo "Converting cast files to GIF..."
+	@for cast in docs/recordings/*.cast; do \
+		echo "Processing $$cast..."; \
+		./bin/asciinema-v3-to-v2 "$$cast" "$${cast}.v2"; \
+		agg "$${cast}.v2" "$${cast%.cast}.gif"; \
+		rm "$${cast}.v2"; \
+		echo "Created $${cast%.cast}.gif"; \
+	done

@@ -34,10 +34,10 @@ Run the cleanup script directly:
 
 ```bash
 # Dry run - see what would be cleaned up
-./bin/vbox-cleanup-disks.sh --dry-run
+./bin/vbox-cleanup-disks --dry-run
 
 # Actually clean up stale disks
-./bin/vbox-cleanup-disks.sh
+./bin/vbox-cleanup-disks
 
 # Or via Make
 make vbox-cleanup-disks
@@ -73,7 +73,7 @@ This handles most cases automatically. Edge cases (like a running VM with the di
 
 ## Related Files
 
-- `bin/vbox-cleanup-disks.sh` - Cleanup script
+- `bin/vbox-cleanup-disks` - Cleanup script
 - `Vagrantfile` - Contains automatic cleanup logic in the disk creation block
 
 ## See Also

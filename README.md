@@ -1,6 +1,7 @@
 # Provision Tomcat Role
 
 ![Demo](docs/recordings/provision-tmcat.gif)
+*More recordings [here](docs/recordings/README.md)*
 
 This Ansible role installs Apache Tomcat on Windows hosts by downloading the official Tomcat zip archive directly from Apache mirrors. It handles installation, upgrades, Windows service configuration, and firewall rules.
 
@@ -38,6 +39,39 @@ Default variables (`defaults/main.yml`):
 | `tomcat_candidate_manual_control` | `false` | Leave the candidate service running on port 9080 (skip promotion/cleanup) so you can promote later |
 | `tomcat_service_account_username` | `LocalSystem` | Windows service account for Tomcat service (set to domain/user to override) |
 | `tomcat_service_account_password` | `''` | Password for the custom service account (ignored for LocalSystem) |
+
+### Azure DevOps Agent (Linux)
+
+If running on Linux (via dependencies), you can optionally install an Azure DevOps agent.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `install_ado_agent` | `true` | Set to `false` to disable agent installation |
+| `ado_pat_token` | `env:ADO_PAT_TOKEN` | PAT token for agent configuration |
+
+To configure the agent, export your PAT token in your terminal before running the provision command:
+
+```bash
+export ADO_PAT_TOKEN="your-secure-pat-token"
+make vagrant-provision
+```
+
+If the environment variable is not set, the agent configuration tasks will be skipped automatically.
+
+### Optional Features (via windows-base)
+
+This role includes the `windows-base` role, which provides optional security and agent configurations.
+
+**Splunk Universal Forwarder**
+To install Splunk UF, set `splunk_uf_enabled: true` and provide the installer URL.
+
+| Variable | Description |
+|----------|-------------|
+| `splunk_uf_enabled` | Set to `true` to enable |
+| `splunk_uf_installer_url` | URL to MSI installer |
+| `splunk_uf_indexer_host` | Receiving Indexer Host (optional) |
+
+See `windows-base` documentation for all available options.
 
 The Tomcat installation uses a symlink structure:
 
@@ -248,7 +282,7 @@ ansible-playbook -i inventory playbook.yml --extra-vars "tomcat_version=9.0.120"
 
 If you need to run the new Tomcat/Java build side-by-side before switching the `current` symlink, see `docs/ZERO-DOWNTIME-UPGRADES.md`. It describes how to install a temporary service on an alternate port, run smoke tests from both inside the VM and from the controller, and promote (or roll back) entirely within Ansible. For recurring problems we have hit during this process (candidate tasks skipping, controller waits failing, or port 9080 never opening), refer to `docs/CANDIDATE-TROUBLESHOOTING.md`.
 
-For a one-command automated test run (including cleanup), execute `bin/test-upgrade-candidate.sh` from the repo root. It chains together `make candidate-cleanup-win11` and `make test-upgrade-candidate-stack` so step 1, step 2, and teardown all happen sequentially.
+For a one-command automated test run (including cleanup), execute `bin/test-upgrade-candidate` from the repo root. It chains together `make candidate-cleanup-win11` and `make test-upgrade-candidate-stack` so step 1, step 2, and teardown all happen sequentially.
 
 ### Verification After Upgrade
 
@@ -272,6 +306,27 @@ The role includes built-in verification tasks:
 5. Tests HTTP accessibility on port 8080 (200 or 404 response)
 
 The test playbook (`tests/playbook.yml`) includes additional verification from the host machine.
+
+## Makefile Targets
+
+Run `make help` for all available targets:
+
+### Validation
+
+```bash
+make setup          # Verify and setup development environment
+make lint           # Run ansible-lint
+make syntax         # Check playbook syntax
+make check          # Run all validation checks
+```
+
+### Utilities
+
+```bash
+make deps             # Install Ansible collections
+make list-kitchen-instances  # List kitchen instances
+make destroy-all      # Destroy all kitchen instances
+```
 
 ## Local Testing
 
@@ -371,7 +426,7 @@ make destroy-win11     # Clean up
 
 ### Vagrant Candidate Helper
 
-For a direct Vagrant workflow (outside Test Kitchen), use `bin/vagrant-port-check.sh`. It:
+For a direct Vagrant workflow (outside Test Kitchen), use `bin/vagrant-port-check`. It:
 
 1. Brings up the Windows 11 guest without provisioning.
 2. Runs step 1 of the upgrade playbook (Tomcat 9.0.112 / Java 17).
@@ -383,11 +438,11 @@ Ensure port forwarding for 8080 and 9080 is available in `Vagrantfile` (already 
 
 #### Pre-built baseline box (optional)
 
-If you want to skip the "install Tomcat 9.0.112 / Java 17" phase entirely, run `bin/vagrant-build-baseline.sh`. It provisions the stock Windows 11 box with step 1 of the upgrade playbook and packages it into `boxes/windows11-tomcat9.0.112-java17.box`. You can then `vagrant box add windows11-tomcat112 boxes/windows11-tomcat9.0.112-java17.box` and point your Vagrantfile to that box for demos where you only want to exercise the upgrade/candidate workflow.
+If you want to skip the "install Tomcat 9.0.112 / Java 17" phase entirely, run `bin/vagrant-build-baseline`. It provisions the stock Windows 11 box with step 1 of the upgrade playbook and packages it into `boxes/windows11-tomcat9.0.112-java17.box`. You can then `vagrant box add windows11-tomcat112 boxes/windows11-tomcat9.0.112-java17.box` and point your Vagrantfile to that box for demos where you only want to exercise the upgrade/candidate workflow.
 
 #### Upgrade-only script
 
-Once the baseline box is installed (`windows11-tomcat112`), `bin/vagrant-upgrade-demo.sh` drives the rest of the demo using `Vagrantfile-upgrade`:
+Once the baseline box is installed (`windows11-tomcat112`), `bin/vagrant-upgrade-demo` drives the rest of the demo using `Vagrantfile-upgrade`:
 
 1. Brings the baseline box up (no provisioning).
 2. Runs the candidate prepare pass (manual control enabled).
@@ -533,9 +588,13 @@ This role requires:
    - `ansible.windows`
    - `community.windows`
 
-Install collections:
+Install collections (installs to `./collections`):
 ```bash
-ansible-galaxy collection install ansible.windows community.windows
+# Use Make (recommended)
+make deps
+
+# Or manually
+ansible-galaxy collection install ansible.windows community.windows -p ./collections
 ```
 
 ## License

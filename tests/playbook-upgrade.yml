@@ -14,9 +14,32 @@
     java_temp_dir: "{{ install_drive }}/temp"
     tomcat_temp_dir: "{{ install_drive }}/temp"
 
+    # Test overrides for security roles (since no domain controller)
+    security_service_account: "svcTomcat"
+    security_jenkins_accounts:
+      - "svclabbuild"
+      - "svcjenkins"
+    security_admin_groups: []
+
   pre_tasks:
     - name: Gather facts
       ansible.builtin.setup:
+      tags:
+        - always
+
+    - name: Create local test accounts
+      ansible.windows.win_user:
+        name: "{{ item }}"
+        password: "Password123!"
+        password_never_expires: true
+        state: present
+        groups:
+          - Users
+      loop:
+        - svcTomcat
+        - svclabbuild
+        - svcjenkins
+      when: ansible_facts['os_family'] == 'Windows'
       tags:
         - always
 
@@ -75,6 +98,16 @@
           Installing Java: {{ jdk_version }}
       tags:
         - always
+
+    # Base configuration and Agents
+    - name: Include windows-base role
+      include_role:
+        name: windows-base
+
+    # Security configuration
+    - name: Include provision-windows-security role
+      include_role:
+        name: provision-windows-security
 
     # Install Java
     - name: Include provision-java role

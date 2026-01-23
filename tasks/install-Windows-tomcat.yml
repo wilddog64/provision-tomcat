@@ -1,534 +1,557 @@
 ---
-- block:
-  - name: Verify Java is installed (using fact from provision-java role)
-    assert:
-      that:
-        - java_home is defined
-        - java_home | length > 0
-      fail_msg: "Java is not installed. Ensure provision-java role ran successfully."
-      success_msg: "Java verified at {{ java_home }}"
-    tags:
-      - tomcat-install
-      - tomcat-verify
+- name: Install Tomcat on Windows
+  become: false
+  block:
+    - name: Verify Java is installed (using fact from provision-java role)
+      ansible.builtin.assert:
+        that:
+          - java_home is defined
+          - java_home | length > 0
+        fail_msg: "Java is not installed. Ensure provision-java role ran successfully."
+        success_msg: "Java verified at {{ java_home }}"
+      tags:
+        - tomcat-install
+        - tomcat-verify
 
-  - name: Set Tomcat paths
-    set_fact:
-      tomcat_home: "{{ tomcat_install_dir }}/{{ tomcat_symlink_name }}"
-      tomcat_versioned_dir: "{{ tomcat_install_dir }}/apache-tomcat-{{ tomcat_version }}"
-    tags:
-      - tomcat-install
-      - tomcat-restart
-      - tomcat-service
+    - name: Set Tomcat paths
+      ansible.builtin.set_fact:
+        tomcat_home: "{{ tomcat_install_dir }}/{{ tomcat_symlink_name }}"
+        tomcat_versioned_dir: "{{ tomcat_install_dir }}/apache-tomcat-{{ tomcat_version }}"
+      tags:
+        - tomcat-install
+        - tomcat-restart
+        - tomcat-service
 
-  - name: Check if target version is already installed
-    ansible.windows.win_stat:
-      path: "{{ tomcat_versioned_dir }}/bin/catalina.bat"
-    register: tomcat_target_installed
-    tags:
-      - tomcat-install
-      - tomcat-restart
-      - tomcat-service
+    - name: Check if target version is already installed
+      ansible.windows.win_stat:
+        path: "{{ tomcat_versioned_dir }}/bin/catalina.bat"
+      register: tomcat_target_installed
+      tags:
+        - tomcat-install
+        - tomcat-restart
+        - tomcat-service
 
-  - name: Check if symlink exists
-    ansible.windows.win_stat:
-      path: "{{ tomcat_home }}"
-    register: tomcat_symlink_stat
-    tags:
-      - tomcat-install
-      - tomcat-restart
-      - tomcat-service
+    - name: Check if symlink exists
+      ansible.windows.win_stat:
+        path: "{{ tomcat_home }}"
+      register: tomcat_symlink_stat
+      tags:
+        - tomcat-install
+        - tomcat-restart
+        - tomcat-service
 
-  - name: Find any existing Tomcat installations
-    ansible.windows.win_find:
-      paths: "{{ tomcat_install_dir }}"
-      patterns: "apache-tomcat-*"
-      file_type: directory
-    register: existing_tomcat_dirs
-    tags:
-      - tomcat-install
+    - name: Find any existing Tomcat installations
+      ansible.windows.win_find:
+        paths: "{{ tomcat_install_dir }}"
+        patterns: "apache-tomcat-*"
+        file_type: directory
+      register: existing_tomcat_dirs
+      tags:
+        - tomcat-install
 
-  - name: Set facts about existing installations
-    set_fact:
-      tomcat_already_installed: "{{ (existing_tomcat_dirs.files | length) > 0 }}"
-      tomcat_needs_upgrade: "{{ (existing_tomcat_dirs.files | length) > 0 and not tomcat_target_installed.stat.exists }}"
-      existing_tomcat_path: "{{ existing_tomcat_dirs.files[0].path if (existing_tomcat_dirs.files | length) > 0 else '' }}"
-    tags:
-      - tomcat-install
+    - name: Set facts about existing installations
+      ansible.builtin.set_fact:
+        tomcat_already_installed: "{{ (existing_tomcat_dirs.files | length) > 0 }}"
+        tomcat_needs_upgrade: "{{ (existing_tomcat_dirs.files | length) > 0 and not tomcat_target_installed.stat.exists }}"
+        existing_tomcat_path: "{{ existing_tomcat_dirs.files[0].path if (existing_tomcat_dirs.files | length) > 0 else '' }}"
+      tags:
+        - tomcat-install
 
-  - name: Determine candidate upgrade mode
-    set_fact:
-      tomcat_candidate_delegate_configured: >-
-        {{ (tomcat_candidate_delegate is defined)
-           and (tomcat_candidate_delegate is not none)
-           and ((tomcat_candidate_delegate | string | length) > 0) }}
-      tomcat_candidate_active: >-
-        {{ (tomcat_candidate_enabled | default(false) | bool)
-           or (tomcat_candidate_delegate_configured | default(false)) }}
-    tags:
-      - tomcat-install
+    - name: Determine candidate upgrade mode
+      ansible.builtin.set_fact:
+        tomcat_candidate_delegate_configured: >-
+          {{ (tomcat_candidate_delegate is defined)
+             and (tomcat_candidate_delegate is not none)
+             and ((tomcat_candidate_delegate | string | length) > 0) }}
+        tomcat_candidate_active: >-
+          {{ (tomcat_candidate_enabled | default(false) | bool)
+             or (tomcat_candidate_delegate_configured | default(false)) }}
+      tags:
+        - tomcat-install
 
-  - name: Display Tomcat installation status
-    debug:
-      msg: >-
-        {% if tomcat_target_installed.stat.exists %}
-        Tomcat {{ tomcat_version }} already installed at {{ tomcat_home }}
-        {% elif tomcat_needs_upgrade %}
-        Tomcat upgrade needed - existing installation found at {{ existing_tomcat_path }}
-        {% else %}
-        Tomcat not found - will install
-        {% endif %}
-    tags:
-      - tomcat-install
+    - name: Display Tomcat installation status
+      ansible.builtin.debug:
+        msg: >-
+          {% if tomcat_target_installed.stat.exists %}
+          Tomcat {{ tomcat_version }} already installed at {{ tomcat_home }}
+          {% elif tomcat_needs_upgrade %}
+          Tomcat upgrade needed - existing installation found at {{ existing_tomcat_path }}
+          {% else %}
+          Tomcat not found - will install
+          {% endif %}
+      tags:
+        - tomcat-install
 
-  # Upgrade logic - stop service and remove old symlink
-  - name: Stop Tomcat service for upgrade
-    ansible.windows.win_service:
-      name: "{{ tomcat_service_name }}"
-      state: stopped
-    when:
-      - not (tomcat_candidate_active | default(false) | bool)
-      - tomcat_needs_upgrade or (tomcat_symlink_stat.stat.exists and tomcat_symlink_stat.stat.islnk)
-    failed_when: false
-    tags:
-      - tomcat-install
+    # Upgrade logic - stop service and remove old symlink
+    - name: Stop Tomcat service for upgrade
+      ansible.windows.win_service:
+        name: "{{ tomcat_service_name }}"
+        state: stopped
+      when:
+        - not (tomcat_candidate_active | default(false) | bool)
+        - tomcat_needs_upgrade or (tomcat_symlink_stat.stat.exists and tomcat_symlink_stat.stat.islnk)
+      failed_when: false
+      tags:
+        - tomcat-install
 
-  - name: Uninstall old Tomcat service for upgrade
-    ansible.windows.win_command: '"{{ tomcat_home }}/bin/service.bat" uninstall'
-    when:
-      - not (tomcat_candidate_active | default(false) | bool)
-      - tomcat_needs_upgrade
-      - tomcat_symlink_stat.stat.exists
-    failed_when: false
-    tags:
-      - tomcat-install
+    - name: Uninstall old Tomcat service for upgrade
+      ansible.windows.win_command: '"{{ tomcat_home }}/bin/service.bat" uninstall'
+      when:
+        - not (tomcat_candidate_active | default(false) | bool)
+        - tomcat_needs_upgrade
+        - tomcat_symlink_stat.stat.exists
+      failed_when: false
+      tags:
+        - tomcat-install
 
-  - name: Remove old symlink
-    ansible.windows.win_file:
-      path: "{{ tomcat_home }}"
-      state: absent
-    when:
-      - not (tomcat_candidate_active | default(false) | bool)
-      - tomcat_symlink_stat.stat.exists
-      - tomcat_needs_upgrade or not tomcat_target_installed.stat.exists
-    tags:
-      - tomcat-install
+    - name: Remove old symlink
+      ansible.windows.win_file:
+        path: "{{ tomcat_home }}"
+        state: absent
+      when:
+        - not (tomcat_candidate_active | default(false) | bool)
+        - tomcat_symlink_stat.stat.exists
+        - tomcat_needs_upgrade or not tomcat_target_installed.stat.exists
+      tags:
+        - tomcat-install
 
-  - name: Ensure temp directory exists
-    ansible.windows.win_file:
-      path: "{{ tomcat_temp_dir }}"
-      state: directory
-    when: not tomcat_target_installed.stat.exists
-    tags:
-      - tomcat-install
+    - name: Ensure temp directory exists
+      ansible.windows.win_file:
+        path: "{{ tomcat_temp_dir }}"
+        state: directory
+      when: not tomcat_target_installed.stat.exists
+      tags:
+        - tomcat-install
 
-  - name: Download Tomcat zip
-    ansible.windows.win_get_url:
-      url: "{{ tomcat_download_url }}"
-      dest: "{{ tomcat_temp_dir }}/apache-tomcat-{{ tomcat_version }}.zip"
-    register: tomcat_download
-    when: not tomcat_target_installed.stat.exists
-    tags:
-      - tomcat-install
+    - name: Download Tomcat zip
+      ansible.windows.win_get_url:
+        url: "{{ tomcat_download_url }}"
+        dest: "{{ tomcat_temp_dir }}/apache-tomcat-{{ tomcat_version }}.zip"
+      register: tomcat_download
+      when: not tomcat_target_installed.stat.exists
+      tags:
+        - tomcat-install
 
-  - name: Ensure Tomcat install directory exists
-    ansible.windows.win_file:
-      path: "{{ tomcat_install_dir }}"
-      state: directory
-    when: not tomcat_target_installed.stat.exists
-    tags:
-      - tomcat-install
+    - name: Ensure Tomcat install directory exists
+      ansible.windows.win_file:
+        path: "{{ tomcat_install_dir }}"
+        state: directory
+      when: not tomcat_target_installed.stat.exists
+      tags:
+        - tomcat-install
 
-  - name: Set CATALINA_HOME environment variable
-    ansible.windows.win_environment:
-      name: CATALINA_HOME
-      value: "{{ tomcat_home }}"
-      state: present
-      level: machine
-    when: not tomcat_target_installed.stat.exists
-    tags:
-      - tomcat-install
+    - name: Set CATALINA_HOME environment variable
+      ansible.windows.win_environment:
+        name: CATALINA_HOME
+        value: "{{ tomcat_home }}"
+        state: present
+        level: machine
+      when: not tomcat_target_installed.stat.exists
+      tags:
+        - tomcat-install
 
-  - name: Extract Tomcat archive
-    community.windows.win_unzip:
-      src: "{{ tomcat_temp_dir }}/apache-tomcat-{{ tomcat_version }}.zip"
-      dest: "{{ tomcat_install_dir }}"
-    when: not tomcat_target_installed.stat.exists
-    register: tomcat_extract
-    tags:
-      - tomcat-install
+    - name: Extract Tomcat archive
+      community.windows.win_unzip:
+        src: "{{ tomcat_temp_dir }}/apache-tomcat-{{ tomcat_version }}.zip"
+        dest: "{{ tomcat_install_dir }}"
+      when: not tomcat_target_installed.stat.exists
+      register: tomcat_extract
+      tags:
+        - tomcat-install
 
-  - name: Verify Tomcat files were extracted
-    ansible.windows.win_stat:
-      path: "{{ tomcat_versioned_dir }}/bin/catalina.bat"
-    register: tomcat_files_check
-    when: not tomcat_target_installed.stat.exists
-    tags:
-      - tomcat-install
+    - name: Verify Tomcat files were extracted
+      ansible.windows.win_stat:
+        path: "{{ tomcat_versioned_dir }}/bin/catalina.bat"
+      register: tomcat_files_check
+      when: not tomcat_target_installed.stat.exists
+      tags:
+        - tomcat-install
 
-  - name: Assert Tomcat files exist after extraction
-    assert:
-      that:
-        - tomcat_files_check.stat.exists
-      fail_msg: "Tomcat files not found after extraction at {{ tomcat_versioned_dir }}"
-      success_msg: "Tomcat files verified at {{ tomcat_versioned_dir }}"
-    when: not tomcat_target_installed.stat.exists
-    tags:
-      - tomcat-install
+    - name: Assert Tomcat files exist after extraction
+      ansible.builtin.assert:
+        that:
+          - tomcat_files_check.stat.exists
+        fail_msg: "Tomcat files not found after extraction at {{ tomcat_versioned_dir }}"
+        success_msg: "Tomcat files verified at {{ tomcat_versioned_dir }}"
+      when: not tomcat_target_installed.stat.exists
+      tags:
+        - tomcat-install
 
-  - block:
-      - name: Configure candidate HTTP connector
-        ansible.windows.win_shell: |
-          $file = "{{ tomcat_versioned_dir }}/conf/server.xml"
-          $xml = [xml](Get-Content -Path $file)
-          foreach ($service in $xml.Server.Service) {
-            foreach ($connector in $service.Connector) {
-              if ($connector.port -eq "{{ tomcat_http_port }}" -and $connector.protocol -eq "HTTP/1.1") {
-                $connector.port = "{{ tomcat_candidate_port }}"
+    - name: Configure Candidate Tomcat
+      when: tomcat_candidate_active | default(false) | bool
+      tags:
+        - tomcat-install
+        - tomcat-verify
+      block:
+        - name: Configure candidate HTTP connector
+          ansible.windows.win_shell: |
+            $file = "{{ tomcat_versioned_dir }}/conf/server.xml"
+            $xml = [xml](Get-Content -Path $file)
+            foreach ($service in $xml.Server.Service) {
+              foreach ($connector in $service.Connector) {
+                if ($connector.port -eq "{{ tomcat_http_port }}" -and $connector.protocol -eq "HTTP/1.1") {
+                  $connector.port = "{{ tomcat_candidate_port }}"
+                }
               }
             }
-          }
-          $xml.Save($file)
+            $xml.Save($file)
 
-      - name: Configure candidate shutdown port
-        ansible.windows.win_shell: |
-          $file = "{{ tomcat_versioned_dir }}/conf/server.xml"
-          $xml = [xml](Get-Content -Path $file)
-          $xml.Server.port = "{{ tomcat_candidate_shutdown_port }}"
-          $xml.Save($file)
+        - name: Configure candidate shutdown port
+          ansible.windows.win_shell: |
+            $file = "{{ tomcat_versioned_dir }}/conf/server.xml"
+            $xml = [xml](Get-Content -Path $file)
+            $xml.Server.port = "{{ tomcat_candidate_shutdown_port }}"
+            $xml.Save($file)
 
-      - name: Gather candidate service status
-        ansible.windows.win_service_info:
-          name: "{{ tomcat_candidate_service_name }}"
-        register: tomcat_candidate_service_info
+        - name: Gather candidate service status
+          ansible.windows.win_service_info:
+            name: "{{ tomcat_candidate_service_name }}"
+          register: tomcat_candidate_service_info
 
-      - name: Install candidate Tomcat service
-        ansible.windows.win_command: 'cmd /c service.bat install {{ tomcat_candidate_service_name }}'
-        args:
-          chdir: "{{ tomcat_versioned_dir }}/bin"
-        environment:
-          CATALINA_HOME: "{{ tomcat_versioned_dir }}"
-        when: (tomcat_candidate_service_info.services | default([])) | length == 0
+        - name: Install candidate Tomcat service
+          ansible.windows.win_command: 'cmd /c service.bat install {{ tomcat_candidate_service_name }}'
+          args:
+            chdir: "{{ tomcat_versioned_dir }}/bin"
+          environment:
+            CATALINA_HOME: "{{ tomcat_versioned_dir }}"
+          when: (tomcat_candidate_service_info.services | default([])) | length == 0
 
-      - name: Add Windows Firewall rule for candidate
-        community.windows.win_firewall_rule:
-          name: "{{ tomcat_candidate_firewall_rule }}"
-          localport: "{{ tomcat_candidate_port }}"
-          action: allow
-          direction: in
-          protocol: tcp
-          state: present
-          enabled: yes
+        - name: Add Windows Firewall rule for candidate
+          community.windows.win_firewall_rule:
+            name: "{{ tomcat_candidate_firewall_rule }}"
+            localport: "{{ tomcat_candidate_port }}"
+            action: allow
+            direction: in
+            protocol: tcp
+            state: present
+            enabled: true
 
-      - name: Start candidate Tomcat service
-        ansible.windows.win_service:
-          name: "{{ tomcat_candidate_service_name }}"
-          state: started
+        - name: Start candidate Tomcat service
+          ansible.windows.win_service:
+            name: "{{ tomcat_candidate_service_name }}"
+            state: started
 
-      - name: Wait for candidate port on Windows host
-        ansible.windows.win_wait_for:
-          port: "{{ tomcat_candidate_port }}"
-          timeout: "{{ tomcat_candidate_wait_timeout }}"
+        - name: Wait for candidate port on Windows host
+          ansible.windows.win_wait_for:
+            port: "{{ tomcat_candidate_port }}"
+            timeout: "{{ tomcat_candidate_wait_timeout }}"
 
-      - name: Verify candidate Tomcat locally
-        ansible.windows.win_uri:
-          url: "http://localhost:{{ tomcat_candidate_port }}"
-          method: GET
-          status_code: [200, 404]
-          timeout: 30
-        register: tomcat_candidate_http_local
-        failed_when: tomcat_candidate_http_local.status_code not in [200, 404]
+        - name: Verify candidate Tomcat locally
+          ansible.windows.win_uri:
+            url: "http://localhost:{{ tomcat_candidate_port }}"
+            method: GET
+            status_code: [200, 404]
+            timeout: 30
+          register: tomcat_candidate_http_local
+          failed_when: tomcat_candidate_http_local.status_code not in [200, 404]
 
-      - name: Run controller-side candidate checks
-        include_tasks: verify-candidate-controller.yml
-        when: tomcat_candidate_delegate | default('') | length > 0
+        - name: Run controller-side candidate checks
+          ansible.builtin.include_tasks: verify-candidate-controller.yml
+          when: tomcat_candidate_delegate | default('') | length > 0
 
-    when: tomcat_candidate_active | default(false) | bool
-    tags:
-      - tomcat-install
-      - tomcat-verify
+    - name: Candidate promotion deferred notice
+      ansible.builtin.debug:
+        msg: >-
+          Candidate Tomcat remains running on port {{ tomcat_candidate_port }}.
+          Re-run the role with tomcat_candidate_manual_control=false to promote and clean up.
+      when:
+        - tomcat_candidate_active | default(false) | bool
+        - tomcat_candidate_manual_control | default(false) | bool
 
-  - name: Candidate promotion deferred notice
-    debug:
-      msg: >-
-        Candidate Tomcat remains running on port {{ tomcat_candidate_port }}.
-        Re-run the role with tomcat_candidate_manual_control=false to promote and clean up.
-    when:
-      - tomcat_candidate_active | default(false) | bool
-      - tomcat_candidate_manual_control | default(false) | bool
+    - name: Create symlink to current Tomcat version
+      ansible.windows.win_command: 'cmd /c mklink /D "{{ tomcat_home }}" "{{ tomcat_versioned_dir }}"'
+      when:
+        - not (tomcat_candidate_active | default(false) | bool)
+        - not tomcat_symlink_stat.stat.exists or tomcat_needs_upgrade or not tomcat_target_installed.stat.exists
+      register: symlink_result
+      failed_when: symlink_result.rc != 0 and 'already exists' not in symlink_result.stderr
+      tags:
+        - tomcat-install
 
-  - name: Create symlink to current Tomcat version
-    ansible.windows.win_command: 'cmd /c mklink /D "{{ tomcat_home }}" "{{ tomcat_versioned_dir }}"'
-    when:
-      - not (tomcat_candidate_active | default(false) | bool)
-      - not tomcat_symlink_stat.stat.exists or tomcat_needs_upgrade or not tomcat_target_installed.stat.exists
-    register: symlink_result
-    failed_when: symlink_result.rc != 0 and 'already exists' not in symlink_result.stderr
-    tags:
-      - tomcat-install
+    - name: Promote Candidate Tomcat
+      when:
+        - tomcat_candidate_active | default(false) | bool
+        - not (tomcat_candidate_manual_control | default(false) | bool)
+      tags:
+        - tomcat-install
+      block:
+        - name: Stop Tomcat service prior to promotion
+          ansible.windows.win_service:
+            name: "{{ tomcat_service_name }}"
+            state: stopped
+          failed_when: false
 
-  - block:
-      - name: Stop Tomcat service prior to promotion
-        ansible.windows.win_service:
-          name: "{{ tomcat_service_name }}"
-          state: stopped
-        failed_when: false
+        - name: Check for existing service prior to promotion
+          ansible.windows.win_service_info:
+            name: "{{ tomcat_service_name }}"
+          register: promo_existing_service
 
-      - name: Uninstall existing Tomcat service prior to promotion
-        ansible.windows.win_command: '"{{ tomcat_home }}/bin/service.bat" uninstall'
-        failed_when: false
-        when: tomcat_symlink_stat.stat.exists
+        - name: Uninstall existing Tomcat service prior to promotion (service.bat)
+          ansible.windows.win_command: '"{{ tomcat_home }}/bin/service.bat" uninstall'
+          failed_when: false
+          when:
+            - tomcat_symlink_stat.stat.exists
+            - (promo_existing_service.services | length > 0)
 
-      - name: Remove old symlink before promotion
-        ansible.windows.win_file:
-          path: "{{ tomcat_home }}"
-          state: absent
-        when: tomcat_symlink_stat.stat.exists
+        - name: Force remove service if still exists (sc delete)
+          ansible.windows.win_command: "sc.exe delete {{ tomcat_service_name }}"
+          when: (promo_existing_service.services | length > 0)
+          failed_when: false
 
-      - name: Reset HTTP connector to primary port
-        ansible.windows.win_shell: |
-          $file = "{{ tomcat_versioned_dir }}/conf/server.xml"
-          $xml = [xml](Get-Content -Path $file)
-          foreach ($service in $xml.Server.Service) {
-            foreach ($connector in $service.Connector) {
-              if ($connector.port -eq "{{ tomcat_candidate_port }}" -and $connector.protocol -eq "HTTP/1.1") {
-                $connector.port = "{{ tomcat_http_port }}"
+        - name: Remove old symlink before promotion
+          ansible.windows.win_file:
+            path: "{{ tomcat_home }}"
+            state: absent
+          when: tomcat_symlink_stat.stat.exists
+
+        - name: Reset HTTP connector to primary port
+          ansible.windows.win_shell: |
+            $file = "{{ tomcat_versioned_dir }}/conf/server.xml"
+            $xml = [xml](Get-Content -Path $file)
+            foreach ($service in $xml.Server.Service) {
+              foreach ($connector in $service.Connector) {
+                if ($connector.port -eq "{{ tomcat_candidate_port }}" -and $connector.protocol -eq "HTTP/1.1") {
+                  $connector.port = "{{ tomcat_http_port }}"
+                }
               }
             }
-          }
-          $xml.Save($file)
+            $xml.Save($file)
 
-      - name: Reset shutdown port to primary value
-        ansible.windows.win_shell: |
-          $file = "{{ tomcat_versioned_dir }}/conf/server.xml"
-          $xml = [xml](Get-Content -Path $file)
-          $xml.Server.port = "{{ tomcat_shutdown_port }}"
-          $xml.Save($file)
+        - name: Reset shutdown port to primary value
+          ansible.windows.win_shell: |
+            $file = "{{ tomcat_versioned_dir }}/conf/server.xml"
+            $xml = [xml](Get-Content -Path $file)
+            $xml.Server.port = "{{ tomcat_shutdown_port }}"
+            $xml.Save($file)
 
-      - name: Create symlink to promoted Tomcat version
-        ansible.windows.win_command: 'cmd /c mklink /D "{{ tomcat_home }}" "{{ tomcat_versioned_dir }}"'
-        register: tomcat_candidate_symlink
-        failed_when: tomcat_candidate_symlink.rc != 0 and 'already exists' not in tomcat_candidate_symlink.stderr
+        - name: Create symlink to promoted Tomcat version
+          ansible.windows.win_command: 'cmd /c mklink /D "{{ tomcat_home }}" "{{ tomcat_versioned_dir }}"'
+          register: tomcat_candidate_symlink
+          failed_when: tomcat_candidate_symlink.rc != 0 and 'already exists' not in tomcat_candidate_symlink.stderr
 
-      - name: Install Tomcat Windows service after promotion
-        ansible.windows.win_command: '"{{ tomcat_home }}/bin/service.bat" install'
-        environment:
-          CATALINA_HOME: "{{ tomcat_home }}"
+        - name: Install Tomcat Windows service after promotion
+          ansible.windows.win_command: '"{{ tomcat_home }}/bin/service.bat" install'
+          environment:
+            CATALINA_HOME: "{{ tomcat_home }}"
 
-      - name: Configure promoted service startup type
-        ansible.windows.win_service:
-          name: "{{ tomcat_service_name }}"
-          state: restarted
-          start_mode: auto
+        - name: Configure promoted service startup type
+          ansible.windows.win_service:
+            name: "{{ tomcat_service_name }}"
+            state: restarted
+            start_mode: auto
 
-      - name: Start promoted Tomcat service (if auto_start enabled)
-        ansible.windows.win_service:
-          name: "{{ tomcat_service_name }}"
-          state: started
-        when: tomcat_auto_start | bool
+        - name: Start promoted Tomcat service (if auto_start enabled)
+          ansible.windows.win_service:
+            name: "{{ tomcat_service_name }}"
+            state: started
+          when: tomcat_auto_start | bool
 
-      - name: Stop candidate Tomcat service
-        ansible.windows.win_service:
-          name: "{{ tomcat_candidate_service_name }}"
-          state: stopped
-        failed_when: false
+        - name: Stop candidate Tomcat service
+          ansible.windows.win_service:
+            name: "{{ tomcat_candidate_service_name }}"
+            state: stopped
+          failed_when: false
 
-      - name: Remove candidate Tomcat service
-        ansible.windows.win_command: 'cmd /c service.bat remove {{ tomcat_candidate_service_name }}'
-        args:
-          chdir: "{{ tomcat_versioned_dir }}/bin"
-        failed_when: false
+        - name: Remove candidate Tomcat service
+          ansible.windows.win_command: 'cmd /c service.bat remove {{ tomcat_candidate_service_name }}'
+          args:
+            chdir: "{{ tomcat_versioned_dir }}/bin"
+          failed_when: false
 
-      - name: Remove candidate firewall rule
-        community.windows.win_firewall_rule:
-          name: "{{ tomcat_candidate_firewall_rule }}"
-          state: absent
+        - name: Remove candidate firewall rule
+          community.windows.win_firewall_rule:
+            name: "{{ tomcat_candidate_firewall_rule }}"
+            state: absent
 
-    when:
-      - tomcat_candidate_active | default(false) | bool
-      - not (tomcat_candidate_manual_control | default(false) | bool)
-    tags:
-      - tomcat-install
+    - name: Display symlink creation result
+      ansible.builtin.debug:
+        msg: "Symlink created: {{ tomcat_home }} -> {{ tomcat_versioned_dir }}"
+      when:
+        - symlink_result is defined
+        - symlink_result is changed
+      tags:
+        - tomcat-install
 
-  - name: Display symlink creation result
-    debug:
-      msg: "Symlink created: {{ tomcat_home }} -> {{ tomcat_versioned_dir }}"
-    when:
-      - symlink_result is defined
-      - symlink_result is changed
-    tags:
-      - tomcat-install
+    - name: Find all Tomcat version directories for cleanup
+      ansible.windows.win_find:
+        paths: "{{ tomcat_install_dir }}"
+        patterns: "apache-tomcat-*"
+        file_type: directory
+      register: all_tomcat_dirs
+      when: tomcat_keep_versions | int > 0
+      tags:
+        - tomcat-install
 
-  - name: Find all Tomcat version directories for cleanup
-    ansible.windows.win_find:
-      paths: "{{ tomcat_install_dir }}"
-      patterns: "apache-tomcat-*"
-      file_type: directory
-    register: all_tomcat_dirs
-    when: tomcat_keep_versions | int > 0
-    tags:
-      - tomcat-install
+    - name: Sort Tomcat directories by modification time (newest first)
+      ansible.builtin.set_fact:
+        sorted_tomcat_dirs: "{{ all_tomcat_dirs.files | sort(attribute='lastwritetime') | reverse | list }}"
+      when:
+        - tomcat_keep_versions | int > 0
+        - all_tomcat_dirs.files is defined
+        - all_tomcat_dirs.files | length > 0
+      tags:
+        - tomcat-install
 
-  - name: Sort Tomcat directories by modification time (newest first)
-    set_fact:
-      sorted_tomcat_dirs: "{{ all_tomcat_dirs.files | sort(attribute='lastwritetime') | reverse | list }}"
-    when:
-      - tomcat_keep_versions | int > 0
-      - all_tomcat_dirs.files is defined
-      - all_tomcat_dirs.files | length > 0
-    tags:
-      - tomcat-install
+    - name: Identify old Tomcat versions to remove
+      ansible.builtin.set_fact:
+        tomcat_dirs_to_remove: "{{ sorted_tomcat_dirs[tomcat_keep_versions | int :] }}"
+      when:
+        - tomcat_keep_versions | int > 0
+        - sorted_tomcat_dirs is defined
+        - sorted_tomcat_dirs | length > (tomcat_keep_versions | int)
+      tags:
+        - tomcat-install
 
-  - name: Identify old Tomcat versions to remove
-    set_fact:
-      tomcat_dirs_to_remove: "{{ sorted_tomcat_dirs[tomcat_keep_versions | int:] }}"
-    when:
-      - tomcat_keep_versions | int > 0
-      - sorted_tomcat_dirs is defined
-      - sorted_tomcat_dirs | length > (tomcat_keep_versions | int)
-    tags:
-      - tomcat-install
+    - name: Display versions to be removed
+      ansible.builtin.debug:
+        msg: "Removing old Tomcat version: {{ item.path }}"
+      loop: "{{ tomcat_dirs_to_remove | default([]) }}"
+      when: tomcat_dirs_to_remove is defined
+      tags:
+        - tomcat-install
 
-  - name: Display versions to be removed
-    debug:
-      msg: "Removing old Tomcat version: {{ item.path }}"
-    loop: "{{ tomcat_dirs_to_remove | default([]) }}"
-    when: tomcat_dirs_to_remove is defined
-    tags:
-      - tomcat-install
+    - name: Remove old Tomcat versions beyond retention policy
+      ansible.windows.win_file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ tomcat_dirs_to_remove | default([]) }}"
+      when:
+        - tomcat_keep_versions | int > 0
+        - tomcat_dirs_to_remove is defined
+        - tomcat_dirs_to_remove | length > 0
+      tags:
+        - tomcat-install
 
-  - name: Remove old Tomcat versions beyond retention policy
-    ansible.windows.win_file:
-      path: "{{ item.path }}"
-      state: absent
-    loop: "{{ tomcat_dirs_to_remove | default([]) }}"
-    when:
-      - tomcat_keep_versions | int > 0
-      - tomcat_dirs_to_remove is defined
-      - tomcat_dirs_to_remove | length > 0
-    tags:
-      - tomcat-install
+    - name: Check if Tomcat service exists
+      ansible.windows.win_service_info:
+        name: "{{ tomcat_service_name }}"
+      register: tomcat_service_check
+      tags:
+        - tomcat-install
+        - tomcat-restart
+        - tomcat-service
 
-  - name: Check if Tomcat service exists
-    ansible.windows.win_service_info:
-      name: "{{ tomcat_service_name }}"
-    register: tomcat_service_check
-    tags:
-      - tomcat-install
-      - tomcat-restart
-      - tomcat-service
+    - name: Ensure service is removed before fresh install (force cleanup)
+      ansible.windows.win_command: "sc.exe delete {{ tomcat_service_name }}"
+      failed_when: false
+      when:
+        - not (tomcat_candidate_active | default(false) | bool)
+        - not tomcat_target_installed.stat.exists or (tomcat_service_check.services | default([])) | length == 0
+      tags:
+        - tomcat-install
 
-  - name: Install Tomcat Windows service
-    ansible.windows.win_command: '"{{ tomcat_home }}/bin/service.bat" install'
-    environment:
-      CATALINA_HOME: "{{ tomcat_home }}"
-    when:
-      - not (tomcat_candidate_active | default(false) | bool)
-      - not tomcat_target_installed.stat.exists or (tomcat_service_check.services | default([])) | length == 0
-    register: service_install
-    tags:
-      - tomcat-install
+    - name: Install Tomcat Windows service
+      ansible.windows.win_command: '"{{ tomcat_home }}/bin/service.bat" install'
+      environment:
+        CATALINA_HOME: "{{ tomcat_home }}"
+      when:
+        - not (tomcat_candidate_active | default(false) | bool)
+        - not tomcat_target_installed.stat.exists or (tomcat_service_check.services | default([])) | length == 0
+      register: service_install
+      tags:
+        - tomcat-install
 
 
-  - name: Add Windows Firewall rule for Tomcat
-    community.windows.win_firewall_rule:
-      name: Tomcat Server
-      localport: "{{ tomcat_http_port }}"
-      action: allow
-      direction: in
-      protocol: tcp
-      state: present
-      enabled: yes
-    tags:
-      - tomcat-install
+    - name: Add Windows Firewall rule for Tomcat
+      community.windows.win_firewall_rule:
+        name: Tomcat Server
+        localport: "{{ tomcat_http_port }}"
+        action: allow
+        direction: in
+        protocol: tcp
+        state: present
+        enabled: true
+      tags:
+        - tomcat-install
 
-  - name: Configure service startup type
-    ansible.windows.win_service:
-      name: "{{ tomcat_service_name }}"
-      state: restarted
-      start_mode: auto
-    tags:
-      - tomcat-install
-      - tomcat-service
-    when:
-      - not (tomcat_candidate_active | default(false) | bool)
-      - (tomcat_service_check.services | default([])) | length > 0
+    - name: Configure service startup type
+      ansible.windows.win_service:
+        name: "{{ tomcat_service_name }}"
+        state: restarted
+        start_mode: auto
+      tags:
+        - tomcat-install
+        - tomcat-service
+      when:
+        - not (tomcat_candidate_active | default(false) | bool)
+        - (tomcat_service_check.services | default([])) | length > 0
 
-  - name: Start Tomcat service (if auto_start enabled)
-    ansible.windows.win_service:
-      name: "{{ tomcat_service_name }}"
-      state: started
-    when:
-      - not (tomcat_candidate_active | default(false) | bool)
-      - tomcat_auto_start | bool
-    register: tomcat_service_start
-    tags:
-      - tomcat-install
-      - tomcat-service
+    - name: Start Tomcat service (if auto_start enabled)
+      ansible.windows.win_service:
+        name: "{{ tomcat_service_name }}"
+        state: started
+      when:
+        - not (tomcat_candidate_active | default(false) | bool)
+        - tomcat_auto_start | bool
+      register: tomcat_service_start
+      tags:
+        - tomcat-install
+        - tomcat-service
 
-  - name: Restart Tomcat service
-    ansible.windows.win_service:
-      name: "{{ tomcat_service_name }}"
-      state: restarted
-    register: tomcat_service_restart
-    tags:
-      - never
-      - tomcat-restart
+    - name: Restart Tomcat service
+      ansible.windows.win_service:
+        name: "{{ tomcat_service_name }}"
+        state: restarted
+      register: tomcat_service_restart
+      tags:
+        - never
+        - tomcat-restart
 
-  - name: Get Tomcat service status
-    ansible.windows.win_service_info:
-      name: "{{ tomcat_service_name }}"
-    register: tomcat_service_status
-    tags:
-      - tomcat-install
-      - tomcat-restart
-      - tomcat-service
+    - name: Get Tomcat service status
+      ansible.windows.win_service_info:
+        name: "{{ tomcat_service_name }}"
+      register: tomcat_service_status
+      tags:
+        - tomcat-install
+        - tomcat-restart
+        - tomcat-service
 
-  - name: Display Tomcat service status
-    debug:
-      msg: "Tomcat service '{{ tomcat_service_name }}' - State: {{ tomcat_service_status.services[0].state | default('not found') }}, Start mode: {{ tomcat_service_status.services[0].start_mode | default('unknown') }}"
-    when: (tomcat_service_status.services | default([])) | length > 0
-    tags:
-      - tomcat-install
-      - tomcat-restart
-      - tomcat-service
+    - name: Display Tomcat service status
+      ansible.builtin.debug:
+        msg: >-
+          Tomcat service '{{ tomcat_service_name }}' - State: {{ tomcat_service_status.services[0].state | default('not found') }},
+          Start mode: {{ tomcat_service_status.services[0].start_mode | default('unknown') }}
+      when: (tomcat_service_status.services | default([])) | length > 0
+      tags:
+        - tomcat-install
+        - tomcat-restart
+        - tomcat-service
 
-  - name: Verify Tomcat is accessible (if service is running)
-    ansible.windows.win_uri:
-      url: "http://localhost:{{ tomcat_http_port }}"
-      method: GET
-      status_code: [200, 404]  # 404 is OK (default Tomcat page when no apps deployed)
-      timeout: 30
-    register: tomcat_http_check
-    failed_when: false
-    when:
-      - (tomcat_service_status.services | default([])) | length > 0
-      - tomcat_service_status.services[0].state == 'started'
-    tags:
-      - tomcat-verify
-      - tomcat-service
+    - name: Verify Tomcat is accessible (if service is running)
+      ansible.windows.win_uri:
+        url: "http://localhost:{{ tomcat_http_port }}"
+        method: GET
+        status_code: [200, 404]  # 404 is OK (default Tomcat page when no apps deployed)
+        timeout: 30
+      register: tomcat_http_check
+      failed_when: false
+      when:
+        - (tomcat_service_status.services | default([])) | length > 0
+        - tomcat_service_status.services[0].state == 'started'
+      tags:
+        - tomcat-verify
+        - tomcat-service
 
-  - name: Display HTTP check result
-    debug:
-      msg: "Tomcat HTTP check - Status: {{ tomcat_http_check.status_code | default('not checked') }}"
-    when: tomcat_http_check is defined
-    tags:
-      - tomcat-verify
+    - name: Display HTTP check result
+      ansible.builtin.debug:
+        msg: "Tomcat HTTP check - Status: {{ tomcat_http_check.status_code | default('not checked') }}"
+      when: tomcat_http_check is defined
+      tags:
+        - tomcat-verify
 
-  - name: Clean up downloaded zip
-    ansible.windows.win_file:
-      path: "{{ tomcat_temp_dir }}/apache-tomcat-{{ tomcat_version }}.zip"
-      state: absent
-    when: tomcat_download.changed | default(false)
-    tags:
-      - tomcat-install
+    - name: Clean up downloaded zip
+      ansible.windows.win_file:
+        path: "{{ tomcat_temp_dir }}/apache-tomcat-{{ tomcat_version }}.zip"
+        state: absent
+      when: tomcat_download.changed | default(false)  # noqa no-handler
+      tags:
+        - tomcat-install
 
-  - name: Tomcat installation complete
-    debug:
-      msg: >-
-        Tomcat {{ tomcat_version }} installed at {{ tomcat_home }}.
-        Service: {{ tomcat_service_name }}
-        {% if tomcat_auto_start %}(started automatically){% else %}(not started - tomcat_auto_start is false){% endif %}
-    tags:
-      - tomcat-install
-
-  become: no
+    - name: Tomcat installation complete
+      ansible.builtin.debug:
+        msg: >-
+          Tomcat {{ tomcat_version }} installed at {{ tomcat_home }}.
+          Service: {{ tomcat_service_name }}
+          {% if tomcat_auto_start %}(started automatically){% else %}(not started - tomcat_auto_start is false){% endif %}
+      tags:
+        - tomcat-install

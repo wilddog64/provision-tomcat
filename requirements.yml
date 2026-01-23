@@ -3,3 +3,11 @@ roles:
     src: https://github.com/wilddog64/provision-java.git
     scm: git
     version: main
+  - name: windows-base
+    src: https://github.com/wilddog64/windows-base.git
+    scm: git
+    version: main
+  - name: provision-windows-security
+    src: https://github.com/wilddog64/provision-windows-security.git
+    scm: git
+    version: main

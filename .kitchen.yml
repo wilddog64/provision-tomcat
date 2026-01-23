@@ -21,7 +21,7 @@ provisioner:
     env: stage2
     extract_build_number: 16
     extract_debug: 'False'
-    skip_migration: yes
+    skip_migration: true
 
 platforms:
   - name: ubuntu-2404
@@ -29,7 +29,7 @@ platforms:
       box: hashicorp-education/ubuntu-24-04
   - name: rockylinux9
     driver_config:
-      box: rockylinux/9
+      box: bento/rockylinux-9
   - name: win11
     driver_config:
       box: stromweld/windows-11
@@ -61,7 +61,7 @@ platforms:
         env: stage2
         extract_build_number: 16
         extract_debug: 'False'
-        skip_migration: yes
+        skip_migration: true
         ansible_connection: winrm
         ansible_winrm_transport: basic
         ansible_port: 5985
@@ -105,7 +105,7 @@ platforms:
         env: stage2
         extract_build_number: 16
         extract_debug: 'False'
-        skip_migration: yes
+        skip_migration: true
         ansible_connection: winrm
         ansible_winrm_transport: basic
         ansible_port: 5985
@@ -147,7 +147,7 @@ platforms:
         env: stage2
         extract_build_number: 16
         extract_debug: 'False'
-        skip_migration: yes
+        skip_migration: true
         ansible_connection: winrm
         ansible_winrm_transport: basic
         ansible_port: 5985

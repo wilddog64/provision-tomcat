@@ -1,6 +1,6 @@
 #!/bin/bash
 # Clean up stale VirtualBox disk registrations
-# Usage: ./bin/vbox-cleanup-disks.sh [--dry-run]
+# Usage: ./bin/vbox-cleanup-disks [--dry-run]
 
 set -e
 
