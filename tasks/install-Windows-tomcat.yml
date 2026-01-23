@@ -281,10 +281,22 @@
             state: stopped
           failed_when: false
 
-        - name: Uninstall existing Tomcat service prior to promotion
+        - name: Check for existing service prior to promotion
+          ansible.windows.win_service_info:
+            name: "{{ tomcat_service_name }}"
+          register: promo_existing_service
+
+        - name: Uninstall existing Tomcat service prior to promotion (service.bat)
           ansible.windows.win_command: '"{{ tomcat_home }}/bin/service.bat" uninstall'
           failed_when: false
-          when: tomcat_symlink_stat.stat.exists
+          when:
+            - tomcat_symlink_stat.stat.exists
+            - (promo_existing_service.services | length > 0)
+
+        - name: Force remove service if still exists (sc delete)
+          ansible.windows.win_command: "sc.exe delete {{ tomcat_service_name }}"
+          when: (promo_existing_service.services | length > 0)
+          failed_when: false
 
         - name: Remove old symlink before promotion
           ansible.windows.win_file:

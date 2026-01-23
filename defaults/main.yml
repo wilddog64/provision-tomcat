@@ -1,14 +1,15 @@
 # SPDX-License-Identifier: MIT-0
 ---
 # defaults file for provision-tomcat
+install_drive: "C:"
 tomcat_version: 9.0.113  # Tomcat version to install
 tomcat_major_version: 9   # Major version (used for service name and paths)
 tomcat_service_name: "Tomcat{{ tomcat_major_version }}"
-tomcat_install_dir: C:/Tomcat  # Base installation directory
+tomcat_install_dir: "{{ install_drive }}/Tomcat"  # Base installation directory
 tomcat_symlink_name: current   # Symlink name pointing to active version
 tomcat_download_url: >-
   https://dlcdn.apache.org/tomcat/tomcat-{{ tomcat_major_version }}/v{{ tomcat_version }}/bin/apache-tomcat-{{ tomcat_version }}-windows-x64.zip
-tomcat_temp_dir: C:/temp
+tomcat_temp_dir: "{{ install_drive }}/temp"
 tomcat_auto_start: true  # Set to false if you want to start Tomcat manually
 tomcat_keep_versions: 10  # Number of old Tomcat versions to keep (0 = keep all)
 tomcat_http_port: 8080
