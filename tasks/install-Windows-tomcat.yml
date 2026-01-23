@@ -431,6 +431,15 @@
         - tomcat-restart
         - tomcat-service
 
+    - name: Ensure service is removed before fresh install (force cleanup)
+      ansible.windows.win_command: "sc.exe delete {{ tomcat_service_name }}"
+      failed_when: false
+      when:
+        - not (tomcat_candidate_active | default(false) | bool)
+        - not tomcat_target_installed.stat.exists or (tomcat_service_check.services | default([])) | length == 0
+      tags:
+        - tomcat-install
+
     - name: Install Tomcat Windows service
       ansible.windows.win_command: '"{{ tomcat_home }}/bin/service.bat" install'
       environment:
