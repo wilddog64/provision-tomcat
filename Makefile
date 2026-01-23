@@ -130,6 +130,9 @@ help:
 	@echo "Override KITCHEN_YAML=/path/to/.kitchen.yml when needed."
 	@echo "See TESTING-UPGRADES.md for detailed upgrade testing documentation."
 
+# Build extra vars for Ansible
+EXTRA_VARS := $(if $(ADO_PAT_TOKEN),ado_pat_token=$(ADO_PAT_TOKEN),)
+
 .PHONY: list-kitchen-instances
 list-kitchen-instances:
 	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) list
@@ -198,19 +201,19 @@ fix-vbox-locks:
 
 .PHONY: vagrant-disk-setup
 vagrant-disk-setup:
-	vagrant provision --provision-with disk_setup
+	$(if $(EXTRA_VARS),ansible_extra_vars="$(EXTRA_VARS)" ,)vagrant provision --provision-with disk_setup
 
 .PHONY: vagrant-provision
 vagrant-provision:
-	vagrant provision --provision-with ansible
+	$(if $(EXTRA_VARS),ansible_extra_vars="$(EXTRA_VARS)" ,)vagrant provision --provision-with ansible
 
 .PHONY: vagrant-provision-step1
 vagrant-provision-step1:
-	vagrant provision --provision-with ansible_upgrade_step1
+	$(if $(EXTRA_VARS),ansible_extra_vars="$(EXTRA_VARS)" ,)vagrant provision --provision-with ansible_upgrade_step1
 
 .PHONY: vagrant-provision-step2
 vagrant-provision-step2:
-	vagrant provision --provision-with ansible_upgrade_step2
+	$(if $(EXTRA_VARS),ansible_extra_vars="$(EXTRA_VARS)" ,)vagrant provision --provision-with ansible_upgrade_step2
 
 .PHONY: vagrant-build-baseline
 vagrant-build-baseline: vbox-cleanup-disks

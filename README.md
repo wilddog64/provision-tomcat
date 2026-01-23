@@ -39,6 +39,22 @@ Default variables (`defaults/main.yml`):
 | `tomcat_service_account_username` | `LocalSystem` | Windows service account for Tomcat service (set to domain/user to override) |
 | `tomcat_service_account_password` | `''` | Password for the custom service account (ignored for LocalSystem) |
 
+### Azure DevOps Agent (Linux)
+
+If running on Linux (via dependencies), you can optionally install an Azure DevOps agent.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `install_ado_agent` | `true` | Set to `false` to disable agent installation |
+| `ado_pat_token` | `env:ADO_PAT_TOKEN` | PAT token for agent configuration |
+
+To configure the agent, export your PAT token before running:
+
+```bash
+export ADO_PAT_TOKEN="your-token"
+make vagrant-provision
+```
+
 The Tomcat installation uses a symlink structure:
 
 ```
