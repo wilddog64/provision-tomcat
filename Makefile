@@ -158,11 +158,11 @@ vagrant-up-baseline:
 
 .PHONY: vagrant-update-baseline
 vagrant-update-baseline:
-	./bin/vagrant-update-baseline.sh
+	./bin/vagrant-update-baseline
 
 .PHONY: vagrant-upgrade-demo
 vagrant-upgrade-demo:
-	./bin/vagrant-upgrade-demo.sh $(if $(KEEP),--keep,)
+	./bin/vagrant-upgrade-demo $(if $(KEEP),--keep,)
 
 .PHONY: vagrant-destroy
 vagrant-destroy:
@@ -174,7 +174,7 @@ vagrant-destroy-upgrade:
 
 .PHONY: vbox-cleanup-disks
 vbox-cleanup-disks:
-	./bin/vbox-cleanup-disks.sh
+	./bin/vbox-cleanup-disks
 
 .PHONY: fix-vbox-locks
 fix-vbox-locks:
@@ -217,11 +217,11 @@ vagrant-provision-step2:
 
 .PHONY: vagrant-build-baseline
 vagrant-build-baseline: vbox-cleanup-disks
-	./bin/vagrant-build-baseline.sh
+	./bin/vagrant-build-baseline
 
 .PHONY: vagrant-build-baseline-minimal
 vagrant-build-baseline-minimal: vbox-cleanup-disks
-	./bin/vagrant-build-baseline.sh --disk-only
+	./bin/vagrant-build-baseline --disk-only
 
 # Test all suites on a platform
 define TEST_ALL_SUITES

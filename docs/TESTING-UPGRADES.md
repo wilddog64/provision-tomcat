@@ -75,7 +75,7 @@ rbenv exec kitchen destroy upgrade-win11
 Run the interactive test script:
 
 ```bash
-./test-upgrade.sh
+./bin/test-upgrade
 ```
 
 ## What Gets Tested
@@ -250,7 +250,7 @@ Upgrade testing is currently configured for:
 - `tests/playbook-upgrade.yml`: Ansible playbook for upgrade scenarios (Java 17→21, Tomcat 9.0.112→9.0.113)
 - `tests/playbook-downgrade.yml`: Ansible playbook for downgrade scenarios (Java 21→17, Tomcat 9.0.113→9.0.112)
 - `Makefile`: Targets for automated upgrade/downgrade testing
-- `test-upgrade.sh`: Interactive test script
+- `bin/test-upgrade`: Interactive test script
 
 ## Next Steps
 

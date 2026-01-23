@@ -2,8 +2,8 @@
 # Build a Vagrant box with D: drive, optionally with Tomcat + JDK pre-installed.
 #
 # Usage:
-#   ./vagrant-build-baseline.sh              # Full: D: drive + Tomcat + Java
-#   ./vagrant-build-baseline.sh --disk-only  # Minimal: D: drive only
+#   ./vagrant-build-baseline              # Full: D: drive + Tomcat + Java
+#   ./vagrant-build-baseline --disk-only  # Minimal: D: drive only
 #
 set -euo pipefail
 
@@ -106,7 +106,7 @@ if [[ -f "$DISK_FILE" ]]; then
   fi
 fi
 # Also clean up any stale registration without file
-./bin/vbox-cleanup-disks.sh 2>/dev/null || true
+./bin/vbox-cleanup-disks 2>/dev/null || true
 
 # Note: The secondary disk is NOT included in the packaged box by default.
 # The box will have the D: drive configured but empty on first use.

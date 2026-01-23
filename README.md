@@ -266,7 +266,7 @@ ansible-playbook -i inventory playbook.yml --extra-vars "tomcat_version=9.0.120"
 
 If you need to run the new Tomcat/Java build side-by-side before switching the `current` symlink, see `docs/ZERO-DOWNTIME-UPGRADES.md`. It describes how to install a temporary service on an alternate port, run smoke tests from both inside the VM and from the controller, and promote (or roll back) entirely within Ansible. For recurring problems we have hit during this process (candidate tasks skipping, controller waits failing, or port 9080 never opening), refer to `docs/CANDIDATE-TROUBLESHOOTING.md`.
 
-For a one-command automated test run (including cleanup), execute `bin/test-upgrade-candidate.sh` from the repo root. It chains together `make candidate-cleanup-win11` and `make test-upgrade-candidate-stack` so step 1, step 2, and teardown all happen sequentially.
+For a one-command automated test run (including cleanup), execute `bin/test-upgrade-candidate` from the repo root. It chains together `make candidate-cleanup-win11` and `make test-upgrade-candidate-stack` so step 1, step 2, and teardown all happen sequentially.
 
 ### Verification After Upgrade
 
@@ -410,7 +410,7 @@ make destroy-win11     # Clean up
 
 ### Vagrant Candidate Helper
 
-For a direct Vagrant workflow (outside Test Kitchen), use `bin/vagrant-port-check.sh`. It:
+For a direct Vagrant workflow (outside Test Kitchen), use `bin/vagrant-port-check`. It:
 
 1. Brings up the Windows 11 guest without provisioning.
 2. Runs step 1 of the upgrade playbook (Tomcat 9.0.112 / Java 17).
@@ -422,11 +422,11 @@ Ensure port forwarding for 8080 and 9080 is available in `Vagrantfile` (already 
 
 #### Pre-built baseline box (optional)
 
-If you want to skip the "install Tomcat 9.0.112 / Java 17" phase entirely, run `bin/vagrant-build-baseline.sh`. It provisions the stock Windows 11 box with step 1 of the upgrade playbook and packages it into `boxes/windows11-tomcat9.0.112-java17.box`. You can then `vagrant box add windows11-tomcat112 boxes/windows11-tomcat9.0.112-java17.box` and point your Vagrantfile to that box for demos where you only want to exercise the upgrade/candidate workflow.
+If you want to skip the "install Tomcat 9.0.112 / Java 17" phase entirely, run `bin/vagrant-build-baseline`. It provisions the stock Windows 11 box with step 1 of the upgrade playbook and packages it into `boxes/windows11-tomcat9.0.112-java17.box`. You can then `vagrant box add windows11-tomcat112 boxes/windows11-tomcat9.0.112-java17.box` and point your Vagrantfile to that box for demos where you only want to exercise the upgrade/candidate workflow.
 
 #### Upgrade-only script
 
-Once the baseline box is installed (`windows11-tomcat112`), `bin/vagrant-upgrade-demo.sh` drives the rest of the demo using `Vagrantfile-upgrade`:
+Once the baseline box is installed (`windows11-tomcat112`), `bin/vagrant-upgrade-demo` drives the rest of the demo using `Vagrantfile-upgrade`:
 
 1. Brings the baseline box up (no provisioning).
 2. Runs the candidate prepare pass (manual control enabled).
