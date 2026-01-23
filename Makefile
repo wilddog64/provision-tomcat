@@ -418,8 +418,6 @@ gif:
 	@echo "Converting cast files to GIF..."
 	@for cast in docs/recordings/*.cast; do \
 		echo "Processing $$cast..."; \
-		./bin/asciinema-v3-to-v2 "$$cast" "$${cast}.v2"; \
-		agg "$${cast}.v2" "$${cast%.cast}.gif"; \
-		rm "$${cast}.v2"; \
+		agg "$$cast" "$${cast%.cast}.gif"; \
 		echo "Created $${cast%.cast}.gif"; \
 	done
