@@ -57,6 +57,21 @@ make vagrant-provision
 
 If the environment variable is not set, the agent configuration tasks will be skipped automatically.
 
+### Optional Features (via windows-base)
+
+This role includes the `windows-base` role, which provides optional security and agent configurations.
+
+**Splunk Universal Forwarder**
+To install Splunk UF, set `splunk_uf_enabled: true` and provide the installer URL.
+
+| Variable | Description |
+|----------|-------------|
+| `splunk_uf_enabled` | Set to `true` to enable |
+| `splunk_uf_installer_url` | URL to MSI installer |
+| `splunk_uf_indexer_host` | Receiving Indexer Host (optional) |
+
+See `windows-base` documentation for all available options.
+
 The Tomcat installation uses a symlink structure:
 
 ```
