@@ -13,6 +13,7 @@
 
   roles:
     - windows-base
+    - provision-windows-security
     - provision-java
     - provision-tomcat
 
