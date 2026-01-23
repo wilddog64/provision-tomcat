@@ -76,6 +76,16 @@
       tags:
         - always
 
+    # Base configuration and Agents
+    - name: Include windows-base role
+      include_role:
+        name: windows-base
+
+    # Security configuration
+    - name: Include provision-windows-security role
+      include_role:
+        name: provision-windows-security
+
     # Install Java
     - name: Include provision-java role
       include_role:
