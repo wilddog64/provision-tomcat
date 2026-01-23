@@ -12,6 +12,7 @@
     tomcat_temp_dir: "{{ install_drive }}/temp"
 
   roles:
+    - windows-base
     - provision-java
     - provision-tomcat
 
