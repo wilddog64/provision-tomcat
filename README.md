@@ -48,12 +48,14 @@ If running on Linux (via dependencies), you can optionally install an Azure DevO
 | `install_ado_agent` | `true` | Set to `false` to disable agent installation |
 | `ado_pat_token` | `env:ADO_PAT_TOKEN` | PAT token for agent configuration |
 
-To configure the agent, export your PAT token before running:
+To configure the agent, export your PAT token in your terminal before running the provision command:
 
 ```bash
-export ADO_PAT_TOKEN="your-token"
+export ADO_PAT_TOKEN="your-secure-pat-token"
 make vagrant-provision
 ```
+
+If the environment variable is not set, the agent configuration tasks will be skipped automatically.
 
 The Tomcat installation uses a symlink structure:
 
