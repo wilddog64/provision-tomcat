@@ -52,7 +52,7 @@ check: lint syntax
 
 # Utility Targets
 
-# ============================================================================
+# ============================================================================ 
 
 .PHONY: setup
 
@@ -74,7 +74,7 @@ deps:
 # ============================================================================ 
 .PHONY: help
 help:
-	@echo "Available targets (auto KITCHEN_YAML=$(KITCHEN_YAML)):"
+	@echo "Available targets (auto KITCHEN_YAML=$(KITCHEN_YAML)):".
 	@echo ""
 	@echo "Validation:"
 	@echo "  lint                # Run ansible-lint"
@@ -408,3 +408,18 @@ test-downgrade-win11: update-roles
 .PHONY: downgrade-cleanup-win11
 downgrade-cleanup-win11:
 	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) destroy downgrade-win11
+
+# ============================================================================ 
+# Recording Tools
+# ============================================================================ 
+.PHONY: gif
+gif:
+	@command -v agg >/dev/null 2>&1 || { echo >&2 "agg is not installed. Install with: brew install agg"; exit 1; }
+	@echo "Converting cast files to GIF..."
+	@for cast in docs/recordings/*.cast; do \
+		echo "Processing $$cast..."; \
+		./bin/asciinema-v3-to-v2 "$$cast" "$${cast}.v2"; \
+		agg "$${cast}.v2" "$${cast%.cast}.gif"; \
+		rm "$${cast}.v2"; \
+		echo "Created $${cast%.cast}.gif"; \
+	done
