@@ -8,8 +8,3 @@ This recording shows the process of building the baseline Windows box (`windows1
 
 ![Building Baseline Box](building-basebox.gif)
 
-## Provision Tomcat Demo
-
-The main demo showing the standard provision workflow.
-
-![Provision Tomcat](provision-tmcat.gif)
