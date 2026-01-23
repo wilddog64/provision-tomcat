@@ -583,7 +583,7 @@ ansible-galaxy collection install ansible.windows community.windows -p ./collect
 
 ## License
 
-MIT-0 (see `LICENSE`).
+[MIT](LICENSE)
 
 ## Author
 
