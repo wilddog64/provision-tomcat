@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/_lib.sh"
+
+DEFAULT_BRANCH="main"
+BRANCH="${TARGET_BRANCH:-${1:-$DEFAULT_BRANCH}}"
+JOB_NAME="${REQUIRED_STATUS_CHECK:-Lint and Syntax Checks}"
+STRICT_MODE="${STRICT_STATUS_CHECKS:-true}"
+ENFORCE_ADMINS="${ENFORCE_ADMINS:-true}"
+REVIEW_COUNT="${REQUIRED_APPROVALS:-1}"
+DISMISS_STALE="${DISMISS_STALE_REVIEWS:-true}"
+
+require_command() {
+    command -v "$1" >/dev/null 2>&1 || err "Missing required command: $1"
+}
+
+require_command gh
+require_command jq
+
+info "Preparing branch protection for $BRANCH (job: $JOB_NAME)"
+
+OWNER="${GITHUB_OWNER:-$(gh repo view --json owner --jq '.owner.login')}"
+REPO="${GITHUB_REPO:-$(gh repo view --json name --jq '.name')}"
+
+to_bool_literal() {
+    case "${1,,}" in
+        true|1|yes|y) echo true ;;
+        *) echo false ;;
+    esac
+}
+
+STRICT_BOOL=$(to_bool_literal "$STRICT_MODE")
+ADMIN_BOOL=$(to_bool_literal "$ENFORCE_ADMINS")
+DISMISS_BOOL=$(to_bool_literal "$DISMISS_STALE")
+
+if ! [[ "$REVIEW_COUNT" =~ ^[0-9]+$ ]]; then
+    err "REQUIRED_APPROVALS must be a non-negative integer (got '$REVIEW_COUNT')"
+fi
+
+PAYLOAD=$(jq -n \
+    --arg job "$JOB_NAME" \
+    --argjson strict "$STRICT_BOOL" \
+    --argjson admins "$ADMIN_BOOL" \
+    --argjson dismiss "$DISMISS_BOOL" \
+    --argjson reviews "$REVIEW_COUNT" \
+    '{
+        required_status_checks: {
+            strict: $strict,
+            contexts: [$job]
+        },
+        enforce_admins: $admins,
+        required_pull_request_reviews: {
+            dismiss_stale_reviews: $dismiss,
+            required_approving_review_count: $reviews
+        },
+        restrictions: null
+    }')
+
+gh api \
+  -X PUT \
+  -H "Accept: application/vnd.github+json" \
+  "/repos/$OWNER/$REPO/branches/$BRANCH/protection" \
+  --input - <<<"$PAYLOAD" >/dev/null
+
+info "Branch protection applied to $OWNER/$REPO@$BRANCH"
