@@ -10,15 +10,17 @@ Please make sure you have the correct access rights and the repository exists.
 ```
 
 ## Cause: Ambiguous SSH Keys
-This issue occurs when using `webfactory/ssh-agent` (or similar actions) to load multiple SSH keys into the SSH agent at once. 
+This issue occurs when the Git environment has access to multiple SSH keys simultaneously, leading to authentication "pollution":
 
-1.  **Agent Logic:** When Git connects to GitHub, the SSH agent offers the keys one by one.
-2.  **Ambiguity:** If the agent offers Key A (for Repo A) when trying to clone Repo B, GitHub authenticates the user but denies access to Repo B (because Key A is not authorized for Repo B).
-3.  **Failure:** Instead of rejecting the key and letting the agent try Key B, GitHub returns "Repository not found" (security measure). Git interprets this as a fatal error and stops.
+1.  **SSH Agent Conflict:** Using `webfactory/ssh-agent` loads multiple keys into a single agent. When Git connects to GitHub, the agent offers keys sequentially. If GitHub sees a valid key that *doesn't* have access to the specific repo being requested, it returns "Repository not found" instead of allowing the agent to try the next key.
+2.  **Credential Persistence:** By default, `actions/checkout` persists the SSH key to the local Git configuration. If the first checkout step succeeds, its key remains in the environment. The second checkout step may then attempt to use that "persisted" key for the wrong repository, causing the same "Repository not found" error.
 
 ## Solution: Isolated Checkout Steps
 
-Do not use `ssh-agent` to load all keys globally. Instead, provide the specific SSH key to the `actions/checkout` step directly. This configures Git to use *only* that specific key for that specific command, eliminating ambiguity.
+To solve this, you must isolate each checkout operation:
+1.  **Avoid Global Agents:** Remove `ssh-agent` steps.
+2.  **Explicit Keys:** Provide the `ssh-key` directly to each `actions/checkout` step.
+3.  **Disable Persistence:** Set `persist-credentials: false` to ensure each step cleans up its key before the next one starts.
 
 ### Incorrect Configuration (Fails)
 ```yaml
