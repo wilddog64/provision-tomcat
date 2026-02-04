@@ -26,21 +26,41 @@ jobs:
           repository: wilddog64/provision-java
           path: roles/provision-java
 
+      - name: Install SSH Keys and Config
+        run: |
+          mkdir -p ~/.ssh
+          
+          # Write Key 1
+          echo "${{ secrets.WINDOWS_BASE_DEPLOY_KEY }}" > ~/.ssh/id_windows_base
+          chmod 600 ~/.ssh/id_windows_base
+          
+          # Write Key 2
+          echo "${{ secrets.PROVISION_WINDOWS_SECURITY_DEPLOY_KEY }}" > ~/.ssh/id_provision_security
+          chmod 600 ~/.ssh/id_provision_security
+          
+          # Create Config with Aliases
+          cat <<EOF > ~/.ssh/config
+          Host windows-base-repo
+            HostName github.com
+            User git
+            IdentityFile ~/.ssh/id_windows_base
+            IdentitiesOnly yes
+          
+          Host provision-security-repo
+            HostName github.com
+            User git
+            IdentityFile ~/.ssh/id_provision_security
+            IdentitiesOnly yes
+          EOF
+          
+          # Add GitHub to known_hosts
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+
       - name: Checkout windows-base
-        uses: actions/checkout@v4
-        with:
-          repository: wilddog64/windows-base
-          path: roles/windows-base
-          ssh-key: ${{ secrets.WINDOWS_BASE_DEPLOY_KEY }}
-          persist-credentials: false
+        run: git clone windows-base-repo:wilddog64/windows-base.git roles/windows-base
 
       - name: Checkout provision-windows-security
-        uses: actions/checkout@v4
-        with:
-          repository: wilddog64/provision-windows-security
-          path: roles/provision-windows-security
-          ssh-key: ${{ secrets.PROVISION_WINDOWS_SECURITY_DEPLOY_KEY }}
-          persist-credentials: false
+        run: git clone provision-security-repo:wilddog64/provision-windows-security.git roles/provision-windows-security
 
       - name: Install Dependencies
         run: |
