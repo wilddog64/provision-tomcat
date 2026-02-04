@@ -20,13 +20,6 @@ jobs:
       - name: Checkout provision-tomcat
         uses: actions/checkout@v4
 
-      - name: Setup SSH for Private Repos
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: |
-            ${{ secrets.WINDOWS_BASE_DEPLOY_KEY }}
-            ${{ secrets.PROVISION_WINDOWS_SECURITY_DEPLOY_KEY }}
-
       - name: Checkout provision-java
         uses: actions/checkout@v4
         with:

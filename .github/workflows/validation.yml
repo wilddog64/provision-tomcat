@@ -21,13 +21,6 @@ jobs:
           repository: wilddog64/provision-java
           path: roles/provision-java
 
-      - name: Setup SSH for Private Repos
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: |
-            ${{ secrets.WINDOWS_BASE_DEPLOY_KEY }}
-            ${{ secrets.PROVISION_WINDOWS_SECURITY_DEPLOY_KEY }}
-
       - name: Checkout windows-base
         uses: actions/checkout@v4
         with:
