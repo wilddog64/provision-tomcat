@@ -47,12 +47,14 @@ Do not use `ssh-agent` to load all keys globally. Instead, provide the specific 
   with:
     repository: user/repo-a
     ssh-key: ${{ secrets.REPO_A_KEY }}  # Explicit key for this repo
+    persist-credentials: false          # Critical: Do not persist key to next step
 
 - name: Checkout Repo B
   uses: actions/checkout@v4
   with:
     repository: user/repo-b
     ssh-key: ${{ secrets.REPO_B_KEY }}  # Explicit key for this repo
+    persist-credentials: false          # Critical: Do not persist key to next step
 ```
 
 ## Reference

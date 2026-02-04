@@ -32,6 +32,7 @@ jobs:
           repository: wilddog64/windows-base
           path: roles/windows-base
           ssh-key: ${{ secrets.WINDOWS_BASE_DEPLOY_KEY }}
+          persist-credentials: false
 
       - name: Checkout provision-windows-security
         uses: actions/checkout@v4
@@ -39,6 +40,7 @@ jobs:
           repository: wilddog64/provision-windows-security
           path: roles/provision-windows-security
           ssh-key: ${{ secrets.PROVISION_WINDOWS_SECURITY_DEPLOY_KEY }}
+          persist-credentials: false
 
       - name: Install Dependencies
         run: |
