@@ -1,0 +1,62 @@
+name: Validation
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  lint:
+    # ONLY run if the event is a Push OR if the PR comes from the same repository (not a fork)
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout provision-tomcat
+        uses: actions/checkout@v4
+
+      - name: Checkout provision-java
+        uses: actions/checkout@v4
+        with:
+          repository: wilddog64/provision-java
+          path: roles/provision-java
+
+      - name: Setup SSH for Private Repos
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: |
+            ${{ secrets.WINDOWS_BASE_DEPLOY_KEY }}
+            ${{ secrets.PROVISION_WINDOWS_SECURITY_DEPLOY_KEY }}
+
+      - name: Checkout windows-base
+        uses: actions/checkout@v4
+        with:
+          repository: wilddog64/windows-base
+          path: roles/windows-base
+          ssh-key: ${{ secrets.WINDOWS_BASE_DEPLOY_KEY }}
+
+      - name: Checkout provision-windows-security
+        uses: actions/checkout@v4
+        with:
+          repository: wilddog64/provision-windows-security
+          path: roles/provision-windows-security
+          ssh-key: ${{ secrets.PROVISION_WINDOWS_SECURITY_DEPLOY_KEY }}
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          pip install ansible-lint
+
+      - name: Install Ansible collections
+        run: make deps
+
+      - name: Run Validation
+        env:
+          ANSIBLE_ROLES_PATH: ${{ github.workspace }}/roles
+        run: make check
