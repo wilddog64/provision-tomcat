@@ -1,4 +1,1 @@
----
-exclude_paths:
-  - .kitchen.yml
-  - .kitchen-win.yml
+offline: true
