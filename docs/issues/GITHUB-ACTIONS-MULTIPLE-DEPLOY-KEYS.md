@@ -15,49 +15,56 @@ This issue occurs when the Git environment has access to multiple SSH keys simul
 1.  **SSH Agent Conflict:** Using `webfactory/ssh-agent` loads multiple keys into a single agent. When Git connects to GitHub, the agent offers keys sequentially. If GitHub sees a valid key that *doesn't* have access to the specific repo being requested, it returns "Repository not found" instead of allowing the agent to try the next key.
 2.  **Credential Persistence:** By default, `actions/checkout` persists the SSH key to the local Git configuration. If the first checkout step succeeds, its key remains in the environment. The second checkout step may then attempt to use that "persisted" key for the wrong repository, causing the same "Repository not found" error.
 
-## Solution: Isolated Checkout Steps
+## Solution: SSH Config Aliases
 
-To solve this, you must isolate each checkout operation:
-1.  **Avoid Global Agents:** Remove `ssh-agent` steps.
-2.  **Explicit Keys:** Provide the `ssh-key` directly to each `actions/checkout` step.
-3.  **Disable Persistence:** Set `persist-credentials: false` to ensure each step cleans up its key before the next one starts.
+The most reliable way to handle multiple deploy keys is to avoid `actions/checkout` for private dependencies entirely. Instead, manually configure the `~/.ssh/config` file to map specific **Host Aliases** to specific **Identity Files**.
 
-### Incorrect Configuration (Fails)
+### 1. Write Keys and Config
+Create a step to write your secrets to files and generate a config block:
+
 ```yaml
-- name: Setup SSH Keys
-  uses: webfactory/ssh-agent@v0.9.0
-  with:
-    ssh-private-key: |
-      ${{ secrets.REPO_A_KEY }}
-      ${{ secrets.REPO_B_KEY }}
-
-- name: Checkout Repo A
-  uses: actions/checkout@v4
-  with:
-    repository: user/repo-a
-
-- name: Checkout Repo B
-  uses: actions/checkout@v4
-  with:
-    repository: user/repo-b
+- name: Install SSH Keys and Config
+  run: |
+    mkdir -p ~/.ssh
+    
+    # Write Key A
+    echo "${{ secrets.REPO_A_KEY }}" > ~/.ssh/id_repo_a
+    chmod 600 ~/.ssh/id_repo_a
+    
+    # Write Key B
+    echo "${{ secrets.REPO_B_KEY }}" > ~/.ssh/id_repo_b
+    chmod 600 ~/.ssh/id_repo_b
+    
+    # Create Config
+    cat <<EOF > ~/.ssh/config
+    Host repo-a-alias
+      HostName github.com
+      User git
+      IdentityFile ~/.ssh/id_repo_a
+      IdentitiesOnly yes
+    
+    Host repo-b-alias
+      HostName github.com
+      User git
+      IdentityFile ~/.ssh/id_repo_b
+      IdentitiesOnly yes
+    EOF
+    
+    # Scan GitHub keys
+    ssh-keyscan github.com >> ~/.ssh/known_hosts
 ```
 
-### Correct Configuration (Works)
+### 2. Clone using Aliases
+Use standard `git clone` commands with the aliases defined above. Git will see `repo-a-alias` and automatically use the correct key.
+
 ```yaml
 - name: Checkout Repo A
-  uses: actions/checkout@v4
-  with:
-    repository: user/repo-a
-    ssh-key: ${{ secrets.REPO_A_KEY }}  # Explicit key for this repo
-    persist-credentials: false          # Critical: Do not persist key to next step
+  run: git clone repo-a-alias:user/repo-a.git roles/repo-a
 
 - name: Checkout Repo B
-  uses: actions/checkout@v4
-  with:
-    repository: user/repo-b
-    ssh-key: ${{ secrets.REPO_B_KEY }}  # Explicit key for this repo
-    persist-credentials: false          # Critical: Do not persist key to next step
+  run: git clone repo-b-alias:user/repo-b.git roles/repo-b
 ```
 
-## Reference
-This approach ensures that the Git command for each checkout uses strictly the credential authorized for that repository.
+## Why this works
+This approach removes all ambiguity. You explicitly tell Git: "When connecting to `repo-a-alias`, MUST use `id_repo_a`". It bypasses the SSH agent's guessing logic and `actions/checkout`'s persistence issues entirely.
+
