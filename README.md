@@ -17,616 +17,89 @@ Default variables (`defaults/main.yml`):
 
 | Variable | Default | Description |
 | --- | --- | --- |
-| `tomcat_version` | `'9.0.113'` | Tomcat version to install |
+| `tomcat_version` | `'9.0.115'` | Tomcat version to install |
 | `tomcat_major_version` | `'9'` | Major version (used for service name and paths) |
 | `tomcat_service_name` | `"Tomcat{{ tomcat_major_version }}"` | Windows service name (e.g., `Tomcat9`) |
 | `tomcat_install_dir` | `'C:/Tomcat'` | Base installation directory |
 | `tomcat_symlink_name` | `'current'` | Symlink name pointing to active version |
 | `tomcat_download_url` | `"https://dlcdn.apache.org/tomcat/tomcat-{{ tomcat_major_version }}/v{{ tomcat_version }}/bin/apache-tomcat-{{ tomcat_version }}-windows-x64.zip"` | Apache mirror download URL |
+| `tomcat_checksum` | `'sha512:...'` | SHA-512 checksum for download validation |
 | `tomcat_temp_dir` | `'C:/temp'` | Temporary directory for downloads |
 | `tomcat_auto_start` | `true` | Whether to start Tomcat service automatically after installation |
 | `tomcat_keep_versions` | `10` | Number of old Tomcat versions to keep (0 = keep all) |
 | `tomcat_http_port` | `8080` | Primary HTTP connector + firewall port |
 | `tomcat_shutdown_port` | `8005` | Shutdown port used by the main Tomcat service |
-| `tomcat_candidate_enabled` | `false` | Enable side-by-side candidate installs for zero downtime (automatically flips on when `tomcat_candidate_delegate` is set) |
+| `tomcat_candidate_enabled` | `false` | Enable side-by-side candidate installs for zero downtime |
 | `tomcat_candidate_port` | `9080` | HTTP port used by the temporary candidate service |
-| `tomcat_candidate_shutdown_port` | `9005` | Shutdown port used by the temporary candidate service |
-| `tomcat_candidate_service_name` | `Tomcat{{ tomcat_major_version }}Candidate` | Windows service name for the candidate instance |
-| `tomcat_candidate_delegate` | `null` | Controller host to run port checks from; also forces candidate workflow when defined |
-| `tomcat_candidate_delegate_connection` | `'local'` | Connection plugin used for delegated checks (set to `ssh`, `paramiko`, `winrm`, etc. when needed) |
-| `tomcat_candidate_delegate_python` | `null` | Optional Python interpreter path for the delegate (useful for non-default controllers) |
-| `tomcat_candidate_delegate_status_codes` | `[200, 404]` | HTTP status codes that count as success for controller-side checks |
-| `tomcat_candidate_manual_control` | `false` | Leave the candidate service running on port 9080 (skip promotion/cleanup) so you can promote later |
-| `tomcat_service_account_username` | `LocalSystem` | Windows service account for Tomcat service (set to domain/user to override) |
-| `tomcat_service_account_password` | `''` | Password for the custom service account (ignored for LocalSystem) |
-
-### Optional Features (via windows-base)
-
-This role includes the `windows-base` role, which provides optional security and agent configurations.
-
-**Splunk Universal Forwarder**
-To install Splunk UF, set `splunk_uf_enabled: true` and provide the installer URL.
-
-| Variable | Description |
-|----------|-------------|
-| `splunk_uf_enabled` | Set to `true` to enable |
-| `splunk_uf_installer_url` | URL to MSI installer |
-| `splunk_uf_indexer_host` | Receiving Indexer Host (optional) |
-
-See `windows-base` documentation for all available options.
+| `tomcat_service_account_username` | `LocalSystem` | Windows service account for Tomcat (LocalSystem is default) |
 
 The Tomcat installation uses a symlink structure:
 
 ```
 C:/Tomcat/
-├── apache-tomcat-9.0.113/    # Actual installation
-├── apache-tomcat-9.0.120/    # After upgrade
-└── current -> apache-tomcat-9.0.120/  # Symlink (always points to active version)
+├── apache-tomcat-9.0.112/    # Actual installation
+├── apache-tomcat-9.0.115/    # After upgrade
+└── current -> apache-tomcat-9.0.115/  # Symlink (always points to active version)
 ```
-
-The Tomcat service points to: `C:/Tomcat/current/`
 
 ## Features
 
 ### Direct Download Installation
-
 - Downloads Tomcat directly from Apache mirrors (no dependency on Chocolatey)
+- **Security**: Verifies download integrity using SHA-512 checksums.
 - Extracts to configured installation directory
 - Installs Windows service using Tomcat's `service.bat` script
-- Automatically configures Windows Firewall to allow port `tomcat_http_port` (8080 by default)
+- Automatically configures Windows Firewall
 
 ### Automatic Upgrades
-
-The role automatically detects and handles Tomcat upgrades using symlinks:
-
-1. **Detects existing installation** - Finds any `apache-tomcat-*` directory
-2. **Checks if upgrade needed** - Compares existing version to `tomcat_version` variable
-3. **Performs upgrade safely**:
-   - Stops Tomcat service
-   - Uninstalls old service
-   - Removes old symlink
-   - Downloads and extracts new version to `apache-tomcat-{{ tomcat_version }}/`
-   - Creates new symlink: `current -> apache-tomcat-{{ tomcat_version }}/`
-   - Installs new service pointing to `C:/Tomcat/current/`
-   - Starts new service
-
-**Benefits of symlink approach**:
-- Clean upgrades without renaming directories
-- Easy rollback (just repoint symlink)
-- Multiple versions can coexist
-- Service always points to same path (`C:/Tomcat/current/`)
+The role automatically detects and handles Tomcat upgrades using symlinks, allowing for safe version transitions and easy rollbacks.
 
 ### Version Retention Policy
+The role automatically manages old Tomcat versions using the `tomcat_keep_versions` variable (default: 10).
 
-The role automatically manages old Tomcat versions using the `tomcat_keep_versions` variable:
+## Infrastructure & Testing
 
-- **Default retention**: Keeps the 10 most recent versions
-- **Automatic cleanup**: Removes older versions beyond the retention limit during installation/upgrade
-- **Sorting**: Versions are sorted by modification time (newest first)
-- **Disable cleanup**: Set `tomcat_keep_versions: 0` to keep all versions
+This role uses Test Kitchen with Vagrant and AWS for automated testing.
 
-**Example:**
-- You have versions: 9.0.100, 9.0.105, 9.0.110, 9.0.113, 9.0.115, 9.0.117, 9.0.119, 9.0.120 (8 versions)
-- You upgrade to 9.0.125 (9 versions total)
-- Next upgrade to 9.0.130 (10 versions total)
-- Next upgrade to 9.0.135 (11 versions) - oldest version (9.0.100) is automatically removed
-- Result: You always have the current version plus 9 previous versions for rollback
-
-This ensures you have recent versions available for rollback while preventing unlimited disk usage growth.
-
-### Service Management
-
-- Uses batch commands (not PowerShell) for reliability
-- Sets `CATALINA_HOME` environment variable during service installation
-- Supports auto-start control via `tomcat_auto_start` variable
-- Provides Ansible tags for selective execution
-
-### Firewall Configuration
-
-- Automatically creates Windows Firewall rule named "Tomcat Server"
-- Allows inbound TCP connections on `tomcat_http_port` (8080 default)
-- Ensures Tomcat is accessible from host machine via port forwarding
-
-## Behavior
-
-The role is designed to be **idempotent** and **production-safe**:
-
-1. **First installation:**
-   - Downloads Tomcat zip from Apache mirror
-   - Extracts to installation directory
-   - Sets `CATALINA_HOME` environment variable
-   - Installs Windows service
-   - Configures firewall rule
-   - Starts service (if `tomcat_auto_start: true`)
-
-2. **Subsequent runs (same version):**
-   - Detects existing installation
-   - Skips download/extract
-   - Ensures service is running (if `tomcat_auto_start: true`)
-   - No changes made
-
-3. **Upgrade runs (different version):**
-   - Detects version mismatch
-   - Stops existing service
-   - Backs up old installation
-   - Downloads new version
-   - Installs new service
-   - Starts new service
-
-## Ansible Tags
-
-The role supports these tags for selective task execution:
-
-| Tag | Description |
-| --- | --- |
-| `tomcat-install` | Installation and upgrade tasks |
-| `tomcat-service` | Service management tasks |
-| `tomcat-restart` | Restart Tomcat service |
-| `tomcat-verify` | Verification tasks |
-
-**Examples:**
-```bash
-# Only install/upgrade Tomcat
-ansible-playbook playbook.yml --tags tomcat-install
-
-# Only restart Tomcat
-ansible-playbook playbook.yml --tags tomcat-restart
-
-# Skip installation, only verify
-ansible-playbook playbook.yml --skip-tags tomcat-install
-```
-
-## Example Playbooks
-
-### Basic Installation
-
-```yaml
----
-- hosts: windows
-  gather_facts: yes
-  roles:
-    - provision-java      # Installs Java (required)
-    - provision-tomcat    # Installs Tomcat
-```
-
-### Install Specific Version
-
-```yaml
----
-- hosts: windows
-  gather_facts: yes
-  vars:
-    tomcat_version: "9.0.120"
-  roles:
-    - provision-java
-    - provision-tomcat
-```
-
-### Install Without Auto-Start
-
-```yaml
----
-- hosts: windows
-  gather_facts: yes
-  vars:
-    tomcat_version: "9.0.113"
-    tomcat_auto_start: false
-  roles:
-    - provision-java
-    - provision-tomcat
-```
-
-### Upgrade to New Version
-
-```yaml
----
-- hosts: windows
-  gather_facts: yes
-  vars:
-    tomcat_version: "9.0.120"  # Change to new version
-  roles:
-    - provision-java
-    - provision-tomcat
-```
-
-When you change `tomcat_version`, the role will:
-1. Detect the version mismatch
-2. Stop the old service
-3. Backup the old installation (e.g., `apache-tomcat-9.0.113.bak.1736549230`)
-4. Install the new version
-5. Start the new service
-
-## Upgrade Procedures
-
-### Simple Version Upgrade
-
-To upgrade Tomcat to a new version:
-
-```bash
-ansible-playbook -i inventory playbook.yml --extra-vars "tomcat_version=9.0.120"
-```
-
-### Upgrade Java and Tomcat Together
-
-```yaml
----
-- hosts: windows
-  gather_facts: yes
-  vars:
-    java_version: 21
-    tomcat_version: "9.0.120"
-  roles:
-    - provision-java
-    - provision-tomcat
-```
-
-### Zero-Downtime Candidate Testing
-
-If you need to run the new Tomcat/Java build side-by-side before switching the `current` symlink, see `docs/ZERO-DOWNTIME-UPGRADES.md`. It describes how to install a temporary service on an alternate port, run smoke tests from both inside the VM and from the controller, and promote (or roll back) entirely within Ansible. For recurring problems we have hit during this process (candidate tasks skipping, controller waits failing, or port 9080 never opening), refer to `docs/issues/CANDIDATE-TROUBLESHOOTING.md`.
-
-For a one-command automated test run (including cleanup), execute `bin/test-upgrade-candidate` from the repo root. It chains together `make candidate-cleanup-win11` and `make test-upgrade-candidate-stack` so step 1, step 2, and teardown all happen sequentially.
-
-### Verification After Upgrade
-
-```bash
-# Check Tomcat service status
-ansible windows -m ansible.windows.win_service_info -a "name=Tomcat9"
-
-# Test HTTP accessibility
-# Replace 8080 with tomcat_http_port if you override the default
-curl http://localhost:8080
-```
-
-## Verification
-
-The role includes built-in verification tasks:
-
-1. Verifies Java is installed (checks `java_home` fact from `provision-java` role)
-2. Confirms Tomcat files are extracted correctly
-3. Verifies Windows service is installed
-4. Checks service status
-5. Tests HTTP accessibility on port 8080 (200 or 404 response)
-
-The test playbook (`tests/playbook.yml`) includes additional verification from the host machine.
-
-## Makefile Targets
-
-Run `make help` for all available targets:
-
-### Validation
-
-```bash
-make setup          # Verify and setup development environment
-make lint           # Run ansible-lint
-make syntax         # Check playbook syntax
-make check          # Run all validation checks
-```
-
-### Utilities
-
-```bash
-make deps             # Install Ansible collections
-make list-kitchen-instances  # List kitchen instances
-make destroy-all      # Destroy all kitchen instances
-```
-
-## Local Testing
-
-This role uses Test Kitchen with Vagrant for automated testing.
-
-**Documentation**:
-- **[Development Environment Setup](docs/DEVELOPMENT-SETUP.md)** - First-time setup and prerequisites
-- **[Test Kitchen Guide](docs/TEST-KITCHEN.md)** - Using Test Kitchen for testing
-- **[Testing Upgrades](docs/TESTING-UPGRADES.md)** - Upgrade and downgrade testing procedures
-- **[Zero-Downtime Upgrades](docs/ZERO-DOWNTIME-UPGRADES.md)** - Candidate workflow details
-- **[Candidate Troubleshooting](docs/issues/CANDIDATE-TROUBLESHOOTING.md)** - Common issues and fixes while exercising the candidate workflow
-- **[VirtualBox Stale Disks](docs/issues/VIRTUALBOX-STALE-DISKS.md)** - Fix for `VERR_ALREADY_EXISTS` errors when creating disks
-- **[Tooling Consistency & Kitchen Baseline](docs/issues/TOOLING-CONSISTENCY-AND-KITCHEN-BASELINE.md)** - Why lint/toolchain resolution and baseline Kitchen config were adjusted
-- **[Controller Lookup Plugins](docs/plugins/CONTROLLER-LOOKUP-PLUGINS.md)** - How the controller-side port/HTTP checks work
-- **[Azure Sandbox Test Kitchen Plan](docs/plans/azure-sandbox-kitchen.md)** - Step-by-step plan for running Kitchen suites inside an ACG Azure sandbox
+### AWS Testing (AGC Sandbox)
+The project utilizes a **Hybrid Zero-Touch Sync** strategy to handle ephemeral AWS sandboxes:
+- Dynamic resource discovery for Subnets, SGs, and AMIs.
+- Automated SG ingress gating restricted to the runner's public IP.
+- Verified end-to-end on `aws-dev`.
 
 ### Azure Testing (CLI Workflow)
+In restricted sandboxes where Test Kitchen drivers may fail, use the following self-contained targets. These require an active `az login`.
 
-In restricted sandboxes (like ACG or corporate environments) where Test Kitchen drivers fail, use the following self-contained targets. These require an active `az login`.
-
-#### Standard Usage (Auto-detection)
-Run these directly after `az login`. The script will auto-detect your subscription and any resource group containing `playground-sandbox`.
 ```bash
 make test-azure-provision-tomcat   # Full provision test
 make test-azure-upgrade-candidate # Zero-downtime upgrade test
 make test-azure-destroy           # Teardown all resources
 ```
 
-#### Universal Overrides (Corporate Sandboxes)
-You can override any parameter by passing it as an environment variable. This is useful if your company uses specific resource group names or hardened images.
-```bash
-# Example: Use a specific RG and a different location
-AZURE_RESOURCE_GROUP=my-company-rg AZURE_LOCATION=westeurope make test-azure-provision-tomcat
+For troubleshooting common issues in the ACG Azure sandbox (Resource Group restrictions, MSI timeouts, etc.), see **[Azure Kitchen Integration Issues](docs/issues/AZURE-KITCHEN-INTEGRATION.md)**.
 
-# Example: Use a custom hardened Windows image
-AZURE_IMAGE=My Hardened Image Name make test-azure-provision-tomcat
-```
+## Security
 
-| Variable | Default (Fallback) | Description |
-| --- | --- | --- |
-| `AZURE_RESOURCE_GROUP` | Auto-detected | Existing group to deploy into |
-| `AZURE_LOCATION` | Auto-detected from RG | Region for resources |
-| `AZURE_IMAGE` | Windows Server 2022 | URN or name of the VM image |
-| `AZURE_VM_NAME` | `kqvm-win11` | Name of the VM and related resources |
-| `KEEP_AZURE_VM` | `0` (null) | Set to `1` to skip automatic destroy |
+The project has undergone a comprehensive security audit. Key protections include:
+- **Fork Protection**: Jobs only run on self-hosted runners if triggered from the original repository.
+- **Network Hardening**: Dynamic SG rules and localhost-only shutdown ports.
+- **Credential Safety**: Mandatory `no_log: true` for all sensitive tasks.
 
-For troubleshooting common issues (Resource Group restrictions, WinRM timeouts, IPv6 mismatches), see **[Azure Integration Issues](docs/issues/AZURE-KITCHEN-INTEGRATION.md)**.
-- Kitchen automatically loads `scratch/azure-sandbox.env` (or the file pointed to by `AZURE_ENV_FILE`) so `bundle exec kitchen test default-win11-azure` picks up the right subscription/credentials even if you forget to `source` first.
-- Run `bin/azure-quick-vm.sh` (defaults to a Windows Server VM, auto-sources `scratch/azure-sandbox.env`, override with `--env`) to perform a quick “create + destroy” VM sanity check in the sandbox before attempting Kitchen.
-- Run `bundle exec kitchen test <suite>-<platform>` from your workstation or self-hosted runner and capture `.kitchen/logs/*` for PR notes. For Azure, start with `bundle exec kitchen test default-win11-azure`.
-- Destroy sandbox resources (`kitchen destroy --all`) before the session expires.
-
-### Test Suites
-
-| Suite | Description |
-| --- | --- |
-| `default` | Basic installation with auto-start enabled |
-| `upgrade` | Tests upgrade from one version to another |
-| `idempotence` | Verifies role is idempotent (no changes on second run) |
-| `no-autostart` | Tests installation with `tomcat_auto_start: false` |
-
-### D: Drive Installation
-
-Install Tomcat and Java on D: drive instead of C: drive. This requires a baseline box with a pre-formatted D: drive.
-
-#### Build the D: Drive Baseline Box
-
-```bash
-# Build minimal box with D: drive only (no Tomcat/Java)
-make vagrant-build-baseline-minimal
-
-# Add the box to Vagrant
-vagrant box add windows11-disk boxes/windows11-disk.box
-```
-
-#### Test with D: Drive
-
-```bash
-# Test Kitchen with D: drive
-make test-win11-disk
-
-# Or with Vagrant
-JDK_VERSION=21 install_drive=D: vagrant up
-vagrant provision --provision-with disk_setup
-vagrant provision
-```
-
-#### Ansible Variables for D: Drive
-
-Set `install_drive` to change the installation path:
-
-```yaml
-# In playbook or extra_vars
-install_drive: "D:"
-# This sets:
-#   java_install_base_dir: D:/java
-#   tomcat_install_dir: D:/Tomcat
-#   java_temp_dir: D:/temp
-#   tomcat_temp_dir: D:/temp
-```
-
-Or set paths individually:
-
-```bash
-ansible-playbook -i inventory playbook.yml \
-  -e 'java_install_base_dir=D:/java' \
-  -e 'tomcat_install_dir=D:/Tomcat' \
-  -e 'tomcat_temp_dir=D:/temp'
-```
-
-### Quick Testing Commands
-
-```bash
-# List all test instances
-make list-kitchen-instances
-
-# Test default suite on Windows 11
-make test-win11
-
-# Test specific suite
-make test-default-win11
-make test-upgrade-win11
-make test-upgrade-baseline-win11
-make test-idempotence-win11
-make test-no-autostart-win11
-
-# Test all suites
-make test-all-win11
-
-# Step-by-step testing
-make converge-win11    # Run Ansible provisioning
-make verify-win11      # Run verification
-make destroy-win11     # Clean up
-```
-
-### Vagrant Candidate Helper
-
-For a direct Vagrant workflow (outside Test Kitchen), use `bin/vagrant-port-check`. It:
-
-1. Brings up the Windows 11 guest without provisioning.
-2. Runs step 1 of the upgrade playbook (Tomcat 9.0.112 / Java 17).
-3. Runs step 2 with `tomcat_candidate_manual_control=true`, which leaves the candidate service running on port 9080.
-4. Verifies ports 8080/9080 from the controller and waits for user confirmation.
-5. After you press Enter, reruns step 2 with `tomcat_candidate_manual_control=false` to promote and clean up.
-
-Ensure port forwarding for 8080 and 9080 is available in `Vagrantfile` (already defined) before running the script.
-
-#### Pre-built baseline box (optional)
-
-If you want to skip the "install Tomcat 9.0.112 / Java 17" phase entirely, run `bin/vagrant-build-baseline`. It provisions the stock Windows 11 box with step 1 of the upgrade playbook and packages it into `boxes/windows11-tomcat9.0.112-java17.box`. You can then `vagrant box add windows11-tomcat112 boxes/windows11-tomcat9.0.112-java17.box` and point your Vagrantfile to that box for demos where you only want to exercise the upgrade/candidate workflow.
-
-#### Upgrade-only script
-
-Once the baseline box is installed (`windows11-tomcat112`), `bin/vagrant-upgrade-demo` drives the rest of the demo using `Vagrantfile-upgrade`:
-
-1. Brings the baseline box up (no provisioning).
-2. Runs the candidate prepare pass (manual control enabled).
-3. Verifies ports 8080/9080.
-4. Promotes/cleans up after you press Enter.
-5. Destroys the VM unless you pass `--keep`.
-
-Run it directly or via `make vagrant-upgrade-demo`. You can keep the VM running by invoking either `make vagrant-upgrade-demo KEEP` (or `KEEP=1 make vagrant-upgrade-demo`) or by running the script with `--keep`.
-
-### Manual Testing
-
-```bash
-# Create VM
-kitchen create default-win11
-
-# Run provisioning
-kitchen converge default-win11
-
-# Run verifier
-kitchen verify default-win11
-
-# Destroy VM
-kitchen destroy default-win11
-
-# Or do all at once
-kitchen test default-win11
-```
-
-### Supported Platforms
-
-- Windows 11 (`win11`)
-- Ubuntu 24.04 (`ubuntu-2404`)
-- Rocky Linux 9 (`rockylinux9`)
-
-Note: Tomcat installation is currently implemented for Windows only.
-
-## Architecture
-
-### Installation Flow
-
-1. **Verify Java** - Checks that Java is installed via `provision-java` role
-2. **Check existing installation** - Looks for existing Tomcat directories
-3. **Determine action** - Install new, upgrade existing, or skip
-4. **Download** (if needed) - Downloads Tomcat zip from Apache mirror
-5. **Extract** - Unzips to installation directory
-6. **Configure environment** - Sets `CATALINA_HOME` variable
-7. **Install service** - Uses `service.bat` with environment variables
-8. **Configure firewall** - Creates Windows Firewall rule for port 8080
-9. **Start service** - Starts Tomcat (if `tomcat_auto_start: true`)
-10. **Verify** - Confirms service is running and accessible
-
-### Service Installation
-
-The role uses Tomcat's native `service.bat install` command with the `environment` parameter to ensure `CATALINA_HOME` is set correctly:
-
-```yaml
-- name: Install Tomcat Windows service
-  ansible.windows.win_command: '"{{ tomcat_home }}/bin/service.bat" install'
-  environment:
-    CATALINA_HOME: "{{ tomcat_home }}"
-```
-
-This approach is more stable than PowerShell-based service installation.
+See **[CI/CD Security Architecture](docs/CI-SECURITY.md)** and **[Security Audit Report](docs/SECURITY-AUDIT.md)** for details.
 
 ## Troubleshooting
 
-### Port 8080 Not Accessible
+### GitHub Actions CI Errors
+If you encounter "Repository not found" errors when checking out private dependencies:
+- See **[GitHub Actions Multiple Deploy Keys](docs/issues/GITHUB-ACTIONS-MULTIPLE-DEPLOY-KEYS.md)** for the fix regarding ambiguous SSH keys.
 
-The role automatically configures the Windows Firewall, but verify:
-
-1. **Check firewall rule exists:**
-   ```powershell
-   Get-NetFirewallRule -DisplayName "Tomcat Server"
-   ```
-
-2. **Check service is running:**
-   ```powershell
-   Get-Service Tomcat9
-   ```
-
-3. **Test from inside VM:**
-   ```powershell
-   curl http://localhost:8080
-   ```
-
-4. **Check port forwarding** (if using Vagrant):
-   ```bash
-   vagrant port
-   ```
-
-### Service Won't Start
-
-Check the Tomcat logs:
-```
-C:/Tomcat/Tomcat/apache-tomcat-{version}/logs/
-```
-
-Common issues:
-- Java not installed or `JAVA_HOME` not set
-- Port 8080 already in use
-- Insufficient permissions
-
-### Upgrade Issues
-
-If an upgrade fails:
-
-1. **Check backup exists:**
-   ```powershell
-   Get-ChildItem C:/Tomcat/Tomcat -Filter "*.bak.*"
-   ```
-
-2. **Manual rollback:**
-   ```powershell
-   Stop-Service Tomcat9
-   Remove-Item "C:/Tomcat/Tomcat/apache-tomcat-{new-version}" -Recurse
-   Rename-Item "C:/Tomcat/Tomcat/apache-tomcat-{old-version}.bak.{timestamp}" `
-               "C:/Tomcat/Tomcat/apache-tomcat-{old-version}"
-   # Re-run Ansible with old version
-   ```
-
-3. **Clean install:**
-   - Set `tomcat_version` to desired version
-   - Destroy and recreate VM
-   - Re-run playbook
-
-### VirtualBox Disk Errors
-
-If you see `VERR_ALREADY_EXISTS` when creating VMs with D: drive:
-
-```bash
-# Clean up stale disk registrations
-make vbox-cleanup-disks
-```
-
-See **[VirtualBox Stale Disks](docs/issues/VIRTUALBOX-STALE-DISKS.md)** for details.
-
-### Azure Sandbox Issues
-
-For troubleshooting common issues in the ACG Azure sandbox (Resource Group restrictions, MSI timeouts, etc.), see **[Azure Kitchen Integration Issues](docs/issues/AZURE-KITCHEN-INTEGRATION.md)**.
+### Known Issues
+See the [docs/issues](docs/issues/) directory for detailed documentation on common problems.
 
 ## Dependencies
 
-This role requires:
-
-1. **provision-java role** - Must run before this role to install Java and set `java_home` fact
-2. **Ansible collections:**
-   - `ansible.windows`
-   - `community.windows`
-
-Install collections (installs to `./collections`):
-```bash
-# Use Make (recommended)
-make deps
-
-# Or manually
-ansible-galaxy collection install ansible.windows community.windows -p ./collections
-```
+1. **provision-java role** - Must run before this role.
+2. **Ansible collections:** `ansible.windows`, `community.windows`, `chocolatey.chocolatey`.
 
 ## License
-
 [MIT](LICENSE)
-
-## Author
-
-Created for automated Tomcat deployment on Windows environments.
-- Supports custom service accounts via `tomcat_service_account_username` / `tomcat_service_account_password`
-- **[Service Accounts](docs/SERVICE-ACCOUNTS.md)** - How to provide Windows service credentials securely
