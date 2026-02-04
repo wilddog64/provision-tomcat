@@ -579,6 +579,12 @@ make vbox-cleanup-disks
 
 See **[VirtualBox Stale Disks](docs/issues/VIRTUALBOX-STALE-DISKS.md)** for details.
 
+### GitHub Actions CI Errors
+
+If you encounter "Repository not found" errors when checking out private dependencies:
+
+- See **[GitHub Actions Multiple Deploy Keys](docs/issues/GITHUB-ACTIONS-MULTIPLE-DEPLOY-KEYS.md)** for the fix regarding ambiguous SSH keys.
+
 ## Dependencies
 
 This role requires:
