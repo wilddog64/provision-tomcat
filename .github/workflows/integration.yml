@@ -1,0 +1,57 @@
+name: Integration Tests
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [ main ]
+    paths-ignore:
+      - 'docs/**'
+      - '*.md'
+
+jobs:
+  kitchen-test:
+    # Security: Only run on trusted PRs/pushes (No Forks)
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, macOS]
+    env:
+      ANSIBLE_ROLES_PATH: ${{ github.workspace }}/roles
+      OBJC_DISABLE_INITIALIZE_FORK_SAFETY: YES
+    steps:
+      - name: Checkout provision-tomcat
+        uses: actions/checkout@v4
+
+      - name: Setup SSH for Private Repos
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: |
+            ${{ secrets.WINDOWS_BASE_DEPLOY_KEY }}
+            ${{ secrets.PROVISION_WINDOWS_SECURITY_DEPLOY_KEY }}
+
+      - name: Checkout provision-java
+        uses: actions/checkout@v4
+        with:
+          repository: wilddog64/provision-java
+          path: roles/provision-java
+
+      - name: Checkout windows-base
+        uses: actions/checkout@v4
+        with:
+          repository: wilddog64/windows-base
+          path: roles/windows-base
+          ssh-key: ${{ secrets.WINDOWS_BASE_DEPLOY_KEY }}
+
+      - name: Checkout provision-windows-security
+        uses: actions/checkout@v4
+        with:
+          repository: wilddog64/provision-windows-security
+          path: roles/provision-windows-security
+          ssh-key: ${{ secrets.PROVISION_WINDOWS_SECURITY_DEPLOY_KEY }}
+
+      - name: Install Dependencies
+        run: |
+          gem install bundler
+          bundle install
+          make deps
+
+      - name: Run Test (Upgrade Win11)
+        run: make test-upgrade-win11
