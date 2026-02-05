@@ -192,17 +192,28 @@ jobs:
               if not os.path.exists(kfile): continue
               with open(kfile, 'r') as f: content = f.read()
               
-              # 1. Global port fix (Host 5985 is often busy on Mac)
-              content = content.replace('5985', '25985')
+              # 1. Fix Kitchen/Ansible connection port (Host side)
+              content = content.replace('port: 5985', 'port: 25985')
+              content = content.replace('ansible_port: 5985', 'ansible_port: 25985')
               
-              # 2. Fix Ansible binary path (Replace the ERB direnv template)
+              # 2. Fix Vagrant Port Forwarding (Host side)
+              # Inject network rule with id: "winrm" to override Vagrant default
+              if 'communicator: winrm' in content:
+                  winrm_net = 'communicator: winrm\\n      network:\\n        - [\\\"forwarded_port\\\", {guest: 5985, host: 25985, id: \\\"winrm\\\"}]'
+                  content = content.replace('communicator: winrm', winrm_net)
+              
+              # 3. Fix Ansible binary path
               if 'ansible_playbook_bin:' in content:
                   content = re.sub(r'ansible_playbook_bin:.*', f'ansible_playbook_bin: {ansible_path}', content)
               else:
                   content = content.replace('name: ansible_push', f'name: ansible_push\n      ansible_playbook_bin: {ansible_path}')
               
-              # 3. Inject robust verifier
-              content = re.sub(r'command: \|.*?(?=\n\n|\n[a-z]|\Z)', f'command: {robust_verifier}', content, flags=re.DOTALL)
+              # 4. Fix WinRM stability
+              content = content.replace('connection_retries: 5', 'connection_retries: 15')
+              content = content.replace('connection_retry_sleep: 10', 'connection_retry_sleep: 20')
+              
+              # 5. Inject robust verifier
+              content = re.sub(r'command: \\|.*?(?=\\n\\n|\\n[a-z]|\\Z)', f'command: {robust_verifier}', content, flags=re.DOTALL)
               
               with open(kfile, 'w') as f: f.write(content)
               print(f"Patched {kfile}")
