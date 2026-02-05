@@ -208,7 +208,11 @@ jobs:
                   content = content.replace('port: 5985', 'port: 25985')
                   content = content.replace('ansible_port: 5985', 'ansible_port: 25985')
                   
-                  # 3. Add Retry Loop to verifier
+                  # 3. Fix WinRM stability (Increase retries for slow Windows boot)
+                  content = content.replace('connection_retries: 5', 'connection_retries: 15')
+                  content = content.replace('connection_retry_sleep: 10', 'connection_retry_sleep: 20')
+                  
+                  # 4. Add Retry Loop to verifier
                   # Find the command: | block and replace it
                   # Note: This is a bit naive but should work given the file structure
                   pattern = r'command: \|.*?(?=\n\n|\n[a-z]|\Z)'
