@@ -205,9 +205,8 @@ jobs:
                       content = content.replace('name: ansible_push', f'name: ansible_push\n      ansible_playbook_bin: {ansible_path}')
                   
                   # 2. Fix Port Conflict (Host 5985 is busy)
-                  # Update transport and ansible ports
-                  content = content.replace('port: 5985', 'port: 25985')
-                  content = content.replace('ansible_port: 5985', 'ansible_port: 25985')
+                  # Replace all occurrences of 5985 with 25985 to be safe
+                  content = content.replace(': 5985', ': 25985')
                   
                   # Ensure Vagrant actually forwards the port 25985
                   if 'communicator: winrm' in content:
@@ -230,8 +229,8 @@ jobs:
           "
           
           # Verify injection
-          grep "ansible_playbook_bin" .kitchen.yml || true
-          grep "port: 25985" .kitchen.yml || true
+          echo "=== Patched .kitchen.yml ==="
+          cat .kitchen.yml
           
           bundle exec make test-upgrade-win11
 
