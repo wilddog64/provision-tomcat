@@ -115,13 +115,36 @@ jobs:
         run: |
           source .venv/bin/activate
           
-          # Debugging
-          echo "Current PATH: $PATH"
-          echo "Ansible Playbook: $(which ansible-playbook)"
+          # Inject explicit path to ansible-playbook into kitchen config using Python
+          # This avoids sed/newline issues on macOS
+          python3 -c "
+          import sys
+          import os
           
-          # Inject explicit path to ansible-playbook into kitchen config
-          # This fixes the "sh: --extra-vars: command not found" error by ensuring kitchen knows the binary name
-          sed -i '' "s|name: ansible_push|name: ansible_push\n      ansible_playbook_command: $(which ansible-playbook)|" .kitchen-win.yml
+          kitchen_file = '.kitchen-win.yml'
+          ansible_path = os.path.abspath('.venv/bin/ansible-playbook')
+          
+          if not os.path.exists(ansible_path):
+              print(f'Error: ansible-playbook not found at {ansible_path}')
+              sys.exit(1)
+          
+          with open(kitchen_file, 'r') as f:
+              content = f.read()
+          
+          target = 'name: ansible_push'
+          replacement = f'name: ansible_push\n      ansible_playbook_command: {ansible_path}'
+          
+          if target not in content:
+              print(f'Error: Could not find target string in {kitchen_file}')
+              sys.exit(1)
+          
+          new_content = content.replace(target, replacement)
+          
+          with open(kitchen_file, 'w') as f:
+              f.write(new_content)
+          
+          print(f'Updated {kitchen_file} with ansible_playbook_command: {ansible_path}')
+          "
           
           # Verify injection
           grep "ansible_playbook_command" .kitchen-win.yml
