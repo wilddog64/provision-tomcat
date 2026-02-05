@@ -76,7 +76,7 @@ jobs:
           
           # Run deps with correct path
           export PATH=$PWD/.venv/bin:$PATH
-          bundle exec make deps
+          # Note: We skip 'make deps' because we manually checked out roles above to handle SSH aliases
           ln -s . roles/provision-tomcat
 
       - name: Run Test (Upgrade Win11)
