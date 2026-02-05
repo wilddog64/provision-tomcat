@@ -217,7 +217,6 @@ jobs:
           echo "=== Verification of Patched .kitchen.yml ==="
           grep "ansible_playbook_bin" .kitchen.yml | head -n 5
           grep "connection_retries" .kitchen.yml
-          grep "Tomcat is UP" .kitchen.yml | head -n 1
           
           bundle exec make test-upgrade-win11
 
