@@ -80,6 +80,7 @@ jobs:
           gem install bundler
           bundle install
           make deps
+          ln -s . roles/provision-tomcat
 
       - name: Run Test (Upgrade Win11)
         run: make test-upgrade-win11
