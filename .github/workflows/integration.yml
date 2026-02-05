@@ -47,6 +47,21 @@ jobs:
           repository: wilddog64/provision-java
           path: roles/provision-java
 
+      - name: Hotpatch provision-java
+        run: |
+          # Fix the regex_search crash in the checked out role
+          python3 -c "
+          import os
+          fpath = 'roles/provision-java/tasks/install-Windows-java.yml'
+          if os.path.exists(fpath):
+              with open(fpath, 'r') as f: content = f.read()
+              old = 'regex_search(\'openjdk version \\\"([0-9.]+)\\\"\', \'\\\\1\')'
+              new = 'regex_findall(\'version \\\"([0-9.]+)\\\"\')'
+              if old in content:
+                  with open(fpath, 'w') as f: f.write(content.replace(old, new))
+                  print('Hotpatched provision-java task')
+          "
+
       - name: Install SSH Keys and Config
         run: |
           mkdir -p ~/.ssh
