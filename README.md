@@ -585,6 +585,12 @@ If you encounter "Repository not found" errors when checking out private depende
 
 - See **[GitHub Actions Multiple Deploy Keys](docs/issues/GITHUB-ACTIONS-MULTIPLE-DEPLOY-KEYS.md)** for the fix regarding ambiguous SSH keys.
 
+### CI on Self-Hosted Runners
+
+If you encounter crashes with Vagrant, Bundler conflicts, or "Command Not Found" errors in CI:
+
+- See **[CI Robustness Fixes](docs/issues/2026-02-04-ci-robustness-fixes.md)** for details on the Vagrant wrapper, Python injection, and environment isolation.
+
 ## Dependencies
 
 This role requires:
