@@ -164,73 +164,53 @@ jobs:
         run: |
           source .venv/bin/activate
           
-          # Inject explicit path to ansible-playbook into kitchen config using Python
-          # This fixes the issue where .kitchen.yml uses direnv path which doesn't exist in CI
-          python3 -c "
-          import sys
-          import os
-          import re
+          # Inject explicit path to ansible-playbook and fix ports using Python heredoc
+          python3 - <<'EOF'
+          import os, re, sys
           
           ansible_path = os.path.abspath('.venv/bin/ansible-playbook')
           if not os.path.exists(ansible_path):
-              print(f'Error: ansible-playbook not found at {ansible_path}')
+              print(f"Error: {ansible_path} not found")
               sys.exit(1)
           
-          # Patch both files to be safe
           kitchen_files = ['.kitchen.yml', '.kitchen-win.yml']
           
-          # Improved verifier with retry loop
-          robust_verifier = ' |' + '\n' + \
-              '        echo \"Waiting for Tomcat to respond on port 8080...\"' + '\n' + \
-              '        for i in {1..12}; do' + '\n' + \
-              '          if curl -s --connect-timeout 5 -f http://localhost:8080 || curl -s --connect-timeout 5 http://localhost:8080 | grep -q \"404\"; then' + '\n' + \
-              '            echo \"Tomcat is UP!\"' + '\n' + \
-              '            exit 0' + '\n' + \
-              '          fi' + '\n' + \
-              '          echo \"Still waiting ($i/12)...\"' + '\n' + \
-              '          sleep 10' + '\n' + \
-              '        done' + '\n' + \
-              '        echo \"ERROR: Tomcat failed to respond after 2 minutes\"' + '\n' + \
-              '        exit 1'
+          robust_verifier = """ |
+                  echo "Waiting for Tomcat to respond on port 8080..."
+                  for i in {1..12}; do
+                    if curl -s --connect-timeout 5 -f http://localhost:8080 || curl -s --connect-timeout 5 http://localhost:8080 | grep -q "404"; then
+                      echo "Tomcat is UP!"
+                      exit 0
+                    fi
+                    echo "Still waiting ($i/12)..."
+                    sleep 10
+                  done
+                  echo "ERROR: Tomcat failed to respond after 2 minutes"
+                  exit 1"""
           
           for kfile in kitchen_files:
-              if os.path.exists(kfile):
-                  with open(kfile, 'r') as f:
-                      content = f.read()
-                  
-                  # 1. Fix Ansible binary path
-                  if 'ansible_playbook_bin:' in content:
-                      content = re.sub(r'ansible_playbook_bin:.*', f'ansible_playbook_bin: {ansible_path}', content)
-                  else:
-                      content = content.replace('name: ansible_push', f'name: ansible_push\n      ansible_playbook_bin: {ansible_path}')
-                  
-                  # 2. Fix Port Conflict (Host 5985 is busy)
-                  # Replace all occurrences of 5985 with 25985 to be safe
-                  content = content.replace(': 5985', ': 25985')
-                  
-                  # Ensure Vagrant actually forwards the port 25985
-                  if 'communicator: winrm' in content:
-                      winrm_net = 'communicator: winrm\n      network:\n        - [\"forwarded_port\", {guest: 5985, host: 25985}]'
-                      content = content.replace('communicator: winrm', winrm_net)
-                  
-                  # 3. Fix WinRM stability (Increase retries for slow Windows boot)
-                  content = content.replace('connection_retries: 5', 'connection_retries: 15')
-                  content = content.replace('connection_retry_sleep: 10', 'connection_retry_sleep: 20')
-                  
-                  # 4. Add Retry Loop to verifier
-                  # Find the command: | block and replace it
-                  # Note: This is a bit naive but should work given the file structure
-                  pattern = r'command: \|.*?(?=\n\n|\n[a-z]|\Z)'
-                  content = re.sub(pattern, f'command:{robust_verifier}', content, flags=re.DOTALL)
-                  
-                  with open(kfile, 'w') as f:
-                      f.write(content)
-                  print(f'Updated {kfile} with robust verifier and port 25985')
-          "
+              if not os.path.exists(kfile): continue
+              with open(kfile, 'r') as f: content = f.read()
+              
+              # 1. Global port fix (Host 5985 is often busy on Mac)
+              content = content.replace('5985', '25985')
+              
+              # 2. Fix Ansible binary path (Replace the ERB direnv template)
+              if 'ansible_playbook_bin:' in content:
+                  content = re.sub(r'ansible_playbook_bin:.*', f'ansible_playbook_bin: {ansible_path}', content)
+              else:
+                  content = content.replace('name: ansible_push', f'name: ansible_push\n      ansible_playbook_bin: {ansible_path}')
+              
+              # 3. Inject robust verifier
+              content = re.sub(r'command: \|.*?(?=\n\n|\n[a-z]|\Z)', f'command: {robust_verifier}', content, flags=re.DOTALL)
+              
+              with open(kfile, 'w') as f: f.write(content)
+              print(f"Patched {kfile}")
+          EOF
           
-          # Verify injection
-          echo "=== Patched .kitchen.yml ==="
-          cat .kitchen.yml
+          echo "=== Verification of Patched .kitchen.yml ==="
+          grep "25985" .kitchen.yml | head -n 5
+          grep "ansible_playbook_bin" .kitchen.yml
           
           bundle exec make test-upgrade-win11
 
