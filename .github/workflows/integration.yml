@@ -175,3 +175,16 @@ jobs:
           grep "ansible_playbook_bin" .kitchen.yml || true
           
           bundle exec make test-upgrade-win11
+
+      - name: Post-Test Cleanup
+        if: always()
+        run: |
+          echo "Performing final VirtualBox cleanup..."
+          VMS=$(VBoxManage list vms | grep "kitchen-provision-tomcat" | awk -F'"' '{print $2}' || true)
+          for VM in $VMS; do
+            echo "Cleaning up $VM..."
+            VBoxManage controlvm "$VM" poweroff || true
+            sleep 2
+            VBoxManage unregistervm "$VM" --delete || true
+          done
+
