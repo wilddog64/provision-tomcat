@@ -82,15 +82,26 @@ jobs:
       - name: Workaround Vagrant Bundler Conflict
         run: |
           mkdir -p $HOME/.local/bin
-          cat <<EOF > $HOME/.local/bin/vagrant
+          cat <<'EOF' > $HOME/.local/bin/vagrant
           #!/bin/bash
-          unset BUNDLE_GEMFILE
-          unset BUNDLE_PATH
-          unset BUNDLE_BIN
-          unset RUBYOPT
-          unset GEM_HOME
-          unset GEM_PATH
-          exec /usr/local/bin/vagrant "\$@"
+          # Robust wrapper to clean environment for Vagrant
+          # Preserves SSH_AUTH_SOCK and basic system paths while stripping Bundler vars
+          
+          ENV_ARGS=(
+            HOME="$HOME"
+            PATH="/opt/vagrant/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+            TERM="${TERM:-dumb}"
+            LANG="${LANG:-en_US.UTF-8}"
+            USER="$USER"
+            SHELL="$SHELL"
+            TMPDIR="${TMPDIR:-/tmp}"
+          )
+          
+          [[ -n "${SSH_AUTH_SOCK:-}" ]] && ENV_ARGS+=( SSH_AUTH_SOCK="$SSH_AUTH_SOCK" )
+          [[ -n "${VAGRANT_CWD:-}" ]]  && ENV_ARGS+=( VAGRANT_CWD="$VAGRANT_CWD" )
+          
+          # Use /usr/bin/env -i to clear environment and set only the whitelist
+          exec /usr/bin/env -i "${ENV_ARGS[@]}" /usr/local/bin/vagrant "$@"
           EOF
           chmod +x $HOME/.local/bin/vagrant
           echo "$HOME/.local/bin" >> $GITHUB_PATH
