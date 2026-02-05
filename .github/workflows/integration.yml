@@ -3,7 +3,7 @@ name: Integration Tests
 on:
   workflow_dispatch:
   push:
-    branches: [ main, github-workflow ]
+    branches: [ main ]
   pull_request:
     branches: [ main ]
     paths-ignore:
