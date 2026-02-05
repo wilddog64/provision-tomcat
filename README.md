@@ -97,8 +97,14 @@ If you encounter "Repository not found" errors when checking out private depende
 If you encounter crashes with Vagrant, Bundler conflicts, or "Command Not Found" errors in CI:
 - See **[CI Robustness Fixes](docs/issues/2026-02-04-ci-robustness-fixes.md)** for details on the Vagrant wrapper, Python injection, and environment isolation.
 
+<<<<<<< HEAD
 ### Known Issues
 See the [docs/issues](docs/issues/) directory for detailed documentation on common problems.
+=======
+## Security
+
+For details on how the CI/CD pipeline is secured on the self-hosted runner (including fork protection, SSH key management, and environment isolation), see **[CI/CD Security Architecture](docs/CI-SECURITY.md)**.
+>>>>>>> 265921a (docs: add CI security architecture documentation)
 
 ## Dependencies
 
