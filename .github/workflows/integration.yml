@@ -57,18 +57,6 @@ jobs:
           ssh-keyscan github.com >> ~/.ssh/known_hosts
           chmod 700 ~/.ssh
 
-      - name: Debug SSH Keys
-        run: |
-          echo "=== Windows Base Key Fingerprint ==="
-          ssh-keygen -lf ~/.ssh/id_windows_base
-          
-          echo "=== Provision Security Key Fingerprint ==="
-          ssh-keygen -lf ~/.ssh/id_provision_security
-          
-          echo "=== Testing Connection for Security Repo ==="
-          # -T: Disable pseudo-tty, -v: Verbose
-          ssh -vT provision-security-repo || true
-
       - name: Checkout windows-base
         run: git clone windows-base-repo:wilddog64/windows-base.git roles/windows-base
 
