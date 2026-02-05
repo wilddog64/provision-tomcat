@@ -56,11 +56,23 @@ jobs:
           fpath = 'roles/provision-java/tasks/install-Windows-java.yml'
           if os.path.exists(fpath):
               with open(fpath, 'r') as f: content = f.read()
-              old = 'regex_search(\'openjdk version \\\"([0-9.]+)\\\"\', \'\\\\1\')'
-              new = 'regex_findall(\'version \\\"([0-9.]+)\\\"\')'
-              if old in content:
-                  with open(fpath, 'w') as f: f.write(content.replace(old, new))
-                  print('Hotpatched provision-java task')
+              
+              # 1. Change filter name to avoid NoneType crash
+              content = content.replace('regex_search', 'regex_findall')
+              
+              # 2. Update pattern to match Microsoft JDK output ('version ...' instead of 'openjdk version')
+              content = content.replace('openjdk version', 'version')
+              
+              # 3. Remove backreference argument (regex_findall returns list)
+              # Handle potential escaping variations
+              content = content.replace(\", '\\\\1'\", \"\")
+              content = content.replace(\", '\\1'\", \"\")
+              
+              # 4. Check both stdout and stderr (Microsoft JDK usually prints to stdout or stderr depending on version)
+              content = content.replace('java_version_output.stderr', '(java_version_output.stdout + java_version_output.stderr)')
+              
+              with open(fpath, 'w') as f: f.write(content)
+              print('Hotpatched provision-java task with robust regex_findall fix')
           "
 
       - name: Install SSH Keys and Config
