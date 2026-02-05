@@ -177,18 +177,22 @@ jobs:
           
           kitchen_files = ['.kitchen.yml', '.kitchen-win.yml']
           
-          robust_verifier = """ |
-                  echo "Waiting for Tomcat to respond on port 8080..."
-                  for i in {1..12}; do
-                    if curl -s --connect-timeout 5 -f http://localhost:8080 || curl -s --connect-timeout 5 http://localhost:8080 | grep -q "404"; then
-                      echo "Tomcat is UP!"
-                      exit 0
-                    fi
-                    echo "Still waiting ($i/12)..."
-                    sleep 10
-                  done
-                  echo "ERROR: Tomcat failed to respond after 2 minutes"
-                  exit 1"""
+          # Improved verifier with retry loop (indented for YAML)
+          v_lines = [
+              ' |',
+              '        echo "Waiting for Tomcat to respond on port 8080..."',
+              '        for i in {1..12}; do',
+              '          if curl -s --connect-timeout 5 -f http://localhost:8080 || curl -s --connect-timeout 5 http://localhost:8080 | grep -q "404"; then',
+              '            echo "Tomcat is UP!"',
+              '            exit 0',
+              '          fi',
+              '          echo "Still waiting ($i/12)..."',
+              '          sleep 10',
+              '        done',
+              '        echo "ERROR: Tomcat failed to respond after 2 minutes"',
+              '        exit 1'
+          ]
+          robust_verifier = "\\n".join(v_lines)
           
           for kfile in kitchen_files:
               if not os.path.exists(kfile): continue
@@ -201,16 +205,14 @@ jobs:
               # 2. Fix Vagrant Port Forwarding (Host side)
               # Inject network rule with id: "winrm" to override Vagrant default
               if 'communicator: winrm' in content:
-                  winrm_net = \"\"\"communicator: winrm
-      network:
-        - [\"forwarded_port\", {guest: 5985, host: 25985, id: \"winrm\"}]\"\"\"
+                  winrm_net = 'communicator: winrm\\n      network:\\n        - [\"forwarded_port\", {guest: 5985, host: 25985, id: \"winrm\"}]'
                   content = content.replace('communicator: winrm', winrm_net)
               
-              # 3. Fix Ansible binary path
+              # 3. Fix Ansible binary path (Replace the ERB direnv template)
               if 'ansible_playbook_bin:' in content:
                   content = re.sub(r'ansible_playbook_bin:.*', f'ansible_playbook_bin: {ansible_path}', content)
               else:
-                  content = content.replace('name: ansible_push', f'name: ansible_push\n      ansible_playbook_bin: {ansible_path}')
+                  content = content.replace('name: ansible_push', f'name: ansible_push\\n      ansible_playbook_bin: {ansible_path}')
               
               # 4. Fix WinRM stability
               content = content.replace('connection_retries: 5', 'connection_retries: 15')
