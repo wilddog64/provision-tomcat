@@ -166,7 +166,7 @@ jobs:
         run: |
           source .venv/bin/activate
           
-          # Inject explicit path to ansible-playbook and robust verifier using Python heredoc
+          # Inject explicit path to ansible-playbook using Python heredoc
           python3 - <<'EOF'
           import os, re, sys
           
@@ -175,25 +175,7 @@ jobs:
               print(f"Error: {ansible_path} not found")
               sys.exit(1)
           
-          kitchen_files = ['.kitchen.yml', '.kitchen-win.yml']
-          
-          # Improved verifier with retry loop (indented for YAML)
-          v_lines = [
-              ' |',
-              '        echo "Waiting for Tomcat to respond on port 8080..."',
-              '        for i in {1..12}; do',
-              '          if curl -s --connect-timeout 5 --max-time 10 -f http://localhost:8080 || curl -s --connect-timeout 5 --max-time 10 http://localhost:8080 | grep -q "404"; then',
-              '            echo "Tomcat is UP!"',
-              '            exit 0',
-              '          fi',
-              '          echo "Still waiting ($i/12)..."',
-              '          sleep 10',
-              '        done',
-              '        echo "ERROR: Tomcat failed to respond after 2 minutes"',
-              '        exit 1'
-          ]
-          
-          for kfile in kitchen_files:
+          for kfile in ['.kitchen.yml', '.kitchen-win.yml']:
               if not os.path.exists(kfile): continue
               with open(kfile, 'r') as f: content = f.read()
               
@@ -205,10 +187,6 @@ jobs:
               
               # 2. Fix WinRM stability (Increase retries for slow Windows boot)
               content = content.replace('connection_retries: 5', 'connection_retries: 30')
-              content = content.replace('connection_retry_sleep: 10', 'connection_retry_sleep: 10')
-              
-              # 3. Inject robust verifier
-              content = re.sub(r'command: \|.*?(?=\n\n|\n[a-z]|\Z)', f'command: {robust_verifier}', content, flags=re.DOTALL)
               
               with open(kfile, 'w') as f: f.write(content)
               print(f"Patched {kfile}")
