@@ -104,6 +104,11 @@ jobs:
           exec /usr/bin/env -i "${ENV_ARGS[@]}" /usr/local/bin/vagrant "$@"
           EOF
           chmod +x $HOME/.local/bin/vagrant
+          
+          # Symlink Ansible binaries to a path on PATH to ensure Kitchen finds them
+          ln -sf $PWD/.venv/bin/ansible-playbook $HOME/.local/bin/ansible-playbook
+          ln -sf $PWD/.venv/bin/ansible-galaxy $HOME/.local/bin/ansible-galaxy
+          
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Run Test (Upgrade Win11)
