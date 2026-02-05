@@ -199,7 +199,9 @@ jobs:
               # 2. Fix Vagrant Port Forwarding (Host side)
               # Inject network rule with id: "winrm" to override Vagrant default
               if 'communicator: winrm' in content:
-                  winrm_net = 'communicator: winrm\\n      network:\\n        - [\\\"forwarded_port\\\", {guest: 5985, host: 25985, id: \\\"winrm\\\"}]'
+                  winrm_net = \"\"\"communicator: winrm
+      network:
+        - [\"forwarded_port\", {guest: 5985, host: 25985, id: \"winrm\"}]\"\"\"
                   content = content.replace('communicator: winrm', winrm_net)
               
               # 3. Fix Ansible binary path
