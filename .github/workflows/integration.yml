@@ -65,10 +65,21 @@ jobs:
 
       - name: Install Dependencies
         run: |
+          # Set up Python venv for Ansible
+          python3 -m venv .venv
+          source .venv/bin/activate
+          pip install -r requirements.txt
+          
+          # Set up Ruby bundle for Kitchen
           bundle config set --local path 'vendor/bundle'
           bundle install
+          
+          # Run deps with correct path
+          export PATH=$PWD/.venv/bin:$PATH
           bundle exec make deps
           ln -s . roles/provision-tomcat
 
       - name: Run Test (Upgrade Win11)
-        run: bundle exec make test-upgrade-win11
+        run: |
+          source .venv/bin/activate
+          bundle exec make test-upgrade-win11
