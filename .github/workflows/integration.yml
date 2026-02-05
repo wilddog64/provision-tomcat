@@ -65,10 +65,10 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          gem install bundler
+          bundle config set --local path 'vendor/bundle'
           bundle install
-          make deps
+          bundle exec make deps
           ln -s . roles/provision-tomcat
 
       - name: Run Test (Upgrade Win11)
-        run: make test-upgrade-win11
+        run: bundle exec make test-upgrade-win11

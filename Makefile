@@ -13,11 +13,16 @@ else
 endif
 
 KITCHEN_YAML ?= $(DEFAULT_KITCHEN_YAML)
-RBENV_BIN := $(shell command -v rbenv 2>/dev/null)
-ifdef RBENV_BIN
-  KITCHEN_CMD ?= rbenv exec kitchen
+BUNDLE_BIN := $(shell command -v bundle 2>/dev/null)
+ifdef BUNDLE_BIN
+  KITCHEN_CMD ?= bundle exec kitchen
 else
-  KITCHEN_CMD ?= kitchen
+  RBENV_BIN := $(shell command -v rbenv 2>/dev/null)
+  ifdef RBENV_BIN
+    KITCHEN_CMD ?= rbenv exec kitchen
+  else
+    KITCHEN_CMD ?= kitchen
+  fi
 endif
 
 # Keep Ansible tooling on a consistent install path to avoid
