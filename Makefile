@@ -438,7 +438,6 @@ update-roles:
 # Upgrade testing helpers
 .PHONY: test-upgrade-win11
 test-upgrade-win11: update-roles
-	@rm -f .kitchen.local.yml
 	@echo "=== Testing Java + Tomcat upgrade on Windows 11 ==="
 	@echo "Step 1: Installing Java 17 + Tomcat 9.0.112..."
 	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) create upgrade-win11
@@ -446,83 +445,30 @@ test-upgrade-win11: update-roles
 	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) verify upgrade-win11
 	@echo ""
 	@echo "Step 2: Upgrading to Java 21 + Tomcat 9.0.113..."
-	@echo "Updating .kitchen.local.yml for step 2..."
-	@echo "---" > .kitchen.local.yml
-	@echo "suites:" >> .kitchen.local.yml
-	@echo "  - name: upgrade" >> .kitchen.local.yml
-	@echo "    provisioner:" >> .kitchen.local.yml
-	@echo "      playbook: tests/playbook-upgrade.yml" >> .kitchen.local.yml
-	@echo "      extra_vars:" >> .kitchen.local.yml
-	@echo "        upgrade_step: 2" >> .kitchen.local.yml
-	@echo "        tomcat_auto_start: true" >> .kitchen.local.yml
-	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) converge upgrade-win11
-	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) verify upgrade-win11
-	@rm -f .kitchen.local.yml
+	@sed 's/upgrade_step: 1/upgrade_step: 2/' $(KITCHEN_YAML) > .kitchen.step2.yml
+	KITCHEN_YAML=.kitchen.step2.yml $(KITCHEN_CMD) converge upgrade-win11
+	KITCHEN_YAML=.kitchen.step2.yml $(KITCHEN_CMD) verify upgrade-win11
+	@rm -f .kitchen.step2.yml
 	@echo ""
 	@echo "Upgrade test complete!"
 
 
 .PHONY: test-upgrade-candidate-win11
 test-upgrade-candidate-win11: upgrade-cleanup-win11 update-roles
-	@rm -f .kitchen.local.yml
-	@echo "Preparing .kitchen.local.yml with candidate port forwarding..."
-	@printf '%s\n' \
-		'---' \
-		'suites:' \
-		'  - name: upgrade' \
-		'    driver:' \
-		"      network:" \
-		"        - [\'forwarded_port\', {guest: 8080, host: 18080, auto_correct: true}]" \
-		"        - [\'forwarded_port\', {guest: 9080, host: 19080, auto_correct: true}]" \
-	> .kitchen.local.yml
-	@echo
 	@echo "=== Testing Java + Tomcat upgrade (candidate mode) on Windows 11 (D: drive) ==="
 	@echo "Step 1: Installing Java 17 + Tomcat 9.0.112..."
-	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) create upgrade-win11-disk
-	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) converge upgrade-win11-disk
-	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) verify upgrade-win11-disk || true
+	@sed 's/auto_correct: true/auto_correct: true\n    network:\n        - ["forwarded_port", {guest: 8080, host: 18080, auto_correct: true}]\n        - ["forwarded_port", {guest: 9080, host: 19080, auto_correct: true}]/' $(KITCHEN_YAML) > .kitchen.cand1.yml
+	KITCHEN_YAML=.kitchen.cand1.yml $(KITCHEN_CMD) create upgrade-win11-disk
+	KITCHEN_YAML=.kitchen.cand1.yml $(KITCHEN_CMD) converge upgrade-win11-disk
+	KITCHEN_YAML=.kitchen.cand1.yml $(KITCHEN_CMD) verify upgrade-win11-disk || true
 	@echo ""
 	@echo "Step 2: Upgrading to Java 21 + Tomcat 9.0.113 with candidate workflow..."
-	@echo "Updating .kitchen.local.yml for candidate testing..."
-	@printf '%s\n' \
-		'---' \
-		'suites:' \
-		'  - name: upgrade' \
-		'    driver:' \
-		"      network:" \
-		"        - [\'forwarded_port\', {guest: 8080, host: 18080, auto_correct: true}]" \
-		"        - [\'forwarded_port\', {guest: 9080, host: 19080, auto_correct: true}]" \
-		'    provisioner:' \
-		'      playbook: tests/playbook-upgrade.yml' \
-		'      extra_vars:' \
-		'        upgrade_step: 2' \
-		'        tomcat_auto_start: true' \
-		'        tomcat_candidate_enabled: true' \
-		'        tomcat_candidate_delegate: localhost' \
-		'        tomcat_candidate_delegate_port: 19080' \
-		'    verifier:' \
-		'      name: shell' \
-		'      command: |' \
-		'        echo "=== Verifying Tomcat from controller (localhost:18080) ===" ' \
-		'        for attempt in 1 2 3 4 5 6 7 8 9 10; do' \
-		'          echo "" ' \
-		'          echo "--- Attempt $${attempt}/10 ---" ' \
-		'          echo "curl -v --connect-timeout 5 --max-time 10 http://localhost:18080" ' \
-		'          if curl -v --connect-timeout 5 --max-time 10 http://localhost:18080 2>&1; then' \
-		'            echo "" ' \
-		'            echo "SUCCESS: Tomcat responded on port 18080" ' \
-		'            exit 0' \
-		'          fi' \
-		'          echo "  Waiting 10 seconds before retry..." ' \
-		'          sleep 10' \
-		'        done' \
-		'        echo "" ' \
-		'        echo "FAILED: Tomcat did not respond on port 18080 after 10 attempts" >&2' \
-		'        exit 1' \
-	> .kitchen.local.yml
-	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) converge upgrade-win11-disk
-	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) verify upgrade-win11-disk
-	@rm -f .kitchen.local.yml
+	@sed -e 's/upgrade_step: 1/upgrade_step: 2/' \
+	     -e 's/tomcat_auto_start: true/tomcat_auto_start: true\n        tomcat_candidate_enabled: true\n        tomcat_candidate_delegate: localhost\n        tomcat_candidate_delegate_port: 19080/' \
+	     .kitchen.cand1.yml > .kitchen.cand2.yml
+	KITCHEN_YAML=.kitchen.cand2.yml $(KITCHEN_CMD) converge upgrade-win11-disk
+	KITCHEN_YAML=.kitchen.cand2.yml $(KITCHEN_CMD) verify upgrade-win11-disk
+	@rm -f .kitchen.cand1.yml .kitchen.cand2.yml
 	@echo ""
 	@echo "Candidate upgrade test complete!"
 
@@ -547,23 +493,16 @@ test-upgrade-candidate-stack: test-upgrade-candidate-win11 candidate-cleanup-win
 test-downgrade-win11: update-roles
 	@echo "=== Testing Java + Tomcat downgrade on Windows 11 ==="
 	@echo "Step 1: Installing Java $(JAVA_NEW_VERSION) + Tomcat $(TOMCAT_NEW_VERSION)..."
-	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) create downgrade-win11
-	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) converge downgrade-win11
-	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) verify downgrade-win11
+	@sed 's/downgrade_step: 1/downgrade_step: 1/' $(KITCHEN_YAML) > .kitchen.down1.yml
+	KITCHEN_YAML=.kitchen.down1.yml $(KITCHEN_CMD) create downgrade-win11
+	KITCHEN_YAML=.kitchen.down1.yml $(KITCHEN_CMD) converge downgrade-win11
+	KITCHEN_YAML=.kitchen.down1.yml $(KITCHEN_CMD) verify downgrade-win11
 	@echo ""
 	@echo "Step 2: Downgrading to Java $(JAVA_OLD_VERSION) + Tomcat $(TOMCAT_OLD_VERSION)..."
-	@echo "Updating .kitchen.local.yml for step 2..."
-	@echo "---" > .kitchen.local.yml
-	@echo "suites:" >> .kitchen.local.yml
-	@echo "  - name: downgrade" >> .kitchen.local.yml
-	@echo "    provisioner:" >> .kitchen.local.yml
-	@echo "      playbook: tests/playbook-downgrade.yml" >> .kitchen.local.yml
-	@echo "      extra_vars:" >> .kitchen.local.yml
-	@echo "        downgrade_step: 2" >> .kitchen.local.yml
-	@echo "        tomcat_auto_start: true" >> .kitchen.local.yml
-	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) converge downgrade-win11
-	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) verify downgrade-win11
-	@rm -f .kitchen.local.yml
+	@sed 's/downgrade_step: 1/downgrade_step: 2/' .kitchen.down1.yml > .kitchen.down2.yml
+	KITCHEN_YAML=.kitchen.down2.yml $(KITCHEN_CMD) converge downgrade-win11
+	KITCHEN_YAML=.kitchen.down2.yml $(KITCHEN_CMD) verify downgrade-win11
+	@rm -f .kitchen.down1.yml .kitchen.down2.yml
 	@echo ""
 	@echo "Downgrade test complete!"
 
