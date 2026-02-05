@@ -12,8 +12,8 @@ on:
 
 jobs:
   kitchen-test:
-    # Security: Only run on trusted PRs/pushes (No Forks)
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+    # Security: Only run on trusted PRs/pushes/dispatch (No Forks)
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: [self-hosted, macOS]
     env:
       ANSIBLE_ROLES_PATH: ${{ github.workspace }}/roles
