@@ -17,6 +17,27 @@ jobs:
       ANSIBLE_ROLES_PATH: ${{ github.workspace }}/roles
       OBJC_DISABLE_INITIALIZE_FORK_SAFETY: YES
     steps:
+      - name: Cleanup Stale VMs
+        run: |
+          echo "Cleaning up stale VirtualBox VMs..."
+          # Find VMs matching the pattern (kitchen-provision-tomcat...)
+          # grep returns non-zero if no match, so use || true
+          VMS=$(VBoxManage list vms | grep "kitchen-provision-tomcat" | awk -F'"' '{print $2}' || true)
+          
+          for VM in $VMS; do
+            echo "Found stale VM: $VM"
+            # Check if running
+            if VBoxManage showvminfo "$VM" | grep -q "State:.*running"; then
+              echo "Powering off $VM..."
+              VBoxManage controlvm "$VM" poweroff || true
+              sleep 5
+            fi
+            # Unregister and delete disk
+            echo "Deleting $VM..."
+            VBoxManage unregistervm "$VM" --delete || true
+          done
+          echo "Cleanup complete."
+
       - name: Checkout provision-tomcat
         uses: actions/checkout@v4
 
