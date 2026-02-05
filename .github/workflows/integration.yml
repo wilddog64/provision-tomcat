@@ -116,37 +116,41 @@ jobs:
           source .venv/bin/activate
           
           # Inject explicit path to ansible-playbook into kitchen config using Python
-          # This avoids sed/newline issues on macOS
+          # This fixes the issue where .kitchen.yml uses direnv path which doesn't exist in CI
           python3 -c "
           import sys
           import os
+          import re
           
-          kitchen_file = '.kitchen-win.yml'
           ansible_path = os.path.abspath('.venv/bin/ansible-playbook')
-          
           if not os.path.exists(ansible_path):
               print(f'Error: ansible-playbook not found at {ansible_path}')
               sys.exit(1)
           
-          with open(kitchen_file, 'r') as f:
-              content = f.read()
+          # Patch both files to be safe
+          kitchen_files = ['.kitchen.yml', '.kitchen-win.yml']
           
-          target = 'name: ansible_push'
-          replacement = f'name: ansible_push\n      ansible_playbook_command: {ansible_path}'
-          
-          if target not in content:
-              print(f'Error: Could not find target string in {kitchen_file}')
-              sys.exit(1)
-          
-          new_content = content.replace(target, replacement)
-          
-          with open(kitchen_file, 'w') as f:
-              f.write(new_content)
-          
-          print(f'Updated {kitchen_file} with ansible_playbook_command: {ansible_path}')
+          for kfile in kitchen_files:
+              if os.path.exists(kfile):
+                  with open(kfile, 'r') as f:
+                      content = f.read()
+                  
+                  # Replace existing ansible_playbook_bin (which uses broken ERB)
+                  # or inject it if missing
+                  if 'ansible_playbook_bin:' in content:
+                      new_content = re.sub(r'ansible_playbook_bin:.*', f'ansible_playbook_bin: {ansible_path}', content)
+                  else:
+                      # If not present, inject it under ansible_push
+                      target = 'name: ansible_push'
+                      replacement = f'name: ansible_push\n      ansible_playbook_bin: {ansible_path}'
+                      new_content = content.replace(target, replacement)
+                  
+                  with open(kfile, 'w') as f:
+                      f.write(new_content)
+                  print(f'Updated {kfile} with ansible_playbook_bin: {ansible_path}')
           "
           
           # Verify injection
-          grep "ansible_playbook_command" .kitchen-win.yml
+          grep "ansible_playbook_bin" .kitchen.yml || true
           
           bundle exec make test-upgrade-win11
