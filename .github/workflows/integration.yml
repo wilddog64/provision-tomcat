@@ -204,9 +204,15 @@ jobs:
                   else:
                       content = content.replace('name: ansible_push', f'name: ansible_push\n      ansible_playbook_bin: {ansible_path}')
                   
-                  # 2. Fix Port Conflict (5985 -> 25985)
+                  # 2. Fix Port Conflict (Host 5985 is busy)
+                  # Update transport and ansible ports
                   content = content.replace('port: 5985', 'port: 25985')
                   content = content.replace('ansible_port: 5985', 'ansible_port: 25985')
+                  
+                  # Ensure Vagrant actually forwards the port 25985
+                  if 'communicator: winrm' in content:
+                      winrm_net = 'communicator: winrm\n      network:\n        - [\"forwarded_port\", {guest: 5985, host: 25985}]'
+                      content = content.replace('communicator: winrm', winrm_net)
                   
                   # 3. Fix WinRM stability (Increase retries for slow Windows boot)
                   content = content.replace('connection_retries: 5', 'connection_retries: 15')
