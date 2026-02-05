@@ -178,18 +178,20 @@ jobs:
           kitchen_files = ['.kitchen.yml', '.kitchen-win.yml']
           
           # Improved verifier with retry loop (indented for YAML)
-          robust_verifier = " |\n" + \
-              "        echo \"Waiting for Tomcat to respond on port 8080...\"\n" + \
-              "        for i in {1..12}; do\n" + \
-              "          if curl -s --connect-timeout 5 -f http://localhost:8080 || curl -s --connect-timeout 5 http://localhost:8080 | grep -q \"404\"; then\n" + \
-              "            echo \"Tomcat is UP!\"\n" + \
-              "            exit 0\n" + \
-              "          fi\n" + \
-              "          echo \"Still waiting ($i/12)...\"\n" + \
-              "          sleep 10\n" + \
-              "        done\n" + \
-              "        echo \"ERROR: Tomcat failed to respond after 2 minutes\"\n" + \
-              "        exit 1"
+          v_lines = [
+              ' |',
+              '        echo "Waiting for Tomcat to respond on port 8080..."',
+              '        for i in {1..12}; do',
+              '          if curl -s --connect-timeout 5 --max-time 10 -f http://localhost:8080 || curl -s --connect-timeout 5 --max-time 10 http://localhost:8080 | grep -q "404"; then',
+              '            echo "Tomcat is UP!"',
+              '            exit 0',
+              '          fi',
+              '          echo "Still waiting ($i/12)..."',
+              '          sleep 10',
+              '        done',
+              '        echo "ERROR: Tomcat failed to respond after 2 minutes"',
+              '        exit 1'
+          ]
           
           for kfile in kitchen_files:
               if not os.path.exists(kfile): continue
