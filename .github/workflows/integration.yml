@@ -166,7 +166,7 @@ jobs:
         run: |
           source .venv/bin/activate
           
-          # Inject explicit path to ansible-playbook and fix ports using Python heredoc
+          # Inject explicit path to ansible-playbook using Python heredoc
           python3 - <<'EOF'
           import os, re, sys
           
@@ -177,53 +177,27 @@ jobs:
           
           kitchen_files = ['.kitchen.yml', '.kitchen-win.yml']
           
-          # Improved verifier with retry loop (indented for YAML)
-          robust_verifier = " |\n" + \
-              "        echo \"Waiting for Tomcat to respond on port 8080...\"\n" + \
-              "        for i in {1..12}; do\n" + \
-              "          if curl -s --connect-timeout 5 -f http://localhost:8080 || curl -s --connect-timeout 5 http://localhost:8080 | grep -q \"404\"; then\n" + \
-              "            echo \"Tomcat is UP!\"\n" + \
-              "            exit 0\n" + \
-              "          fi\n" + \
-              "          echo \"Still waiting ($i/12)...\"\n" + \
-              "          sleep 10\n" + \
-              "        done\n" + \
-              "        echo \"ERROR: Tomcat failed to respond after 2 minutes\"\n" + \
-              "        exit 1"
-          
           for kfile in kitchen_files:
               if not os.path.exists(kfile): continue
               with open(kfile, 'r') as f: content = f.read()
               
-              # 1. Fix Kitchen/Ansible connection port (Host side)
-              content = content.replace('port: 5985', 'port: 25985')
-              content = content.replace('ansible_port: 5985', 'ansible_port: 25985')
-              
-              # 2. Fix Vagrant Port Forwarding (Host side)
-              # Inject network rule with id: "winrm" to override Vagrant default
-              if 'communicator: winrm' in content:
-                  winrm_net = 'communicator: winrm\n      network:\n        - ["forwarded_port", {guest: 5985, host: 25985, id: "winrm"}]'
-                  content = content.replace('communicator: winrm', winrm_net)
-              
-              # 3. Fix Ansible binary path (Replace the ERB direnv template)
+              # 1. Fix Ansible binary path (Replace the ERB direnv template)
               if 'ansible_playbook_bin:' in content:
                   content = re.sub(r'ansible_playbook_bin:.*', f'ansible_playbook_bin: {ansible_path}', content)
               else:
                   content = content.replace('name: ansible_push', f'name: ansible_push\n      ansible_playbook_bin: {ansible_path}')
               
-              # 4. Fix WinRM stability
-              content = content.replace('connection_retries: 5', 'connection_retries: 15')
-              content = content.replace('connection_retry_sleep: 10', 'connection_retry_sleep: 20')
-              
-              # 5. Inject robust verifier
-              content = re.sub(r'command: \|.*?(?=\n\n|\n[a-z]|\Z)', f'command: {robust_verifier}', content, flags=re.DOTALL)
+              # 2. Fix WinRM stability (Increase retries for slow Windows boot)
+              content = content.replace('connection_retries: 5', 'connection_retries: 30')
+              content = content.replace('connection_retry_sleep: 10', 'connection_retry_sleep: 10')
               
               with open(kfile, 'w') as f: f.write(content)
               print(f"Patched {kfile}")
           EOF
           
           echo "=== Verification of Patched .kitchen.yml ==="
-          cat .kitchen.yml | grep -A 10 "win11"
+          grep "ansible_playbook_bin" .kitchen.yml | head -n 5
+          grep "connection_retries" .kitchen.yml
           
           bundle exec make test-upgrade-win11
 
