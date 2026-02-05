@@ -79,6 +79,22 @@ jobs:
           # Note: We skip 'make deps' because we manually checked out roles above to handle SSH aliases
           ln -s . roles/provision-tomcat
 
+      - name: Workaround Vagrant Bundler Conflict
+        run: |
+          mkdir -p $HOME/.local/bin
+          cat <<EOF > $HOME/.local/bin/vagrant
+          #!/bin/bash
+          unset BUNDLE_GEMFILE
+          unset BUNDLE_PATH
+          unset BUNDLE_BIN
+          unset RUBYOPT
+          unset GEM_HOME
+          unset GEM_PATH
+          exec /usr/local/bin/vagrant "\$@"
+          EOF
+          chmod +x $HOME/.local/bin/vagrant
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
       - name: Run Test (Upgrade Win11)
         run: |
           source .venv/bin/activate
