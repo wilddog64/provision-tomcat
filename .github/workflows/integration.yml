@@ -114,4 +114,16 @@ jobs:
       - name: Run Test (Upgrade Win11)
         run: |
           source .venv/bin/activate
+          
+          # Debugging
+          echo "Current PATH: $PATH"
+          echo "Ansible Playbook: $(which ansible-playbook)"
+          
+          # Inject explicit path to ansible-playbook into kitchen config
+          # This fixes the "sh: --extra-vars: command not found" error by ensuring kitchen knows the binary name
+          sed -i '' "s|name: ansible_push|name: ansible_push\n      ansible_playbook_command: $(which ansible-playbook)|" .kitchen-win.yml
+          
+          # Verify injection
+          grep "ansible_playbook_command" .kitchen-win.yml
+          
           bundle exec make test-upgrade-win11
