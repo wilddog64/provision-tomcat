@@ -16,6 +16,7 @@ jobs:
     env:
       ANSIBLE_ROLES_PATH: ${{ github.workspace }}/roles
       OBJC_DISABLE_INITIALIZE_FORK_SAFETY: YES
+      VAGRANT_IGNORE_WINRM_PLUGIN: YES
     steps:
       - name: Cleanup Stale VMs
         run: |
