@@ -359,6 +359,12 @@
             state: started
           when: tomcat_auto_start | bool
 
+        - name: Wait for promoted port
+          ansible.windows.win_wait_for:
+            port: "{{ tomcat_http_port }}"
+            timeout: "{{ tomcat_candidate_wait_timeout | default(120) }}"
+          when: tomcat_auto_start | bool
+
         - name: Stop candidate Tomcat service
           ansible.windows.win_service:
             name: "{{ tomcat_candidate_service_name }}"
@@ -497,6 +503,17 @@
         - not (tomcat_candidate_active | default(false) | bool)
         - tomcat_auto_start | bool
       register: tomcat_service_start
+      tags:
+        - tomcat-install
+        - tomcat-service
+
+    - name: Wait for Tomcat port
+      ansible.windows.win_wait_for:
+        port: "{{ tomcat_http_port }}"
+        timeout: "{{ tomcat_candidate_wait_timeout | default(120) }}"
+      when:
+        - not (tomcat_candidate_active | default(false) | bool)
+        - tomcat_auto_start | bool
       tags:
         - tomcat-install
         - tomcat-service
