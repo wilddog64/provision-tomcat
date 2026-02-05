@@ -591,6 +591,10 @@ If you encounter crashes with Vagrant, Bundler conflicts, or "Command Not Found"
 
 - See **[CI Robustness Fixes](docs/issues/2026-02-04-ci-robustness-fixes.md)** for details on the Vagrant wrapper, Python injection, and environment isolation.
 
+## Security
+
+For details on how the CI/CD pipeline is secured on the self-hosted runner (including fork protection, SSH key management, and environment isolation), see **[CI/CD Security Architecture](docs/CI-SECURITY.md)**.
+
 ## Dependencies
 
 This role requires:
