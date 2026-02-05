@@ -179,28 +179,49 @@ jobs:
           # Patch both files to be safe
           kitchen_files = ['.kitchen.yml', '.kitchen-win.yml']
           
+          # Improved verifier with retry loop
+          robust_verifier = ' |' + '\n' + \
+              '        echo \"Waiting for Tomcat to respond on port 8080...\"' + '\n' + \
+              '        for i in {1..12}; do' + '\n' + \
+              '          if curl -s --connect-timeout 5 -f http://localhost:8080 || curl -s --connect-timeout 5 http://localhost:8080 | grep -q \"404\"; then' + '\n' + \
+              '            echo \"Tomcat is UP!\"' + '\n' + \
+              '            exit 0' + '\n' + \
+              '          fi' + '\n' + \
+              '          echo \"Still waiting ($i/12)...\"' + '\n' + \
+              '          sleep 10' + '\n' + \
+              '        done' + '\n' + \
+              '        echo \"ERROR: Tomcat failed to respond after 2 minutes\"' + '\n' + \
+              '        exit 1'
+          
           for kfile in kitchen_files:
               if os.path.exists(kfile):
                   with open(kfile, 'r') as f:
                       content = f.read()
                   
-                  # Replace existing ansible_playbook_bin (which uses broken ERB)
-                  # or inject it if missing
+                  # 1. Fix Ansible binary path
                   if 'ansible_playbook_bin:' in content:
-                      new_content = re.sub(r'ansible_playbook_bin:.*', f'ansible_playbook_bin: {ansible_path}', content)
+                      content = re.sub(r'ansible_playbook_bin:.*', f'ansible_playbook_bin: {ansible_path}', content)
                   else:
-                      # If not present, inject it under ansible_push
-                      target = 'name: ansible_push'
-                      replacement = f'name: ansible_push\n      ansible_playbook_bin: {ansible_path}'
-                      new_content = content.replace(target, replacement)
+                      content = content.replace('name: ansible_push', f'name: ansible_push\n      ansible_playbook_bin: {ansible_path}')
+                  
+                  # 2. Fix Port Conflict (5985 -> 25985)
+                  content = content.replace('port: 5985', 'port: 25985')
+                  content = content.replace('ansible_port: 5985', 'ansible_port: 25985')
+                  
+                  # 3. Add Retry Loop to verifier
+                  # Find the command: | block and replace it
+                  # Note: This is a bit naive but should work given the file structure
+                  pattern = r'command: \|.*?(?=\n\n|\n[a-z]|\Z)'
+                  content = re.sub(pattern, f'command:{robust_verifier}', content, flags=re.DOTALL)
                   
                   with open(kfile, 'w') as f:
-                      f.write(new_content)
-                  print(f'Updated {kfile} with ansible_playbook_bin: {ansible_path}')
+                      f.write(content)
+                  print(f'Updated {kfile} with robust verifier and port 25985')
           "
           
           # Verify injection
           grep "ansible_playbook_bin" .kitchen.yml || true
+          grep "port: 25985" .kitchen.yml || true
           
           bundle exec make test-upgrade-win11
 
