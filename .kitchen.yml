@@ -23,6 +23,7 @@ provisioner:
     extract_build_number: 16
     extract_debug: 'False'
     skip_migration: true
+    install_drive: "D:"
 
 platforms:
   - name: ubuntu-2404
@@ -71,6 +72,7 @@ platforms:
         ansible_user: vagrant
         ansible_password: vagrant
         ansible_host: 127.0.0.1
+        install_drive: "D:"
   - name: win11-disk
     driver:
       provision: true  # Run Vagrant provisioners (disk_setup) during kitchen create
@@ -157,6 +159,7 @@ platforms:
         ansible_user: vagrant
         ansible_password: vagrant
         ansible_host: 127.0.0.1
+        install_drive: "D:"
 
 suites:
   - name: default
@@ -285,7 +288,7 @@ suites:
         [baseline-win11-baseline]
         baseline-win11 ansible_connection=winrm ansible_host=127.0.0.1 ansible_user=vagrant ansible_password=vagrant ansible_port=55985 ansible_winrm_transport=basic ansible_winrm_scheme=http ansible_winrm_server_cert_validation=ignore
         EOF
-        promotion_extra_vars="env=stage2 extract_build_number=16 extract_debug=False skip_migration=true upgrade_step=2 tomcat_auto_start=true tomcat_candidate_enabled=true tomcat_candidate_delegate=127.0.0.1 tomcat_candidate_delegate_host=127.0.0.1 tomcat_candidate_delegate_port=${candidate_host_port}"
+        promotion_extra_vars="env=stage2 extract_build_number=16 extract_debug=False skip_migration=true install_drive=D: upgrade_step=2 tomcat_auto_start=true tomcat_candidate_enabled=true tomcat_candidate_delegate=127.0.0.1 tomcat_candidate_delegate_host=127.0.0.1 tomcat_candidate_delegate_port=${candidate_host_port}"
 
         echo "Checking candidate Tomcat on port ${candidate_host_port} before promotion..."
         check_port "${candidate_host_port}" 20 10
