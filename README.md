@@ -78,6 +78,21 @@ make test-azure-destroy           # Teardown all resources
 
 For troubleshooting common issues in the ACG Azure sandbox (Resource Group restrictions, MSI timeouts, etc.), see **[Azure Kitchen Integration Issues](docs/issues/AZURE-KITCHEN-INTEGRATION.md)**.
 
+### Known Issues
+
+See the [docs/issues](docs/issues/) directory for detailed documentation on common problems:
+
+| Issue | Description |
+|-------|-------------|
+| **[pywinrm urllib3 Compatibility](docs/issues/pywinrm-urllib3-compatibility.md)** | AttributeError with urllib3 2.x - pin to `urllib3<2` |
+| **[Vagrant Bundler Conflict](docs/issues/VAGRANT-BUNDLER-CONFLICT.md)** | Vagrant crashes due to rbenv/Bundler environment pollution |
+| **[WinRM Port Forwarding](docs/issues/WINRM-PORT-FORWARDING.md)** | Ansible connection fails - use port 55985 not 5985 |
+| **[provision-java Regex Crash](docs/issues/PROVISION-JAVA-REGEX-CRASH.md)** | NoneType error parsing Java version |
+| **[Candidate Mode Port](docs/issues/CANDIDATE-MODE-PORT.md)** | Candidate Tomcat runs on port 9080, not 8080 |
+| **[GitHub workflow_run Limitation](docs/issues/GITHUB-WORKFLOW-RUN-LIMITATION.md)** | workflow_run only works from default branch |
+| **[VirtualBox Stale Disks](docs/issues/VIRTUALBOX-STALE-DISKS.md)** | VERR_ALREADY_EXISTS when creating disks |
+| **[Multiple Deploy Keys](docs/issues/GITHUB-ACTIONS-MULTIPLE-DEPLOY-KEYS.md)** | SSH key ambiguity with multiple private repos |
+
 ## Security
 
 The project has undergone a comprehensive security audit. Key protections include:
