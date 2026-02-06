@@ -43,9 +43,7 @@
     - name: Find any existing Tomcat installations
       ansible.windows.win_find:
         paths: "{{ tomcat_install_dir }}"
-        patterns: 
-          - "apache-tomcat-*"
-          - "tomcat"
+        patterns: "apache-tomcat-*"
         file_type: directory
       register: existing_tomcat_dirs
       tags:
