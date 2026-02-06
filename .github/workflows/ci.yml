@@ -115,6 +115,9 @@ jobs:
       OBJC_DISABLE_INITIALIZE_FORK_SAFETY: YES
       VAGRANT_IGNORE_WINRM_PLUGIN: YES
     steps:
+      - name: Checkout provision-tomcat
+        uses: actions/checkout@v4
+
       - name: Cleanup Stale VMs
         run: |
 <<<<<<< HEAD
@@ -138,6 +141,7 @@ jobs:
           ./bin/cleanup-vagrant.sh
 >>>>>>> 513b2af (ci: implement robust cleanup script for stale instances)
 
+<<<<<<< HEAD
       - name: Checkout provision-tomcat
         uses: actions/checkout@v4
 
@@ -335,6 +339,8 @@ jobs:
       - name: Run AWS Test
         run: echo "AWS tests not yet implemented"
 =======
+=======
+>>>>>>> 97314b9 (ci: fix step order - checkout before cleanup)
       - name: Checkout provision-java
         uses: actions/checkout@v4
         with:
