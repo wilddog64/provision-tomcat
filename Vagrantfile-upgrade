@@ -20,6 +20,7 @@ Vagrant.configure("2") do |config|
       if vbox_list.include?(disk_file)
         uuid_match = vbox_list.match(/UUID:\s+([a-f0-9-]+).*?Location:\s+#{Regexp.escape(disk_file)}/m)
         if uuid_match
+<<<<<<< HEAD
           uuid = uuid_match[1]
           # Check if disk is attached to any VM before closing
           attached_info = `VBoxManage showhdinfo #{uuid} 2>/dev/null`
@@ -31,13 +32,19 @@ Vagrant.configure("2") do |config|
             # Safe to delete - disk is not attached or showhdinfo failed
             system("VBoxManage closemedium disk #{uuid} --delete 2>/dev/null")
           end
+=======
+          system("VBoxManage closemedium disk #{uuid_match[1]} --delete 2>/dev/null")
+>>>>>>> ca3b884 (fix: resolve CI role resolution bug and support D: drive in demo)
         end
       end
       vb.customize ['createhd', '--filename', disk_file, '--size', 50 * 1024]
     end
+<<<<<<< HEAD
     
     # Note: storageattach will fail gracefully if disk is already attached,
     # so we don't need to pre-check. VirtualBox handles this case.
+=======
+>>>>>>> ca3b884 (fix: resolve CI role resolution bug and support D: drive in demo)
     vb.customize ['storageattach', :id, '--storagectl', 'SATA Controller',
                   '--port', 1, '--device', 0, '--type', 'hdd', '--medium', disk_file]
   end
