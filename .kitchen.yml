@@ -488,7 +488,7 @@ suites:
         upgrade_step: 2
         tomcat_auto_start: true
         tomcat_candidate_enabled: true
-        tomcat_candidate_delegate: 127.0.0.1
+        tomcat_candidate_delegate: localhost
         tomcat_candidate_delegate_host: 127.0.0.1
         tomcat_candidate_delegate_port: 19080
         tomcat_candidate_manual_control: true
@@ -501,19 +501,22 @@ suites:
 
         sleep 20
 
+<<<<<<< HEAD
 =======
         set -euo pipefail
 
 >>>>>>> 5c8cdae (fix: make upgrade-baseline verify candidate then promotion)
+=======
+>>>>>>> 3212fd0 (fix: stabilize host-to-guest network checks)
         check_port() {
           local port="$1"
           local attempts="${2:-6}"
           local delay="${3:-10}"
 
           for attempt in $(seq 1 "$attempts"); do
-            echo "Attempt ${attempt}/${attempts}: curl http://127.0.0.1:${port}"
-            if curl --silent --show-error --connect-timeout 5 --max-time 10 -f "http://127.0.0.1:${port}" \
-              || curl --silent --show-error --connect-timeout 5 --max-time 10 "http://127.0.0.1:${port}" | grep -q "404"; then
+            echo "Attempt ${attempt}/${attempts}: curl http://localhost:${port}"
+            if curl --silent --show-error --connect-timeout 5 --max-time 10 -f "http://localhost:${port}" \
+              || curl --silent --show-error --connect-timeout 5 --max-time 10 "http://localhost:${port}" | grep -q "404"; then
               echo "Port ${port} responded successfully."
               return 0
             fi
