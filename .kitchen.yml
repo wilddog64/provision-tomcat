@@ -243,4 +243,5 @@ suites:
     verifier:
       name: shell
       command: |
-        curl --connect-timeout 5 --max-time 10 -f http://localhost:8080 || curl --connect-timeout 5 --max-time 10 http://localhost:8080 | grep -q "404"
+        # Check candidate Tomcat on port 9080 (candidate mode uses 9080)
+        curl --connect-timeout 5 --max-time 10 -f http://localhost:9080 || curl --connect-timeout 5 --max-time 10 http://localhost:9080 | grep -q "404"
