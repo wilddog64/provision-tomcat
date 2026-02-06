@@ -117,6 +117,7 @@ jobs:
     steps:
       - name: Cleanup Stale VMs
         run: |
+<<<<<<< HEAD
           echo "Cleaning up stale VirtualBox VMs..."
           VMS=$(VBoxManage list vms | grep "kitchen-provision-tomcat" | awk -F'"' '{print $2}' || true)
 
@@ -132,6 +133,10 @@ jobs:
           done
           echo "Cleanup complete."
 >>>>>>> 7d48ca4 (refactor(ci): combine validation and integration into single workflow)
+=======
+          chmod +x bin/cleanup-vagrant.sh
+          ./bin/cleanup-vagrant.sh
+>>>>>>> 513b2af (ci: implement robust cleanup script for stale instances)
 
       - name: Checkout provision-tomcat
         uses: actions/checkout@v4
@@ -463,6 +468,7 @@ jobs:
       - name: Post-Test Cleanup
         if: always()
         run: |
+<<<<<<< HEAD
           echo "Performing final VirtualBox cleanup..."
           VMS=$(VBoxManage list vms | grep "kitchen-provision-tomcat" | awk -F'"' '{print $2}' || true)
           for VM in $VMS; do
@@ -472,3 +478,6 @@ jobs:
             VBoxManage unregistervm "$VM" --delete || true
           done
 >>>>>>> 7d48ca4 (refactor(ci): combine validation and integration into single workflow)
+=======
+          ./bin/cleanup-vagrant.sh
+>>>>>>> 513b2af (ci: implement robust cleanup script for stale instances)
