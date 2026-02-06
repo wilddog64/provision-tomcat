@@ -94,13 +94,13 @@ jobs:
       OBJC_DISABLE_INITIALIZE_FORK_SAFETY: YES
       VAGRANT_IGNORE_WINRM_PLUGIN: YES
     steps:
+      - name: Checkout provision-tomcat
+        uses: actions/checkout@v4
+
       - name: Cleanup Stale VMs
         run: |
           chmod +x bin/cleanup-vagrant.sh
           ./bin/cleanup-vagrant.sh
-
-      - name: Checkout provision-tomcat
-        uses: actions/checkout@v4
 
       - name: Checkout provision-java
         uses: actions/checkout@v4
