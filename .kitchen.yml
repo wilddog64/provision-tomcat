@@ -286,7 +286,7 @@ suites:
         promotion_extra_vars="env=stage2 extract_build_number=16 extract_debug=False skip_migration=true upgrade_step=2 tomcat_auto_start=true tomcat_candidate_enabled=true tomcat_candidate_delegate=localhost tomcat_candidate_delegate_host=127.0.0.1 tomcat_candidate_delegate_port=${candidate_host_port}"
 
         echo "Checking candidate Tomcat on port ${candidate_host_port} before promotion..."
-        check_port "${candidate_host_port}" 6 5
+        check_port "${candidate_host_port}" 20 10
 
         echo "Promoting candidate via ansible-playbook before primary verification..."
         "$ansible_cmd" tests/playbook-upgrade.yml \
