@@ -1,4 +1,4 @@
-name: Integration Tests
+name: CI
 
 on:
   workflow_dispatch:
@@ -8,12 +8,82 @@ on:
     branches: [main]
 
 jobs:
-  kitchen-test:
+  lint:
+    name: Validation
     # Security: Only run on push, manual dispatch, or PRs from same repo (not forks)
     if: >
       github.event_name == 'push' ||
       github.event_name == 'workflow_dispatch' ||
       github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout provision-tomcat
+        uses: actions/checkout@v4
+
+      - name: Checkout provision-java
+        uses: actions/checkout@v4
+        with:
+          repository: wilddog64/provision-java
+          path: roles/provision-java
+
+      - name: Install SSH Keys and Config
+        run: |
+          mkdir -p ~/.ssh
+
+          echo "${{ secrets.WINDOWS_BASE_DEPLOY_KEY }}" > ~/.ssh/id_windows_base
+          chmod 600 ~/.ssh/id_windows_base
+
+          echo "${{ secrets.PROVISION_WINDOWS_SECURITY_DEPLOY_KEY }}" > ~/.ssh/id_provision_security
+          chmod 600 ~/.ssh/id_provision_security
+
+          cat <<EOF > ~/.ssh/config
+          Host windows-base-repo
+            HostName github.com
+            User git
+            IdentityFile ~/.ssh/id_windows_base
+            IdentitiesOnly yes
+
+          Host provision-security-repo
+            HostName github.com
+            User git
+            IdentityFile ~/.ssh/id_provision_security
+            IdentitiesOnly yes
+          EOF
+
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+          chmod 700 ~/.ssh
+
+      - name: Checkout windows-base
+        run: git clone windows-base-repo:wilddog64/windows-base.git roles/windows-base
+
+      - name: Checkout provision-windows-security
+        run: git clone provision-security-repo:wilddog64/provision-windows-security.git roles/provision-windows-security
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          pip install ansible-lint
+
+      - name: Install Ansible collections
+        run: make deps
+
+      - name: Link self as role
+        run: ln -s . roles/provision-tomcat
+
+      - name: Run Validation
+        env:
+          ANSIBLE_ROLES_PATH: ${{ github.workspace }}/roles
+        run: make check
+
+  kitchen-test:
+    name: Integration Tests
+    needs: lint
     runs-on: [self-hosted, macOS]
     env:
       ANSIBLE_ROLES_PATH: ${{ github.workspace }}/roles
@@ -23,19 +93,15 @@ jobs:
       - name: Cleanup Stale VMs
         run: |
           echo "Cleaning up stale VirtualBox VMs..."
-          # Find VMs matching the pattern (kitchen-provision-tomcat...)
-          # grep returns non-zero if no match, so use || true
           VMS=$(VBoxManage list vms | grep "kitchen-provision-tomcat" | awk -F'"' '{print $2}' || true)
-          
+
           for VM in $VMS; do
             echo "Found stale VM: $VM"
-            # Check if running
             if VBoxManage showvminfo "$VM" | grep -q "State:.*running"; then
               echo "Powering off $VM..."
               VBoxManage controlvm "$VM" poweroff || true
               sleep 5
             fi
-            # Unregister and delete disk
             echo "Deleting $VM..."
             VBoxManage unregistervm "$VM" --delete || true
           done
@@ -52,27 +118,18 @@ jobs:
 
       - name: Hotpatch provision-java
         run: |
-          # Fix the regex_search crash in the checked out role
           python3 -c "
           import os
           fpath = 'roles/provision-java/tasks/install-Windows-java.yml'
           if os.path.exists(fpath):
               with open(fpath, 'r') as f: content = f.read()
-              
-              # 1. Change filter name to avoid NoneType crash
+
               content = content.replace('regex_search', 'regex_findall')
-              
-              # 2. Update pattern to match Microsoft JDK output ('version ...' instead of 'openjdk version')
               content = content.replace('openjdk version', 'version')
-              
-              # 3. Remove backreference argument (regex_findall returns list)
-              # Handle potential escaping variations
               content = content.replace(\", '\\\\1'\", \"\")
               content = content.replace(\", '\\1'\", \"\")
-              
-              # 4. Check both stdout and stderr (Microsoft JDK usually prints to stdout or stderr depending on version)
               content = content.replace('java_version_output.stderr', '(java_version_output.stdout + java_version_output.stderr)')
-              
+
               with open(fpath, 'w') as f: f.write(content)
               print('Hotpatched provision-java task with robust regex_findall fix')
           "
@@ -80,31 +137,27 @@ jobs:
       - name: Install SSH Keys and Config
         run: |
           mkdir -p ~/.ssh
-          
-          # Write Key 1
+
           echo "${{ secrets.WINDOWS_BASE_DEPLOY_KEY }}" > ~/.ssh/id_windows_base
           chmod 600 ~/.ssh/id_windows_base
-          
-          # Write Key 2
+
           echo "${{ secrets.PROVISION_WINDOWS_SECURITY_DEPLOY_KEY }}" > ~/.ssh/id_provision_security
           chmod 600 ~/.ssh/id_provision_security
-          
-          # Create Config with Aliases
+
           cat <<EOF > ~/.ssh/config
           Host windows-base-repo
             HostName github.com
             User git
             IdentityFile ~/.ssh/id_windows_base
             IdentitiesOnly yes
-          
+
           Host provision-security-repo
             HostName github.com
             User git
             IdentityFile ~/.ssh/id_provision_security
             IdentitiesOnly yes
           EOF
-          
-          # Add GitHub to known_hosts
+
           ssh-keyscan github.com >> ~/.ssh/known_hosts
           chmod 700 ~/.ssh
 
@@ -116,18 +169,14 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          # Set up Python venv for Ansible
           python3 -m venv .venv
           source .venv/bin/activate
           pip install -r requirements.txt
-          
-          # Set up Ruby bundle for Kitchen
+
           bundle config set --local path 'vendor/bundle'
           bundle install
-          
-          # Run deps with correct path
+
           export PATH=$PWD/.venv/bin:$PATH
-          # Note: We skip 'make deps' because we manually checked out roles above to handle SSH aliases
           ln -s . roles/provision-tomcat
 
       - name: Workaround Vagrant Bundler Conflict
@@ -135,9 +184,6 @@ jobs:
           mkdir -p $HOME/.local/bin
           cat <<'EOF' > $HOME/.local/bin/vagrant
           #!/bin/bash
-          # Robust wrapper to clean environment for Vagrant
-          # Preserves SSH_AUTH_SOCK and basic system paths while stripping Bundler vars
-          
           ENV_ARGS=(
             HOME="$HOME"
             PATH="/opt/vagrant/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
@@ -147,26 +193,23 @@ jobs:
             SHELL="$SHELL"
             TMPDIR="${TMPDIR:-/tmp}"
           )
-          
+
           [[ -n "${SSH_AUTH_SOCK:-}" ]] && ENV_ARGS+=( SSH_AUTH_SOCK="$SSH_AUTH_SOCK" )
           [[ -n "${VAGRANT_CWD:-}" ]]  && ENV_ARGS+=( VAGRANT_CWD="$VAGRANT_CWD" )
-          
-          # Use /usr/bin/env -i to clear environment and set only the whitelist
+
           exec /usr/bin/env -i "${ENV_ARGS[@]}" /usr/local/bin/vagrant "$@"
           EOF
           chmod +x $HOME/.local/bin/vagrant
-          
-          # Symlink Ansible binaries to a path on PATH to ensure Kitchen finds them
+
           ln -sf $PWD/.venv/bin/ansible-playbook $HOME/.local/bin/ansible-playbook
           ln -sf $PWD/.venv/bin/ansible-galaxy $HOME/.local/bin/ansible-galaxy
-          
+
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Run Test (Upgrade Baseline Win11)
         run: |
           source .venv/bin/activate
 
-          # Inject explicit path to ansible-playbook using Python heredoc
           python3 - <<'EOF'
           import os, re, sys
 
@@ -179,13 +222,11 @@ jobs:
               if not os.path.exists(kfile): continue
               with open(kfile, 'r') as f: content = f.read()
 
-              # 1. Fix Ansible binary path (Replace the ERB direnv template)
               if 'ansible_playbook_bin:' in content:
                   content = re.sub(r'ansible_playbook_bin:.*', f'ansible_playbook_bin: {ansible_path}', content)
               else:
                   content = content.replace('name: ansible_push', f'name: ansible_push\n      ansible_playbook_bin: {ansible_path}')
 
-              # 2. Fix WinRM stability (Increase retries for slow Windows boot)
               content = content.replace('connection_retries: 5', 'connection_retries: 30')
 
               with open(kfile, 'w') as f: f.write(content)
@@ -209,4 +250,3 @@ jobs:
             sleep 2
             VBoxManage unregistervm "$VM" --delete || true
           done
-
