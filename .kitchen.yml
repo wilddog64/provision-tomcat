@@ -486,10 +486,15 @@ suites:
       name: shell
       command: |
 <<<<<<< HEAD
+<<<<<<< HEAD
         set -euo pipefail
 
         sleep 20
 
+=======
+        set -euo pipefail
+
+>>>>>>> 5c8cdae (fix: make upgrade-baseline verify candidate then promotion)
         check_port() {
           local port="$1"
           local attempts="${2:-6}"
@@ -512,6 +517,7 @@ suites:
           return 1
         }
 
+<<<<<<< HEAD
         candidate_host_port=19080
         primary_host_port=18080
         ansible_cmd="${KITCHEN_ANSIBLE_PLAYBOOK_BIN:-$(command -v ansible-playbook)}"
@@ -589,3 +595,11 @@ suites:
         # Final promotion verification happens on port 8080 after candidate testing succeeds
         curl --connect-timeout 5 --max-time 10 -f http://localhost:8080 || curl --connect-timeout 5 --max-time 10 http://localhost:8080 | grep -q "404"
 >>>>>>> eb0bd4f (fix: verify promoted service on upgrade-baseline)
+=======
+        echo "Checking candidate Tomcat on port 9080 before promotion..."
+        check_port 9080 6 5
+
+        echo "Waiting for promoted Tomcat on port 8080..."
+        # Give the promotion extra time to restart the primary service.
+        check_port 8080 12 10
+>>>>>>> 5c8cdae (fix: make upgrade-baseline verify candidate then promotion)
