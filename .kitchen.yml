@@ -471,19 +471,24 @@ suites:
       network:
         # Use alternate host ports to avoid local conflicts (similar to provision-jenkins)
 <<<<<<< HEAD
+<<<<<<< HEAD
         - ["forwarded_port", {guest: 8080, host: 18080, auto_correct: false}]
         - ["forwarded_port", {guest: 9080, host: 19080, auto_correct: false}]
 =======
         - ["forwarded_port", {guest: 8080, host: 18080, auto_correct: true}]
         - ["forwarded_port", {guest: 9080, host: 19080, auto_correct: true}]
 >>>>>>> 0d342f8 (chore: stabilize upgrade-baseline verifier)
+=======
+        - ["forwarded_port", {guest: 8080, host: 18080, auto_correct: false}]
+        - ["forwarded_port", {guest: 9080, host: 19080, auto_correct: false}]
+>>>>>>> 6ad104c (docs: improve CI stability and debuggability)
     provisioner:
       playbook: tests/playbook-upgrade.yml
       extra_vars:
         upgrade_step: 2
         tomcat_auto_start: true
         tomcat_candidate_enabled: true
-        tomcat_candidate_delegate: localhost
+        tomcat_candidate_delegate: 127.0.0.1
         tomcat_candidate_delegate_host: 127.0.0.1
         tomcat_candidate_delegate_port: 19080
         tomcat_candidate_manual_control: true
@@ -506,9 +511,9 @@ suites:
           local delay="${3:-10}"
 
           for attempt in $(seq 1 "$attempts"); do
-            echo "Attempt ${attempt}/${attempts}: curl http://localhost:${port}"
-            if curl --silent --show-error --connect-timeout 5 --max-time 10 -f "http://localhost:${port}" \
-              || curl --silent --show-error --connect-timeout 5 --max-time 10 "http://localhost:${port}" | grep -q "404"; then
+            echo "Attempt ${attempt}/${attempts}: curl http://127.0.0.1:${port}"
+            if curl --silent --show-error --connect-timeout 5 --max-time 10 -f "http://127.0.0.1:${port}" \
+              || curl --silent --show-error --connect-timeout 5 --max-time 10 "http://127.0.0.1:${port}" | grep -q "404"; then
               echo "Port ${port} responded successfully."
               return 0
             fi
