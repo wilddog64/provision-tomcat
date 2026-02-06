@@ -19,6 +19,7 @@ driver:
 
 .common_vagrant: &common_vagrant
   name: vagrant
+  driver: virtualbox
   vagrant_binary: <%= File.join(File.dirname(__FILE__), 'bin', 'vagrant-wrapper') %>
 
 provisioner:
@@ -27,12 +28,12 @@ provisioner:
   hosts: test-kitchen
   require_ansible_repo: true
   playbook: tests/playbook.yml
-  roles_path: ..
+  roles_path: ./roles:..
   ansible_version: latest
   host_key_checking: false
   ansible_galaxy_role_file: requirements.yml
   # vault_password_file: ./secrets/my_pass.txt
-  idempotency_test: false
+  idempotency_test: <%= ENV.fetch('KITCHEN_IDEMPOTENCE', 'false') == 'true' %>
   chef_bootstrap_url: null
   verbose: vv
   extra_vars:
@@ -73,15 +74,15 @@ platforms:
       operation_timeout: 600
     provisioner:
       name: ansible_push
-      ansible_playbook_bin: <%= Dir.glob("#{Dir.pwd}/.direnv/python-*/bin/ansible-playbook").first || "ansible-playbook" %>
+      ansible_playbook_bin: <%= Dir.glob("#{Dir.pwd}/venv/bin/ansible-playbook").first || Dir.glob("#{File.dirname(File.dirname(__FILE__))}/.direnv/python-*/bin/ansible-playbook").first || Dir.glob("#{Dir.pwd}/.direnv/python-*/bin/ansible-playbook").first || "ansible-playbook" %>
       hosts: test-kitchen
       require_ansible_repo: true
       playbook: tests/playbook.yml
-      roles_path: ..
+      roles_path: ./roles:..
       ansible_version: latest
       ansible_host_key_checking: false
       ansible_galaxy_role_file: requirements.yml
-      idempotency_test: false
+      idempotency_test: <%= ENV.fetch('KITCHEN_IDEMPOTENCE', 'false') == 'true' %>
       chef_bootstrap_url: null
       ansible_verbosity: 2
       require_windows_support: true
@@ -92,7 +93,7 @@ platforms:
         skip_migration: true
         ansible_connection: winrm
         ansible_winrm_transport: basic
-        ansible_port: 5985
+        ansible_port: 55985
         ansible_winrm_scheme: http
         ansible_winrm_server_cert_validation: ignore
         ansible_user: vagrant
@@ -111,7 +112,7 @@ platforms:
         memory: 8192
         cpus: 4
       vagrantfiles:
-        - <%= File.expand_path('vagrant/Vagrantfile-disk.rb', __dir__) %>
+        - <%= File.join(File.dirname(__FILE__), 'vagrant', 'Vagrantfile-disk.rb') %>
     transport:
       name: winrm
       elevated: true
@@ -124,15 +125,15 @@ platforms:
       operation_timeout: 600
     provisioner:
       name: ansible_push
-      ansible_playbook_bin: <%= Dir.glob("#{Dir.pwd}/.direnv/python-*/bin/ansible-playbook").first || "ansible-playbook" %>
+      ansible_playbook_bin: <%= Dir.glob("#{Dir.pwd}/venv/bin/ansible-playbook").first || Dir.glob("#{File.dirname(File.dirname(__FILE__))}/.direnv/python-*/bin/ansible-playbook").first || Dir.glob("#{Dir.pwd}/.direnv/python-*/bin/ansible-playbook").first || "ansible-playbook" %>
       hosts: test-kitchen
       require_ansible_repo: true
       playbook: tests/playbook.yml
-      roles_path: ..
+      roles_path: ./roles:..
       ansible_version: latest
       ansible_host_key_checking: false
       ansible_galaxy_role_file: requirements.yml
-      idempotency_test: false
+      idempotency_test: <%= ENV.fetch('KITCHEN_IDEMPOTENCE', 'false') == 'true' %>
       chef_bootstrap_url: null
       ansible_verbosity: 2
       require_windows_support: true
@@ -143,7 +144,7 @@ platforms:
         skip_migration: true
         ansible_connection: winrm
         ansible_winrm_transport: basic
-        ansible_port: 5985
+        ansible_port: 55985
         ansible_winrm_scheme: http
         ansible_winrm_server_cert_validation: ignore
         ansible_user: vagrant
@@ -153,61 +154,59 @@ platforms:
         ansible_become_user: vagrant
         install_drive: "D:"
 
-#  - name: win11-baseline
-#    driver:
-#      <<: *common_vagrant
-#    driver_config:
-#      box: windows11-tomcat112
-#      communicator: winrm
-#    transport:
-#      name: winrm
-#      elevated: true
-#      ssl_peer_verification: false
-#      port: 5985
-#      winrm_transport: :plaintext
-#      ssl: false
-#      connection_retries: 5
-#      connection_retry_sleep: 10
-#    provisioner:
-#      name: ansible_push
-#      ansible_playbook_bin: <%= Dir.glob("#{Dir.pwd}/.direnv/python-*/bin/ansible-playbook").first %>
-#      hosts: test-kitchen
-#      require_ansible_repo: true
-#      playbook: tests/playbook.yml
-#      roles_path: ..
-#      ansible_version: latest
-#      ansible_host_key_checking: false
-#      ansible_galaxy_role_file: requirements.yml
-#      idempotency_test: false
-#      chef_bootstrap_url: null
-#      ansible_verbosity: 2
-#      require_windows_support: true
-#      extra_vars:
-#        env: stage2
-#        extract_build_number: 16
-#        extract_debug: 'False'
-#        skip_migration: true
-#        ansible_connection: winrm
-#        ansible_winrm_transport: basic
-#        ansible_port: 5985
-#        ansible_winrm_scheme: http
-#        ansible_winrm_server_cert_validation: ignore
-#        ansible_user: vagrant
-#        ansible_password: vagrant
-#        ansible_host: 127.0.0.1
+  - name: win11-baseline
+    driver:
+      <<: *common_vagrant
+    driver_config:
+      box: windows11-tomcat112
+      communicator: winrm
+    transport:
+      name: winrm
+      elevated: true
+      ssl_peer_verification: false
+      port: 5985
+      winrm_transport: :plaintext
+      ssl: false
+      connection_retries: 15
+      connection_retry_sleep: 10
+      operation_timeout: 600
+    provisioner:
+      name: ansible_push
+      ansible_playbook_bin: <%= Dir.glob("#{Dir.pwd}/venv/bin/ansible-playbook").first || Dir.glob("#{File.dirname(File.dirname(__FILE__))}/.direnv/python-*/bin/ansible-playbook").first || Dir.glob("#{Dir.pwd}/.direnv/python-*/bin/ansible-playbook").first || "ansible-playbook" %>
+      hosts: test-kitchen
+      require_ansible_repo: true
+      playbook: tests/playbook.yml
+      roles_path: ..
+      ansible_version: latest
+      ansible_host_key_checking: false
+      ansible_galaxy_role_file: requirements.yml
+      idempotency_test: <%= ENV.fetch('KITCHEN_IDEMPOTENCE', 'false') == 'true' %>
+      chef_bootstrap_url: null
+      ansible_verbosity: 2
+      require_windows_support: true
+      extra_vars:
+        env: stage2
+        extract_build_number: 16
+        extract_debug: 'False'
+        skip_migration: true
+        ansible_connection: winrm
+        ansible_winrm_transport: basic
+        ansible_port: 55985
+        ansible_winrm_scheme: http
+        ansible_winrm_server_cert_validation: ignore
+        ansible_user: vagrant
+        ansible_password: vagrant
+        ansible_host: 127.0.0.1
 
   - name: win11-azure
     driver:
       name: azurerm
-      # Example subscription and tenant IDs - replace with your own or set via environment variables
-      subscription_id: <%= ENV.fetch('AZURE_SUBSCRIPTION_ID', '00000000-0000-0000-0000-000000000000') %>
-      tenant_id: <%= ENV.fetch('AZURE_TENANT_ID', '00000000-0000-0000-0000-000000000000') %>
+      subscription_id: <%= ENV.fetch('AZURE_SUBSCRIPTION_ID', '28e1e42a-4438-4c30-9a5f-7d7b488fd883') %>
+      tenant_id: <%= ENV.fetch('AZURE_TENANT_ID', '84f1e4ea-8554-43e1-8709-f0b8589ea118') %>
       use_cli_credentials: true
       use_managed_identity: false
       location: southcentralus
-      # Resource group name - must be set via AZURE_RESOURCE_GROUP environment variable
-      # or will fail with KeyError. This ensures explicit configuration for Kitchen tests.
-      explicit_resource_group_name: <%= ENV.fetch('AZURE_RESOURCE_GROUP') %>
+      explicit_resource_group_name: <%= ENV.fetch('AZURE_RESOURCE_GROUP', '1-6057ce5e-playground-sandbox') %>
       allow_resource_group_creation: false
       delete_resource_group: false
       destroy_explicit_resource_group: false
@@ -241,13 +240,11 @@ platforms:
       connection_retries: 15
       connection_retry_sleep: 10
       operation_timeout: 600
-      # WARNING: Default passwords are weak and for testing only. Set AZURE_ADMIN_USERNAME and
-      # AZURE_ADMIN_PASSWORD environment variables with secure credentials before use.
       username: <%= ENV.fetch('AZURE_ADMIN_USERNAME', 'azureadmin') %>
       password: <%= ENV.fetch('AZURE_ADMIN_PASSWORD', 'ChangeM3!') %>
     provisioner:
       name: ansible_push
-      ansible_playbook_bin: <%= Dir.glob("#{Dir.pwd}/.direnv/python-*/bin/ansible-playbook").first || "ansible-playbook" %>
+      ansible_playbook_bin: <%= Dir.glob("#{Dir.pwd}/venv/bin/ansible-playbook").first || Dir.glob("#{File.dirname(File.dirname(__FILE__))}/.direnv/python-*/bin/ansible-playbook").first || Dir.glob("#{Dir.pwd}/.direnv/python-*/bin/ansible-playbook").first || "ansible-playbook" %>
       hosts: test-kitchen
       require_ansible_repo: true
       playbook: tests/playbook.yml
@@ -255,7 +252,7 @@ platforms:
       ansible_version: latest
       ansible_host_key_checking: false
       ansible_galaxy_role_file: requirements.yml
-      idempotency_test: false
+      idempotency_test: <%= ENV.fetch('KITCHEN_IDEMPOTENCE', 'false') == 'true' %>
       chef_bootstrap_url: null
       ansible_verbosity: 2
       require_windows_support: true
@@ -266,13 +263,133 @@ platforms:
         skip_migration: true
         ansible_connection: winrm
         ansible_winrm_transport: basic
-        ansible_port: 5985
+        ansible_port: 55985
         ansible_winrm_scheme: http
         ansible_winrm_server_cert_validation: ignore
         ansible_user: <%= ENV.fetch('AZURE_ADMIN_USERNAME', 'azureadmin') %>
         ansible_password: <%= ENV.fetch('AZURE_ADMIN_PASSWORD', 'ChangeM3!') %>
         ansible_become_method: runas
         ansible_become_user: <%= ENV.fetch('AZURE_ADMIN_USERNAME', 'azureadmin') %>
+
+  - name: aws-minimal-win
+    driver:
+      name: ec2
+      region: us-east-1
+      availability_zone: <%= ENV.fetch('AWS_AZ') %>
+      instance_type: t2.micro
+      associate_public_ip: true
+      subnet_id: <%= ENV.fetch('AWS_SUBNET_ID') %>
+      security_group_ids: <%= ENV.fetch('AWS_SECURITY_GROUP_IDS') %>
+      image_id: <%= ENV.fetch('AWS_AMI_ID') %>
+    transport:
+      name: winrm
+      elevated: true
+      username: Administrator
+      winrm_transport: :negotiate
+      port: 5985
+      ssl: false
+      connection_retries: 15
+      connection_retry_sleep: 10
+      operation_timeout: 600
+    provisioner:
+      name: ansible_push
+      ansible_install_mode: :skip
+      pass_transport_password: true
+      generate_inv: true
+      use_instance_name: false
+      ansible_playbook_bin: <%= Dir.glob("#{Dir.pwd}/venv/bin/ansible-playbook").first || Dir.glob("#{File.dirname(File.dirname(__FILE__))}/.direnv/python-*/bin/ansible-playbook").first || Dir.glob("#{Dir.pwd}/.direnv/python-*/bin/ansible-playbook").first || "ansible-playbook" %>
+      require_ansible_repo: true
+      playbook: tests/playbook.yml
+      roles_path: ..
+      ansible_version: latest
+      ansible_host_key_checking: false
+      ansible_galaxy_role_file: requirements.yml
+      idempotency_test: <%= ENV.fetch('KITCHEN_IDEMPOTENCE', 'false') == 'true' %>
+      chef_bootstrap_url: null
+      ansible_verbosity: 2
+      require_windows_support: true
+      extra_vars:
+        env: stage2
+        extract_build_number: 16
+        extract_debug: 'False'
+        skip_migration: true
+        ansible_connection: winrm
+        ansible_winrm_transport: ntlm
+        ansible_winrm_scheme: http
+        ansible_winrm_server_cert_validation: ignore
+        ansible_user: Administrator
+        ansible_become_method: runas
+        ansible_become_user: Administrator
+        ansible_port: 5985
+        ansible_host: "<%= ENV['ANSIBLE_HOST_OVERRIDE'] %>"
+        security_service_account: ""
+        security_jenkins_accounts: []
+
+  - name: aws-minimal-win-disk
+    driver:
+      name: ec2
+      region: us-east-1
+      availability_zone: <%= ENV.fetch('AWS_AZ') %>
+      instance_type: t2.medium
+      associate_public_ip: true
+      subnet_id: <%= ENV.fetch('AWS_SUBNET_ID') %>
+      security_group_ids: <%= ENV.fetch('AWS_SECURITY_GROUP_IDS') %>
+      image_id: <%= ENV.fetch('AWS_AMI_ID') %>
+      block_device_mappings:
+        - device_name: /dev/sda1
+          ebs:
+            volume_size: 50
+            volume_type: gp3
+            delete_on_termination: true
+        - device_name: /dev/sdb
+          ebs:
+            volume_size: 20
+            volume_type: gp3
+            delete_on_termination: true
+    transport:
+      name: winrm
+      elevated: true
+      username: Administrator
+      winrm_transport: :negotiate
+      port: 5985
+      ssl: false
+      connection_retries: 15
+      connection_retry_sleep: 10
+      operation_timeout: 600
+    provisioner:
+      name: ansible_push
+      ansible_install_mode: :skip
+      pass_transport_password: true
+      generate_inv: true
+      use_instance_name: false
+      ansible_playbook_bin: <%= Dir.glob("#{Dir.pwd}/venv/bin/ansible-playbook").first || Dir.glob("#{File.dirname(File.dirname(__FILE__))}/.direnv/python-*/bin/ansible-playbook").first || Dir.glob("#{Dir.pwd}/.direnv/python-*/bin/ansible-playbook").first || "ansible-playbook" %>
+      require_ansible_repo: true
+      playbook: tests/playbook.yml
+      roles_path: ..
+      ansible_version: latest
+      ansible_host_key_checking: false
+      ansible_galaxy_role_file: requirements.yml
+      idempotency_test: <%= ENV.fetch('KITCHEN_IDEMPOTENCE', 'false') == 'true' %>
+      chef_bootstrap_url: null
+      ansible_verbosity: 2
+      require_windows_support: true
+      extra_vars:
+        env: stage2
+        extract_build_number: 16
+        extract_debug: 'False'
+        skip_migration: true
+        ansible_connection: winrm
+        ansible_winrm_transport: ntlm
+        ansible_winrm_scheme: http
+        ansible_winrm_server_cert_validation: ignore
+        ansible_user: Administrator
+        ansible_become_method: runas
+        ansible_become_user: Administrator
+        ansible_port: 5985
+        ansible_host: "<%= ENV['ANSIBLE_HOST_OVERRIDE'] %>"
+        security_service_account: ""
+        security_jenkins_accounts: []
+        install_drive: "D:"
 
 suites:
   - name: default
@@ -281,13 +398,18 @@ suites:
         - ["forwarded_port", {guest: 8080, host: 8080, auto_correct: true}]
     provisioner:
       extra_vars:
-        tomcat_version: "9.0.113"
+        tomcat_version: "9.0.115"
         tomcat_auto_start: true
     verifier:
       name: shell
       command: |
-        # Verify port forwarding is working (Ansible playbook handles service verification)
-        curl --connect-timeout 5 --max-time 10 -f http://localhost:8080 || curl --connect-timeout 5 --max-time 10 http://localhost:8080 | grep -q "404"
+        # Get hostname from Kitchen state (works for both Vagrant/localhost and AWS public IPs)
+        INSTANCE_HOSTNAME=$(yq .hostname .kitchen/default-*.yml)
+        if [ "$INSTANCE_HOSTNAME" = "null" ] || [ -z "$INSTANCE_HOSTNAME" ]; then
+          INSTANCE_HOSTNAME="localhost"
+        fi
+        echo "Verifying Tomcat on http://${INSTANCE_HOSTNAME}:8080"
+        curl --connect-timeout 5 --max-time 10 -f "http://${INSTANCE_HOSTNAME}:8080" || curl --connect-timeout 5 --max-time 10 "http://${INSTANCE_HOSTNAME}:8080" | grep -q "404"
 
   - name: upgrade
     driver:
@@ -325,7 +447,7 @@ suites:
         - ["forwarded_port", {guest: 8080, host: 8080, auto_correct: true}]
     provisioner:
       extra_vars:
-        tomcat_version: "9.0.113"
+        tomcat_version: "9.0.115"
         tomcat_auto_start: true
       idempotency_test: true
     verifier:
@@ -337,7 +459,7 @@ suites:
   - name: no-autostart
     provisioner:
       extra_vars:
-        tomcat_version: "9.0.113"
+        tomcat_version: "9.0.115"
         tomcat_auto_start: false
     verifier:
       name: shell
@@ -347,8 +469,9 @@ suites:
   - name: upgrade-baseline
     driver:
       network:
-        - ["forwarded_port", {guest: 8080, host: 8080, auto_correct: true}]
-        - ["forwarded_port", {guest: 9080, host: 9080, auto_correct: true}]
+        # Use alternate host ports to avoid local conflicts (similar to provision-jenkins)
+        - ["forwarded_port", {guest: 8080, host: 18080, auto_correct: false}]
+        - ["forwarded_port", {guest: 9080, host: 19080, auto_correct: false}]
     provisioner:
       playbook: tests/playbook-upgrade.yml
       extra_vars:
@@ -356,7 +479,108 @@ suites:
         tomcat_auto_start: true
         tomcat_candidate_enabled: true
         tomcat_candidate_delegate: localhost
+        tomcat_candidate_delegate_host: 127.0.0.1
+        tomcat_candidate_delegate_port: 19080
+        tomcat_candidate_manual_control: true
     verifier:
       name: shell
       command: |
-        curl --connect-timeout 5 --max-time 10 -f http://localhost:8080 || curl --connect-timeout 5 --max-time 10 http://localhost:8080 | grep -q "404"
+        set -euo pipefail
+
+        sleep 20
+
+        check_port() {
+          local port="$1"
+          local attempts="${2:-6}"
+          local delay="${3:-10}"
+
+          for attempt in $(seq 1 "$attempts"); do
+            echo "Attempt ${attempt}/${attempts}: curl http://localhost:${port}"
+            if curl --silent --show-error --connect-timeout 5 --max-time 10 -f "http://localhost:${port}" \
+              || curl --silent --show-error --connect-timeout 5 --max-time 10 "http://localhost:${port}" | grep -q "404"; then
+              echo "Port ${port} responded successfully."
+              return 0
+            fi
+            if [ "$attempt" -lt "$attempts" ]; then
+              echo "Port ${port} not ready yet; sleeping ${delay}s before retrying..."
+              sleep "$delay"
+            fi
+          done
+
+          echo "ERROR: Port ${port} never responded after ${attempts} attempts."
+          return 1
+        }
+
+        candidate_host_port=19080
+        primary_host_port=18080
+        ansible_cmd="${KITCHEN_ANSIBLE_PLAYBOOK_BIN:-$(command -v ansible-playbook)}"
+        if [ ! -x "$ansible_cmd" ]; then
+          echo "ERROR: ansible-playbook binary not found" >&2
+          exit 1
+        fi
+        temp_inventory="$(mktemp)"
+        cat <<'EOF' > "$temp_inventory"
+        [baseline-win11-baseline]
+        baseline-win11 ansible_connection=winrm ansible_host=127.0.0.1 ansible_user=vagrant ansible_password=vagrant ansible_port=55985 ansible_winrm_transport=basic ansible_winrm_scheme=http ansible_winrm_server_cert_validation=ignore
+        EOF
+        promotion_extra_vars="env=stage2 extract_build_number=16 extract_debug=False skip_migration=true upgrade_step=2 tomcat_auto_start=true tomcat_candidate_enabled=true tomcat_candidate_delegate=localhost tomcat_candidate_delegate_host=127.0.0.1 tomcat_candidate_delegate_port=${candidate_host_port}"
+
+        echo "Checking candidate Tomcat on port ${candidate_host_port} before promotion..."
+        check_port "${candidate_host_port}" 20 10
+
+        echo "Promoting candidate via ansible-playbook before primary verification..."
+        "$ansible_cmd" tests/playbook-upgrade.yml \
+          -i "$temp_inventory" \
+          -e "${promotion_extra_vars} tomcat_candidate_manual_control=false"
+        rm -f "$temp_inventory"
+
+        echo "Waiting for promoted Tomcat on port ${primary_host_port}..."
+        # Give the promotion extra time to restart the primary service.
+        check_port "${primary_host_port}" 12 10
+
+  - name: upgrade-candidate-aws
+    provisioner:
+      playbook: tests/playbook-upgrade.yml
+      use_instance_name: false
+      generate_inv: true
+      ansible_host_key_checking: false
+      extra_vars:
+        ansible_host: "<%= ENV['ANSIBLE_HOST_OVERRIDE'] %>"
+        tomcat_candidate_delegate_host: "<%= ENV['ANSIBLE_HOST_OVERRIDE'] %>"
+        upgrade_step: 2
+        tomcat_auto_start: true
+        tomcat_candidate_enabled: true
+        tomcat_candidate_delegate: localhost
+        tomcat_candidate_delegate_port: 9080
+        tomcat_candidate_manual_control: true
+    verifier:
+      name: shell
+      command: |
+        # In AWS, we verify against the dynamic hostname
+        INSTANCE_HOSTNAME=$(yq .hostname .kitchen/upgrade-candidate-aws-aws-minimal-win.yml)
+        echo "Verifying candidate on http://${INSTANCE_HOSTNAME}:9080"
+        curl --connect-timeout 5 --max-time 10 -f "http://${INSTANCE_HOSTNAME}:9080" || curl --connect-timeout 5 --max-time 10 "http://${INSTANCE_HOSTNAME}:9080" | grep -q "404"
+
+  - name: upgrade-candidate-aws-disk
+    provisioner:
+      playbook: tests/playbook-upgrade.yml
+      use_instance_name: false
+      generate_inv: true
+      ansible_host_key_checking: false
+      extra_vars:
+        ansible_host: "<%= ENV['ANSIBLE_HOST_OVERRIDE'] %>"
+        tomcat_candidate_delegate_host: "<%= ENV['ANSIBLE_HOST_OVERRIDE'] %>"
+        upgrade_step: 2
+        tomcat_auto_start: true
+        tomcat_candidate_enabled: true
+        tomcat_candidate_delegate: localhost
+        tomcat_candidate_delegate_port: 9080
+        tomcat_candidate_manual_control: true
+        install_drive: "D:"
+    verifier:
+      name: shell
+      command: |
+        # In AWS, we verify against the dynamic hostname
+        INSTANCE_HOSTNAME=$(yq .hostname .kitchen/upgrade-candidate-aws-disk-aws-minimal-win-disk.yml)
+        echo "Verifying candidate on http://${INSTANCE_HOSTNAME}:9080"
+        curl --connect-timeout 5 --max-time 10 -f "http://${INSTANCE_HOSTNAME}:9080" || curl --connect-timeout 5 --max-time 10 "http://${INSTANCE_HOSTNAME}:9080" | grep -q "404"

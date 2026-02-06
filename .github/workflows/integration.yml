@@ -162,41 +162,41 @@ jobs:
           
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
-      - name: Run Test (Upgrade Win11)
+      - name: Run Test (Upgrade Baseline Win11)
         run: |
           source .venv/bin/activate
-          
+
           # Inject explicit path to ansible-playbook using Python heredoc
           python3 - <<'EOF'
           import os, re, sys
-          
+
           ansible_path = os.path.abspath('.venv/bin/ansible-playbook')
           if not os.path.exists(ansible_path):
               print(f"Error: {ansible_path} not found")
               sys.exit(1)
-          
+
           for kfile in ['.kitchen.yml', '.kitchen-win.yml']:
               if not os.path.exists(kfile): continue
               with open(kfile, 'r') as f: content = f.read()
-              
+
               # 1. Fix Ansible binary path (Replace the ERB direnv template)
               if 'ansible_playbook_bin:' in content:
                   content = re.sub(r'ansible_playbook_bin:.*', f'ansible_playbook_bin: {ansible_path}', content)
               else:
                   content = content.replace('name: ansible_push', f'name: ansible_push\n      ansible_playbook_bin: {ansible_path}')
-              
+
               # 2. Fix WinRM stability (Increase retries for slow Windows boot)
               content = content.replace('connection_retries: 5', 'connection_retries: 30')
-              
+
               with open(kfile, 'w') as f: f.write(content)
               print(f"Patched {kfile}")
           EOF
-          
+
           echo "=== Verification of Patched .kitchen.yml ==="
           grep "ansible_playbook_bin" .kitchen.yml | head -n 5
           grep "connection_retries" .kitchen.yml
-          
-          bundle exec make test-upgrade-win11
+
+          bundle exec make test-upgrade-baseline-win11
 
       - name: Post-Test Cleanup
         if: always()
