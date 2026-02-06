@@ -1,8 +1,4 @@
 roles:
-  - name: provision-java
-    src: git@github.com:wilddog64/provision-java.git
-    scm: git
-    version: main
   - name: windows-base
     src: git@github.com:wilddog64/windows-base.git
     scm: git
