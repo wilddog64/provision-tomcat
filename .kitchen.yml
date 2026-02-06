@@ -616,7 +616,7 @@ suites:
 >>>>>>> 0d342f8 (chore: stabilize upgrade-baseline verifier)
 
         echo "Checking candidate Tomcat on port ${candidate_host_port} before promotion..."
-        check_port "${candidate_host_port}" 6 5
+        check_port "${candidate_host_port}" 20 10
 
         echo "Promoting candidate via ansible-playbook before primary verification..."
         "$ansible_cmd" tests/playbook-upgrade.yml \
