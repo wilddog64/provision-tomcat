@@ -96,20 +96,8 @@ jobs:
     steps:
       - name: Cleanup Stale VMs
         run: |
-          echo "Cleaning up stale VirtualBox VMs..."
-          VMS=$(VBoxManage list vms | grep "kitchen-provision-tomcat" | awk -F'"' '{print $2}' || true)
-
-          for VM in $VMS; do
-            echo "Found stale VM: $VM"
-            if VBoxManage showvminfo "$VM" | grep -q "State:.*running"; then
-              echo "Powering off $VM..."
-              VBoxManage controlvm "$VM" poweroff || true
-              sleep 5
-            fi
-            echo "Deleting $VM..."
-            VBoxManage unregistervm "$VM" --delete || true
-          done
-          echo "Cleanup complete."
+          chmod +x bin/cleanup-vagrant.sh
+          ./bin/cleanup-vagrant.sh
 
       - name: Checkout provision-tomcat
         uses: actions/checkout@v4
@@ -247,11 +235,4 @@ jobs:
       - name: Post-Test Cleanup
         if: always()
         run: |
-          echo "Performing final VirtualBox cleanup..."
-          VMS=$(VBoxManage list vms | grep "kitchen-provision-tomcat" | awk -F'"' '{print $2}' || true)
-          for VM in $VMS; do
-            echo "Cleaning up $VM..."
-            VBoxManage controlvm "$VM" poweroff || true
-            sleep 2
-            VBoxManage unregistervm "$VM" --delete || true
-          done
+          ./bin/cleanup-vagrant.sh
