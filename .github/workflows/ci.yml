@@ -28,6 +28,10 @@ jobs:
           ls -la "$HOME" || echo "Cannot access HOME directory"
 =======
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   lint:
     name: Validation
