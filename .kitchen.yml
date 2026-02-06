@@ -485,6 +485,7 @@ suites:
     verifier:
       name: shell
       command: |
+<<<<<<< HEAD
         set -euo pipefail
 
         sleep 20
@@ -584,3 +585,7 @@ suites:
         INSTANCE_HOSTNAME=$(yq .hostname .kitchen/upgrade-candidate-aws-disk-aws-minimal-win-disk.yml)
         echo "Verifying candidate on http://${INSTANCE_HOSTNAME}:9080"
         curl --connect-timeout 5 --max-time 10 -f "http://${INSTANCE_HOSTNAME}:9080" || curl --connect-timeout 5 --max-time 10 "http://${INSTANCE_HOSTNAME}:9080" | grep -q "404"
+=======
+        # Final promotion verification happens on port 8080 after candidate testing succeeds
+        curl --connect-timeout 5 --max-time 10 -f http://localhost:8080 || curl --connect-timeout 5 --max-time 10 http://localhost:8080 | grep -q "404"
+>>>>>>> eb0bd4f (fix: verify promoted service on upgrade-baseline)
