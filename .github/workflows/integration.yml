@@ -2,18 +2,17 @@ name: Integration Tests
 
 on:
   workflow_dispatch:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
-    paths-ignore:
-      - 'docs/**'
-      - '*.md'
+  workflow_run:
+    workflows: ["Validation"]
+    types: [completed]
+    branches: [main]
 
 jobs:
   kitchen-test:
-    # Security: Only run on trusted PRs/pushes/dispatch (No Forks)
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
+    # Only run if Validation workflow succeeded (or manual dispatch)
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
     runs-on: [self-hosted, macOS]
     env:
       ANSIBLE_ROLES_PATH: ${{ github.workspace }}/roles
