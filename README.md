@@ -591,6 +591,21 @@ If you encounter crashes with Vagrant, Bundler conflicts, or "Command Not Found"
 
 - See **[CI Robustness Fixes](docs/issues/2026-02-04-ci-robustness-fixes.md)** for details on the Vagrant wrapper, Python injection, and environment isolation.
 
+### Known Issues
+
+See the [docs/issues](docs/issues/) directory for detailed documentation on common problems:
+
+| Issue | Description |
+|-------|-------------|
+| **[pywinrm urllib3 Compatibility](docs/issues/pywinrm-urllib3-compatibility.md)** | AttributeError with urllib3 2.x - pin to `urllib3<2` |
+| **[Vagrant Bundler Conflict](docs/issues/VAGRANT-BUNDLER-CONFLICT.md)** | Vagrant crashes due to rbenv/Bundler environment pollution |
+| **[WinRM Port Forwarding](docs/issues/WINRM-PORT-FORWARDING.md)** | Ansible connection fails - use port 55985 not 5985 |
+| **[provision-java Regex Crash](docs/issues/PROVISION-JAVA-REGEX-CRASH.md)** | NoneType error parsing Java version |
+| **[Candidate Mode Port](docs/issues/CANDIDATE-MODE-PORT.md)** | Candidate Tomcat runs on port 9080, not 8080 |
+| **[GitHub workflow_run Limitation](docs/issues/GITHUB-WORKFLOW-RUN-LIMITATION.md)** | workflow_run only works from default branch |
+| **[VirtualBox Stale Disks](docs/issues/VIRTUALBOX-STALE-DISKS.md)** | VERR_ALREADY_EXISTS when creating disks |
+| **[Multiple Deploy Keys](docs/issues/GITHUB-ACTIONS-MULTIPLE-DEPLOY-KEYS.md)** | SSH key ambiguity with multiple private repos |
+
 ## Security
 
 For details on how the CI/CD pipeline is secured on the self-hosted runner (including fork protection, SSH key management, and environment isolation), see **[CI/CD Security Architecture](docs/CI-SECURITY.md)**.
