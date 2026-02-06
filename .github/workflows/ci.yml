@@ -77,9 +77,6 @@ jobs:
       - name: Install Ansible collections
         run: make deps
 
-      - name: Link self as role
-        run: ln -s . roles/provision-tomcat
-
       - name: Run Validation
         env:
           ANSIBLE_ROLES_PATH: ${{ github.workspace }}/roles
@@ -169,7 +166,6 @@ jobs:
           bundle install
 
           export PATH=$PWD/.venv/bin:$PATH
-          ln -s . roles/provision-tomcat
 
       - name: Workaround Vagrant Bundler Conflict
         run: |
