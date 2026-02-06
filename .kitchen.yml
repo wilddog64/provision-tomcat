@@ -2,6 +2,7 @@
 driver:
   name: vagrant
   driver: virtualbox
+  vagrant_binary: <%= File.join(File.dirname(__FILE__), 'bin', 'vagrant-wrapper') %>
 
 provisioner:
   require_chef_omnibus: false
@@ -45,7 +46,7 @@ platforms:
       connection_retry_sleep: 10
     provisioner:
       name: ansible_push
-      ansible_playbook_bin: <%= Dir.glob("#{Dir.pwd}/.direnv/python-*/bin/ansible-playbook").first %>
+      ansible_playbook_bin: <%= Dir.glob("#{File.dirname(File.dirname(__FILE__))}/.direnv/python-*/bin/ansible-playbook").first || Dir.glob("#{Dir.pwd}/.direnv/python-*/bin/ansible-playbook").first %>
       hosts: test-kitchen
       require_ansible_repo: true
       playbook: tests/playbook.yml
@@ -64,7 +65,7 @@ platforms:
         skip_migration: true
         ansible_connection: winrm
         ansible_winrm_transport: basic
-        ansible_port: 5985
+        ansible_port: 55985
         ansible_winrm_scheme: http
         ansible_winrm_server_cert_validation: ignore
         ansible_user: vagrant
@@ -89,7 +90,7 @@ platforms:
       connection_retry_sleep: 10
     provisioner:
       name: ansible_push
-      ansible_playbook_bin: <%= Dir.glob("#{Dir.pwd}/.direnv/python-*/bin/ansible-playbook").first %>
+      ansible_playbook_bin: <%= Dir.glob("#{File.dirname(File.dirname(__FILE__))}/.direnv/python-*/bin/ansible-playbook").first || Dir.glob("#{Dir.pwd}/.direnv/python-*/bin/ansible-playbook").first %>
       hosts: test-kitchen
       require_ansible_repo: true
       playbook: tests/playbook.yml
@@ -108,7 +109,7 @@ platforms:
         skip_migration: true
         ansible_connection: winrm
         ansible_winrm_transport: basic
-        ansible_port: 5985
+        ansible_port: 55985
         ansible_winrm_scheme: http
         ansible_winrm_server_cert_validation: ignore
         ansible_user: vagrant
@@ -131,7 +132,7 @@ platforms:
       connection_retry_sleep: 10
     provisioner:
       name: ansible_push
-      ansible_playbook_bin: <%= Dir.glob("#{Dir.pwd}/.direnv/python-*/bin/ansible-playbook").first %>
+      ansible_playbook_bin: <%= Dir.glob("#{File.dirname(File.dirname(__FILE__))}/.direnv/python-*/bin/ansible-playbook").first || Dir.glob("#{Dir.pwd}/.direnv/python-*/bin/ansible-playbook").first %>
       hosts: test-kitchen
       require_ansible_repo: true
       playbook: tests/playbook.yml
@@ -150,7 +151,7 @@ platforms:
         skip_migration: true
         ansible_connection: winrm
         ansible_winrm_transport: basic
-        ansible_port: 5985
+        ansible_port: 55985
         ansible_winrm_scheme: http
         ansible_winrm_server_cert_validation: ignore
         ansible_user: vagrant

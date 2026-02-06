@@ -13,16 +13,12 @@ else
 endif
 
 KITCHEN_YAML ?= $(DEFAULT_KITCHEN_YAML)
-BUNDLE_BIN := $(shell command -v bundle 2>/dev/null)
-ifdef BUNDLE_BIN
-KITCHEN_CMD ?= bundle exec kitchen
-else
 RBENV_BIN := $(shell command -v rbenv 2>/dev/null)
 ifdef RBENV_BIN
-KITCHEN_CMD ?= rbenv exec kitchen
+  export RBENV_VERSION := $(shell cat .ruby-version 2>/dev/null)
+  KITCHEN_CMD ?= rbenv exec kitchen
 else
-KITCHEN_CMD ?= kitchen
-endif
+  KITCHEN_CMD ?= kitchen
 endif
 
 PLATFORMS := win11 win11-disk ubuntu-2404 rockylinux9
