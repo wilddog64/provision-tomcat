@@ -21,6 +21,7 @@ The suite enables **candidate mode**:
     extra_vars:
       tomcat_candidate_enabled: true
       tomcat_candidate_delegate: localhost
+      tomcat_candidate_manual_control: true
 ```
 
 Candidate mode installs the new bits on port 9080 and leaves the primary service (8080) stopped until promotion runs. Ansible already validates the candidate on 9080 (via `win_uri` plus the controller lookups) and then promotes it back to the primary port. If the controller verify step fails—or if the verifier keeps probing 9080 after promotion—the automation never confirms that the promoted service is live on 8080.
@@ -34,8 +35,8 @@ Keep both ports forwarded so the Ansible candidate checks can hit 9080, but make
 - name: upgrade-baseline
   driver:
     network:
-      - ["forwarded_port", {guest: 8080, host: 8080, auto_correct: true}]
-      - ["forwarded_port", {guest: 9080, host: 9080, auto_correct: true}]
+      - ["forwarded_port", {guest: 8080, host: 18080, auto_correct: true}]
+      - ["forwarded_port", {guest: 9080, host: 19080, auto_correct: true}]
   provisioner:
     extra_vars:
       tomcat_candidate_enabled: true
@@ -67,11 +68,27 @@ Keep both ports forwarded so the Ansible candidate checks can hit 9080, but make
         return 1
       }
 
-      echo "Checking candidate Tomcat on port 9080 before promotion..."
-      check_port 9080 6 5
+      candidate_host_port=19080
+      primary_host_port=18080
+      ansible_cmd="${KITCHEN_ANSIBLE_PLAYBOOK_BIN:-$(command -v ansible-playbook)}"
+      temp_inventory="$(mktemp)"
+      cat > "$temp_inventory" <<'EOF'
+[baseline-win11-baseline]
+baseline-win11 ansible_connection=winrm ansible_host=127.0.0.1 ansible_user=vagrant ansible_password=vagrant ansible_port=55985 ansible_winrm_transport=basic ansible_winrm_scheme=http ansible_winrm_server_cert_validation=ignore
+EOF
+      promotion_extra_vars="env=stage2 extract_build_number=16 extract_debug=False skip_migration=true upgrade_step=2 tomcat_auto_start=true tomcat_candidate_enabled=true tomcat_candidate_delegate=localhost tomcat_candidate_delegate_host=127.0.0.1 tomcat_candidate_delegate_port=${candidate_host_port}"
 
-      echo "Waiting for promoted Tomcat on port 8080..."
-      check_port 8080 12 10
+      echo "Checking candidate Tomcat on port ${candidate_host_port} before promotion..."
+      check_port "${candidate_host_port}" 6 5
+
+      echo "Promoting candidate via ansible-playbook before primary verification..."
+      "$ansible_cmd" tests/playbook-upgrade.yml \
+        -i "$temp_inventory" \
+        -e "${promotion_extra_vars} tomcat_candidate_manual_control=false"
+      rm -f "$temp_inventory"
+
+      echo "Waiting for promoted Tomcat on port ${primary_host_port}..."
+      check_port "${primary_host_port}" 12 10
 ```
 
 ## Understanding Candidate Mode

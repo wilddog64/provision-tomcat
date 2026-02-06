@@ -470,8 +470,13 @@ suites:
     driver:
       network:
         # Use alternate host ports to avoid local conflicts (similar to provision-jenkins)
+<<<<<<< HEAD
         - ["forwarded_port", {guest: 8080, host: 18080, auto_correct: false}]
         - ["forwarded_port", {guest: 9080, host: 19080, auto_correct: false}]
+=======
+        - ["forwarded_port", {guest: 8080, host: 18080, auto_correct: true}]
+        - ["forwarded_port", {guest: 9080, host: 19080, auto_correct: true}]
+>>>>>>> 0d342f8 (chore: stabilize upgrade-baseline verifier)
     provisioner:
       playbook: tests/playbook-upgrade.yml
       extra_vars:
@@ -518,6 +523,9 @@ suites:
         }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 0d342f8 (chore: stabilize upgrade-baseline verifier)
         candidate_host_port=19080
         primary_host_port=18080
         ansible_cmd="${KITCHEN_ANSIBLE_PLAYBOOK_BIN:-$(command -v ansible-playbook)}"
@@ -531,6 +539,7 @@ suites:
         baseline-win11 ansible_connection=winrm ansible_host=127.0.0.1 ansible_user=vagrant ansible_password=vagrant ansible_port=55985 ansible_winrm_transport=basic ansible_winrm_scheme=http ansible_winrm_server_cert_validation=ignore
         EOF
         promotion_extra_vars="env=stage2 extract_build_number=16 extract_debug=False skip_migration=true upgrade_step=2 tomcat_auto_start=true tomcat_candidate_enabled=true tomcat_candidate_delegate=localhost tomcat_candidate_delegate_host=127.0.0.1 tomcat_candidate_delegate_port=${candidate_host_port}"
+<<<<<<< HEAD
 
         echo "Checking candidate Tomcat on port ${candidate_host_port} before promotion..."
         check_port "${candidate_host_port}" 20 10
@@ -598,8 +607,23 @@ suites:
 =======
         echo "Checking candidate Tomcat on port 9080 before promotion..."
         check_port 9080 6 5
+=======
+>>>>>>> 0d342f8 (chore: stabilize upgrade-baseline verifier)
 
-        echo "Waiting for promoted Tomcat on port 8080..."
+        echo "Checking candidate Tomcat on port ${candidate_host_port} before promotion..."
+        check_port "${candidate_host_port}" 6 5
+
+        echo "Promoting candidate via ansible-playbook before primary verification..."
+        "$ansible_cmd" tests/playbook-upgrade.yml \
+          -i "$temp_inventory" \
+          -e "${promotion_extra_vars} tomcat_candidate_manual_control=false"
+        rm -f "$temp_inventory"
+
+        echo "Waiting for promoted Tomcat on port ${primary_host_port}..."
         # Give the promotion extra time to restart the primary service.
+<<<<<<< HEAD
         check_port 8080 12 10
 >>>>>>> 5c8cdae (fix: make upgrade-baseline verify candidate then promotion)
+=======
+        check_port "${primary_host_port}" 12 10
+>>>>>>> 0d342f8 (chore: stabilize upgrade-baseline verifier)
