@@ -243,5 +243,33 @@ suites:
     verifier:
       name: shell
       command: |
-        # Final promotion verification happens on port 8080 after candidate testing succeeds
-        curl --connect-timeout 5 --max-time 10 -f http://localhost:8080 || curl --connect-timeout 5 --max-time 10 http://localhost:8080 | grep -q "404"
+        set -euo pipefail
+
+        check_port() {
+          local port="$1"
+          local attempts="${2:-6}"
+          local delay="${3:-10}"
+
+          for attempt in $(seq 1 "$attempts"); do
+            echo "Attempt ${attempt}/${attempts}: curl http://localhost:${port}"
+            if curl --silent --show-error --connect-timeout 5 --max-time 10 -f "http://localhost:${port}" \
+              || curl --silent --show-error --connect-timeout 5 --max-time 10 "http://localhost:${port}" | grep -q "404"; then
+              echo "Port ${port} responded successfully."
+              return 0
+            fi
+            if [ "$attempt" -lt "$attempts" ]; then
+              echo "Port ${port} not ready yet; sleeping ${delay}s before retrying..."
+              sleep "$delay"
+            fi
+          done
+
+          echo "ERROR: Port ${port} never responded after ${attempts} attempts."
+          return 1
+        }
+
+        echo "Checking candidate Tomcat on port 9080 before promotion..."
+        check_port 9080 6 5
+
+        echo "Waiting for promoted Tomcat on port 8080..."
+        # Give the promotion extra time to restart the primary service.
+        check_port 8080 12 10
