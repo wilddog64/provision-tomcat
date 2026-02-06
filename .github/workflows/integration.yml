@@ -5,14 +5,16 @@ on:
   workflow_run:
     workflows: ["Validation"]
     types: [completed]
-    branches: [main]
 
 jobs:
   kitchen-test:
     # Only run if Validation workflow succeeded (or manual dispatch)
+    # Security: Don't run on fork PRs (workflow_run.head_repository check)
     if: >
       github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
     runs-on: [self-hosted, macOS]
     env:
       ANSIBLE_ROLES_PATH: ${{ github.workspace }}/roles
