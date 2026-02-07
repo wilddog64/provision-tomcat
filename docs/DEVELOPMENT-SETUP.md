@@ -51,6 +51,12 @@ The development environment uses:
      eval "$(direnv hook bash)"  # or zsh
      ```
 
+6. **Azure CLI** (required for Azure sandbox/company tenant testing)
+   - macOS: `brew install azure-cli`
+   - Linux (Debian/Ubuntu): `curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash`
+   - Windows: Download installer from https://aka.ms/installazurecliwindows
+   - Verify: `az version`
+
 ## Initial Setup
 
 ### 1. Clone the Repository
@@ -91,7 +97,10 @@ This installs:
 - `kitchen-ansiblepush` - Push-based Ansible provisioning (for Windows)
 - `kitchen-vagrant` - Vagrant driver for Kitchen
 - `kitchen-inspec` - InSpec verifier
+- `kitchen-azurerm` - Azure Resource Manager driver (ACG sandbox and company Azure tenants)
 - `winrm-elevated` - Elevated WinRM support for Windows
+
+> For Azure sandbox/company runs, capture environment variables with `bin/azure-sandbox-env.sh --login --write scratch/azure-sandbox.env` and `source scratch/azure-sandbox.env` before invoking Kitchen.
 
 ### 4. Install Python Dependencies
 
