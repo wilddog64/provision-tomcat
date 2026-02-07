@@ -329,6 +329,7 @@ This role uses Test Kitchen with Vagrant for automated testing.
 Azure-based Kitchen tests are not wired into CI yet. To validate changes against the A Cloud Guru sandbox (or a similar company Azure subscription):
 
 - Start/extend the sandbox session manually, log in with `az login --use-device-code`, and export the env vars listed in [docs/plans/azure-sandbox-kitchen.md](docs/plans/azure-sandbox-kitchen.md).
+- Use `bin/azure-sandbox-env.sh --login --write scratch/azure-sandbox.env` to capture the IDs/credentials from `az account show` and the sandbox dashboard, then `source scratch/azure-sandbox.env`.
 - Run `bundle exec kitchen test <suite>-<platform>` from your workstation or self-hosted runner and capture `.kitchen/logs/*` for PR notes.
 - Destroy sandbox resources (`kitchen destroy --all`) before the session expires.
 

@@ -72,6 +72,29 @@ Support for running Test Kitchen inside an A Cloud Guru (Pluralsight Skills) Azu
 
 > Tip: If you have a self-hosted GitHub runner on your Mac, you can still trigger jobs through Actions, but the sandbox must be started and reachable manually before invoking the workflow.
 
+### Sandbox Variables
+
+Use the Azure CLI output (for example, `az account show`) plus the sandbox dashboard to populate these environment variables. The helper script `bin/azure-sandbox-env.sh` will prompt for each one and can write a ready-to-source file.
+
+| Variable | Description | Example Value | Source |
+| --- | --- | --- | --- |
+| `AZURE_SUBSCRIPTION_ID` | Subscription GUID for the current sandbox session | `80ea84e8-afce-4851-928a-9e2219724c69` | `az account show --query id -o tsv` |
+| `AZURE_TENANT_ID` | Tenant GUID shown in the sandbox account info | `84f1e4ea-8554-43e1-8709-f0b8589ea118` | `az account show --query tenantId -o tsv` |
+| `AZURE_LOCATION` | Region where sandbox resources live | `eastus` | Sandbox “Environment details” page |
+| `AZURE_RESOURCE_GROUP` | Pre-created sandbox resource group name | `ODL-azure-XXXXXX` | Sandbox portal |
+| `AZURE_VNET_NAME` | Virtual network provided by sandbox | `ODL-azure-XXXXXX-vnet` | Sandbox portal |
+| `AZURE_SUBNET_NAME` | Subnet inside the sandbox VNet | `default` | Sandbox portal |
+| `AZURE_NSG_NAME` | Network security group applied to sandbox VMs | `ODL-azure-XXXXXX-nsg` | Sandbox portal |
+| `AZURE_ADMIN_USERNAME` | Temporary admin username for created VMs | `cloud_user_p_1bf8da1a@realhandsonlabs.com` | Sandbox credentials page |
+| `AZURE_ADMIN_PASSWORD` | Temporary admin password for Windows/Linux VMs | (paste from sandbox UI) | Sandbox credentials page |
+
+Example:
+
+```bash
+bin/azure-sandbox-env.sh --login --write scratch/azure-sandbox.env
+source scratch/azure-sandbox.env
+```
+
 ## Test Suites
 
 The project defines multiple test suites in `.kitchen.yml`:
