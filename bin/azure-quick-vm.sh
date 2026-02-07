@@ -3,7 +3,7 @@ set -euo pipefail
 
 usage() {
   cat <<'EOF'
-Usage: bin/azure-quick-vm.sh [--name NAME] [--size VM_SIZE] [--image IMAGE] [--env FILE] [--keep]
+Usage: bin/azure-quick-vm.sh [--name NAME] [--size VM_SIZE] [--image IMAGE] [--nsg-rule RULE] [--env FILE] [--keep]
 
 Creates a short-lived Azure VM inside the current sandbox/company subscription using
 the environment variables exported via bin/azure-sandbox-env.sh, prints connection
@@ -21,8 +21,9 @@ Optional environment:
 
 Options:
   --name NAME   Set VM name (default: kitchen-quicktest-YYYYmmddHHMMSS)
-  --size SIZE   Azure VM size (default: Standard_B1s)
-  --image IMG   Image URN/alias (default: Ubuntu2204)
+  --size SIZE   Azure VM size (default: Standard_D2s_v5)
+  --image IMG   Image URN/alias (default: Win2022Datacenter)
+  --nsg-rule RULE  NSG rule to auto-open (default: RDP). Examples: RDP, SSH.
   --env FILE    Source environment exports from FILE (default: scratch/azure-sandbox.env)
   --keep        Do not delete the VM automatically (script prints cleanup commands)
   --help        Show this message
@@ -50,8 +51,9 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 DEFAULT_ENV_FILE="$REPO_ROOT/scratch/azure-sandbox.env"
 
 VM_NAME=""
-VM_SIZE="Standard_B1s"
-VM_IMAGE="Ubuntu2204"
+VM_SIZE="Standard_D2s_v5"
+VM_IMAGE="Win2022Datacenter"
+NSG_RULE="RDP"
 KEEP_VM=0
 ENV_FILE="$DEFAULT_ENV_FILE"
 
@@ -67,6 +69,8 @@ while [[ $# -gt 0 ]]; do
       KEEP_VM=1; shift;;
     --env)
       ENV_FILE="$2"; shift 2;;
+    --nsg-rule)
+      NSG_RULE="$2"; shift 2;;
     --help|-h)
       usage; exit 0;;
     *)
@@ -130,6 +134,7 @@ az vm create \
   --admin-username "$ADMIN_USER" \
   --admin-password "$ADMIN_PASS" \
   --authentication-type password \
+  --nsg-rule "$NSG_RULE" \
   --public-ip-sku Standard \
   --output json >"$TMP_JSON"
 
