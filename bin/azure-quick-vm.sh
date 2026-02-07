@@ -21,7 +21,7 @@ Optional environment:
 
 Options:
   --name NAME   Set VM name (default: kitchen-quicktest-YYYYmmddHHMMSS)
-  --size SIZE   Azure VM size (default: Standard_D2s_v5)
+  --size SIZE   Azure VM size (default: Standard_DS1_v2)
   --image IMG   Image URN/alias (default: Win2022Datacenter)
   --nsg-rule RULE  NSG rule to auto-open (default: RDP). Examples: RDP, SSH.
   --env FILE    Source environment exports from FILE (default: scratch/azure-sandbox.env)
@@ -51,7 +51,7 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 DEFAULT_ENV_FILE="$REPO_ROOT/scratch/azure-sandbox.env"
 
 VM_NAME=""
-VM_SIZE="Standard_D2s_v5"
+VM_SIZE="Standard_DS1_v2"
 VM_IMAGE="Win2022Datacenter"
 NSG_RULE="RDP"
 KEEP_VM=0
