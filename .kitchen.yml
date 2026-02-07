@@ -171,13 +171,13 @@ platforms:
       storage_account_type: <%= ENV.fetch('AZURE_STORAGE_SKU', 'StandardSSD_LRS') %>
       os_disk_size_gb: <%= ENV.fetch('AZURE_OS_DISK_GB', '64') %>
       public_ip_sku: Standard
-<% if ENV['AZURE_VNET_NAME'].to_s.strip != '' %>
+      <% if ENV['AZURE_VNET_NAME'].to_s.strip != '' %>
       virtual_network_name: <%= ENV['AZURE_VNET_NAME'] %>
       subnet_name: <%= ENV['AZURE_SUBNET_NAME'] %>
-<% end %>
-<% if ENV['AZURE_NSG_NAME'].to_s.strip != '' %>
+      <% end %>
+      <% if ENV['AZURE_NSG_NAME'].to_s.strip != '' %>
       security_group_name: <%= ENV['AZURE_NSG_NAME'] %>
-<% end %>
+      <% end %>
       winrm_powershell_script: |
         winrm quickconfig -q
         winrm set winrm/config/service/Auth @{Basic="true"}
