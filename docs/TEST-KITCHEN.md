@@ -93,6 +93,8 @@ Example:
 ```bash
 bin/azure-sandbox-env.sh --login --write scratch/azure-sandbox.env
 source scratch/azure-sandbox.env
+# Optional sanity check before Kitchen (auto-sources scratch/azure-sandbox.env):
+bin/azure-quick-vm.sh
 ```
 
 ## Test Suites
