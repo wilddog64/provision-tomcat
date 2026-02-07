@@ -178,6 +178,7 @@ platforms:
       subscription_id: <%= ENV.fetch('AZURE_SUBSCRIPTION_ID', '00000000-0000-0000-0000-000000000000') %>
       tenant_id: <%= ENV.fetch('AZURE_TENANT_ID', '00000000-0000-0000-0000-000000000000') %>
       use_cli_credentials: true
+      use_managed_identity: false
       location: <%= ENV.fetch('AZURE_LOCATION', 'eastus') %>
       resource_group_name: <%= ENV.fetch('AZURE_RESOURCE_GROUP', 'CHANGE_ME_RESOURCE_GROUP') %>
       vm_name: <%= ENV.fetch('AZURE_VM_NAME', 'kqvm-win11') %>
