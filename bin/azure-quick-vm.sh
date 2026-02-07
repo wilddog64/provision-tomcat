@@ -195,7 +195,7 @@ delete_vm_resources() {
 }
 
 if [[ $KEEP_VM -eq 1 ]]; then
-  warn "Skipping cleanup. Remember to delete VM $VM_NAME and related resources manually!"
+  warn "Keeping VM $VM_NAME running. Remember to delete it manually when finished."
   echo "Suggested cleanup commands:"
   echo "  az vm delete --resource-group $RESOURCE_GROUP --name $VM_NAME --yes --force-deletion yes"
   if [[ -n "$NIC_ID" ]]; then
@@ -207,12 +207,13 @@ if [[ $KEEP_VM -eq 1 ]]; then
   if [[ -n "$OS_DISK_NAME" ]]; then
     echo "  az disk delete --resource-group $RESOURCE_GROUP --name $OS_DISK_NAME --yes"
   fi
-else
-  read -r -p "Delete VM now? [Y/n] " answer
-  case "$answer" in
-    n|N) warn "Leaving VM running. Use --keep next time if this was intentional."; exit 0;;
-    *) delete_vm_resources;;
-  esac
+  exit 0
 fi
+
+read -r -p "Delete VM now? [Y/n] " answer
+case "$answer" in
+  n|N) warn "Leaving VM running. Re-run with --keep next time if you want to skip this prompt."; exit 0;;
+  *) delete_vm_resources;;
+esac
 
 info "Done."
