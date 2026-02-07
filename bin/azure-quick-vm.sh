@@ -20,7 +20,7 @@ Optional environment:
   AZURE_CONFIG_DIR        Custom Azure CLI config directory
 
 Options:
-  --name NAME   Set VM name (default: kitchen-quicktest-YYYYmmddHHMMSS)
+  --name NAME   Set VM name (default: short Windows-safe ID like kqvm-1a2b)
   --size SIZE   Azure VM size (default: Standard_DS1_v2)
   --image IMG   Image URN/alias (default: Win2022Datacenter)
   --nsg-rule RULE  NSG rule to auto-open (default: RDP). Examples: RDP, SSH.
@@ -106,7 +106,11 @@ if ! command -v az >/dev/null 2>&1; then
 fi
 
 if [[ -z "$VM_NAME" ]]; then
-  VM_NAME="kitchen-quicktest-$(date -u +%Y%m%d%H%M%S)"
+  rand_suffix="$(printf '%04x' $((RANDOM % 65536)))"
+  timestamp="$(date -u +%H%M)"
+  VM_NAME="kqvm-${timestamp}${rand_suffix}"
+  # Ensure Windows computer name limit (<=15 chars)
+  VM_NAME="${VM_NAME:0:15}"
 fi
 
 SUBSCRIPTION="$AZURE_SUBSCRIPTION_ID"
