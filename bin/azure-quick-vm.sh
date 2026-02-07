@@ -140,31 +140,26 @@ az vm create \
   --authentication-type password \
   --nsg-rule "$NSG_RULE" \
   --public-ip-sku Standard \
-  --output json >"$TMP_JSON"
+  --only-show-errors \
+  --output none
 
-parse_json() {
-  local key="$1"
-  python3 - "$TMP_JSON" "$key" <<'PY'
-import json, sys
-path = sys.argv[2]
-with open(sys.argv[1]) as fh:
-    data = json.load(fh)
-parts = path.split(".")
-value = data
-for part in parts:
-    if part.endswith("]"):
-        name, index = part[:-1].split("[")
-        value = value[name][int(index)]
-    else:
-        value = value[part]
-print(value if value is not None else "")
-PY
+get_vm_value() {
+  local query="$1"
+  az vm show \
+    --resource-group "$RESOURCE_GROUP" \
+    --name "$VM_NAME" \
+    --query "$query" \
+    -o tsv
 }
 
-OS_DISK_NAME="$(parse_json 'storageProfile.osDisk.name')"
-NIC_ID="$(parse_json 'networkProfile.networkInterfaces[0].id')"
+OS_DISK_NAME="$(get_vm_value 'storageProfile.osDisk.name')"
+NIC_ID="$(get_vm_value 'networkProfile.networkInterfaces[0].id')"
 NIC_NAME="${NIC_ID##*/}"
-PUBLIC_IP="$(parse_json 'publicIpAddress')"
+PUBLIC_IP="$(az vm show -d \
+  --resource-group "$RESOURCE_GROUP" \
+  --name "$VM_NAME" \
+  --query publicIps \
+  -o tsv)"
 
 info "VM ready: $VM_NAME"
 echo "Public IP: $PUBLIC_IP"
