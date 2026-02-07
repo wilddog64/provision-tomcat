@@ -210,7 +210,7 @@ if [[ $KEEP_VM -eq 1 ]]; then
   exit 0
 fi
 
-read -r -p "Delete VM now? [Y/n] " answer
+read -r -p "Delete VM now? [Y/n] (use --keep to skip this prompt) " answer
 case "$answer" in
   n|N) warn "Leaving VM running. Re-run with --keep next time if you want to skip this prompt."; exit 0;;
   *) delete_vm_resources;;
