@@ -60,6 +60,18 @@ make destroy-win11     # Cleanup
 make help
 ```
 
+## Azure Sandbox (Manual Workflow)
+
+Support for running Test Kitchen inside an A Cloud Guru (Pluralsight Skills) Azure sandbox is currently **manual only**—there is no GitHub Actions automation yet. Use this flow whenever you need Windows/Linux validation in Azure (either the sandbox or a company tenant that mirrors it):
+
+1. Start the sandbox session in the ACG portal (extends up to 8 hours) and keep the credentials page open.
+2. Run `az login --use-device-code` from the same workstation (or GitHub runner on your Mac) and sign in with the sandbox-provided username/password.
+3. Export the Azure environment variables your Kitchen config expects (subscription ID, tenant ID, resource group, location, admin username/password, etc.). The full list lives in [docs/plans/azure-sandbox-kitchen.md](plans/azure-sandbox-kitchen.md) and will be finalized alongside the Azure platforms.
+4. Set `KITCHEN_YAML` (or the per-platform env vars) as documented, then run `bundle exec kitchen list`, `kitchen create`, or `kitchen test` from your local terminal. Capture logs under `.kitchen/logs/` for traceability.
+5. When finished, run `kitchen destroy --all` before the sandbox expires, and note the manual test run in your PR description.
+
+> Tip: If you have a self-hosted GitHub runner on your Mac, you can still trigger jobs through Actions, but the sandbox must be started and reachable manually before invoking the workflow.
+
 ## Test Suites
 
 The project defines multiple test suites in `.kitchen.yml`:

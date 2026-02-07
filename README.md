@@ -322,6 +322,15 @@ This role uses Test Kitchen with Vagrant for automated testing.
 - **[Candidate Troubleshooting](docs/CANDIDATE-TROUBLESHOOTING.md)** - Common issues and fixes while exercising the candidate workflow
 - **[VirtualBox Stale Disks](docs/issues/VIRTUALBOX-STALE-DISKS.md)** - Fix for `VERR_ALREADY_EXISTS` errors when creating disks
 - **[Controller Lookup Plugins](docs/plugins/CONTROLLER-LOOKUP-PLUGINS.md)** - How the controller-side port/HTTP checks work
+- **[Azure Sandbox Test Kitchen Plan](docs/plans/azure-sandbox-kitchen.md)** - Step-by-step plan for running Kitchen suites inside an ACG Azure sandbox
+
+### Azure Sandbox (Manual Workflow)
+
+Azure-based Kitchen tests are not wired into CI yet. To validate changes against the A Cloud Guru sandbox (or a similar company Azure subscription):
+
+- Start/extend the sandbox session manually, log in with `az login --use-device-code`, and export the env vars listed in [docs/plans/azure-sandbox-kitchen.md](docs/plans/azure-sandbox-kitchen.md).
+- Run `bundle exec kitchen test <suite>-<platform>` from your workstation or self-hosted runner and capture `.kitchen/logs/*` for PR notes.
+- Destroy sandbox resources (`kitchen destroy --all`) before the session expires.
 
 ### Test Suites
 
