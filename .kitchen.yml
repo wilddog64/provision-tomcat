@@ -1,3 +1,18 @@
+<%
+azure_env_file = ENV['AZURE_ENV_FILE'] || File.expand_path('scratch/azure-sandbox.env', __dir__)
+if File.exist?(azure_env_file)
+  File.foreach(azure_env_file) do |line|
+    next unless line.start_with?('export ')
+    key, value = line.sub('export ', '').split('=', 2)
+    next unless key && value
+    value = value.strip
+    if (value.start_with?("'") && value.end_with?("'")) || (value.start_with?('"') && value.end_with?('"'))
+      value = value[1...-1]
+    end
+    ENV[key] ||= value
+  end
+end
+%>
 ---
 driver:
   name: vagrant

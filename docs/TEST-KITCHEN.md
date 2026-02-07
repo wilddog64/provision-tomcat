@@ -97,6 +97,8 @@ source scratch/azure-sandbox.env
 bin/azure-quick-vm.sh          # creates a temporary Win2022 VM with RDP open
 # Run the Azure-backed Kitchen platform:
 bundle exec kitchen test default-win11-azure
+
+> `.kitchen.yml` automatically loads `scratch/azure-sandbox.env` (or the file referenced by `AZURE_ENV_FILE`) so Kitchen commands still get the subscription/credential values even if you forget to `source` the file first.
 ```
 
 Optional overrides (only set if you need to change the defaults baked into `.kitchen.yml`):
