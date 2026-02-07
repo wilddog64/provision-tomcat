@@ -95,7 +95,19 @@ bin/azure-sandbox-env.sh --login --write scratch/azure-sandbox.env
 source scratch/azure-sandbox.env
 # Optional Windows sanity check before Kitchen (auto-sources scratch/azure-sandbox.env):
 bin/azure-quick-vm.sh          # creates a temporary Win2022 VM with RDP open
+# Run the Azure-backed Kitchen platform:
+bundle exec kitchen test default-win11-azure
 ```
+
+Optional overrides (only set if you need to change the defaults baked into `.kitchen.yml`):
+
+| Variable | Description | Default |
+| --- | --- | --- |
+| `AZURE_VM_NAME` | VM name/hostname for Kitchen instances | `kqvm-win11` |
+| `AZURE_VM_SIZE` | Azure VM size/SKU | `Standard_DS1_v2` |
+| `AZURE_IMAGE_URN` | Image URN (publisher:offer:sku:version) | `MicrosoftWindowsServer:WindowsServer:2022-datacenter-g2:latest` |
+| `AZURE_STORAGE_SKU` | Managed disk storage account type | `StandardSSD_LRS` |
+| `AZURE_OS_DISK_GB` | OS disk size (GiB) | `64` |
 
 ## Test Suites
 

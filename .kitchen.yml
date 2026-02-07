@@ -157,6 +157,72 @@ platforms:
         ansible_password: vagrant
         ansible_host: 127.0.0.1
 
+  - name: win11-azure
+    driver:
+      name: azurerm
+      subscription_id: <%= ENV.fetch('AZURE_SUBSCRIPTION_ID', '00000000-0000-0000-0000-000000000000') %>
+      tenant_id: <%= ENV.fetch('AZURE_TENANT_ID', '00000000-0000-0000-0000-000000000000') %>
+      use_cli_credentials: true
+      location: <%= ENV.fetch('AZURE_LOCATION', 'eastus') %>
+      resource_group_name: <%= ENV.fetch('AZURE_RESOURCE_GROUP', 'CHANGE_ME_RESOURCE_GROUP') %>
+      vm_name: <%= ENV.fetch('AZURE_VM_NAME', 'kqvm-win11') %>
+      vm_size: <%= ENV.fetch('AZURE_VM_SIZE', 'Standard_DS1_v2') %>
+      image_urn: <%= ENV.fetch('AZURE_IMAGE_URN', 'MicrosoftWindowsServer:WindowsServer:2022-datacenter-g2:latest') %>
+      storage_account_type: <%= ENV.fetch('AZURE_STORAGE_SKU', 'StandardSSD_LRS') %>
+      os_disk_size_gb: <%= ENV.fetch('AZURE_OS_DISK_GB', '64') %>
+      public_ip_sku: Standard
+      <%- if ENV['AZURE_VNET_NAME'].to_s.strip != '' -%>
+      virtual_network_name: <%= ENV['AZURE_VNET_NAME'] %>
+      subnet_name: <%= ENV['AZURE_SUBNET_NAME'] %>
+      <%- end -%>
+      <%- if ENV['AZURE_NSG_NAME'].to_s.strip != '' -%>
+      security_group_name: <%= ENV['AZURE_NSG_NAME'] %>
+      <%- end -%>
+      winrm_powershell_script: |
+        winrm quickconfig -q
+        winrm set winrm/config/service/Auth @{Basic="true"}
+        winrm set winrm/config/service @{AllowUnencrypted="true"}
+        netsh advfirewall firewall add rule name="WinRM5985" dir=in action=allow protocol=TCP localport=5985
+        netsh advfirewall firewall add rule name="HTTP8080" dir=in action=allow protocol=TCP localport=8080
+        netsh advfirewall firewall add rule name="HTTP9080" dir=in action=allow protocol=TCP localport=9080
+    transport:
+      name: winrm
+      elevated: true
+      ssl_peer_verification: false
+      port: 5985
+      winrm_transport: :plaintext
+      ssl: false
+      connection_retries: 15
+      connection_retry_sleep: 10
+      username: <%= ENV.fetch('AZURE_ADMIN_USERNAME', 'azureadmin') %>
+      password: <%= ENV.fetch('AZURE_ADMIN_PASSWORD', 'ChangeM3!') %>
+    provisioner:
+      name: ansible_push
+      ansible_playbook_bin: <%= Dir.glob("#{Dir.pwd}/.direnv/python-*/bin/ansible-playbook").first %>
+      hosts: test-kitchen
+      require_ansible_repo: true
+      playbook: tests/playbook.yml
+      roles_path: ..
+      ansible_version: latest
+      ansible_host_key_checking: false
+      ansible_galaxy_role_file: requirements.yml
+      idempotency_test: false
+      chef_bootstrap_url: null
+      ansible_verbosity: 2
+      require_windows_support: true
+      extra_vars:
+        env: stage2
+        extract_build_number: 16
+        extract_debug: 'False'
+        skip_migration: true
+        ansible_connection: winrm
+        ansible_winrm_transport: basic
+        ansible_port: 5985
+        ansible_winrm_scheme: http
+        ansible_winrm_server_cert_validation: ignore
+        ansible_user: <%= ENV.fetch('AZURE_ADMIN_USERNAME', 'azureadmin') %>
+        ansible_password: <%= ENV.fetch('AZURE_ADMIN_PASSWORD', 'ChangeM3!') %>
+
 suites:
   - name: default
     driver:
