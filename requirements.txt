@@ -1,2 +1,3 @@
 pywinrm
 ansible
+ansible-lint

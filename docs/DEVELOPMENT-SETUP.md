@@ -116,6 +116,7 @@ pip install -r requirements.txt
 This installs:
 - `ansible` - Latest Ansible
 - `pywinrm` - Python WinRM library for Windows management
+- `ansible-lint` - Linting tool invoked by `make lint`/`make check`
 
 ### 5. Install Ansible Collections
 
