@@ -1,21 +1,23 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Default path to the ERB template and output file
+ERB_TEMPLATE="${BASH_SOURCE[0]%/*}/../scratch/azure-sandbox.env.erb"
+OUT_FILE="${BASH_SOURCE[0]%/*}/../scratch/azure-sandbox.env"
+
 usage() {
   cat <<'EOF'
-Usage: bin/azure-sandbox-env.sh [--write FILE] [--login] [--help]
+Usage: bin/azure-sandbox-env.sh [--auto-fill] [--login] [--help] [VAR=VALUE ...]
 
-Helper for ACG/Pluralsight Azure sandbox sessions. The script:
-  1. Ensures Azure CLI is available and (if needed) triggers `az login --use-device-code`.
-  2. Prompts for sandbox-specific values (resource group, VNet/subnet, admin user/password).
-  3. Emits `export` statements you can eval or write to a file with --write FILE.
-
-Environment variables already set in your shell are used as defaults for each prompt.
+Generates `scratch/azure-sandbox.env` with Azure sandbox credentials and settings.
+Values are prioritized as: CLI arguments > existing environment variables > Azure CLI auto-detection > defaults.
 
 Options:
-  --write FILE   Write exports to FILE instead of stdout (file is overwritten).
+  --auto-fill    Attempt to automatically detect Resource Group, VNet, etc. from Azure.
   --login        Force an `az login --use-device-code` even if already authenticated.
   --help         Show this help text and exit.
+  VAR=VALUE      Override any variable (e.g., AZURE_LOCATION=eastus).
+
 EOF
 }
 
@@ -27,62 +29,26 @@ info() {
   printf 'INFO: %s\n' "$*" >&2
 }
 
-prompt_value() {
-  local __var_name="$1"
-  local __prompt="$2"
-  local __default="$3"
-  local __current="${!__var_name:-}"
-  local __effective="${__current:-$__default}"
-  local __input
+# Default values
+AZURE_SUBSCRIPTION_ID=""
+AZURE_TENANT_ID=""
+AZURE_LOCATION="southcentralus" # Default for ACG sandbox
+AZURE_RESOURCE_GROUP=""
+AZURE_VNET_NAME=""
+AZURE_SUBNET_NAME=""
+AZURE_NSG_NAME=""
+AZURE_ADMIN_USERNAME="azureadmin" # Default for ACG Windows VMs
+AZURE_ADMIN_PASSWORD="ChangeM3!SecurePassword" # Default for ACG Windows VMs
 
-  if [[ -n "$__effective" ]]; then
-    read -r -p "$__prompt [$__effective]: " __input
-  else
-    read -r -p "$__prompt: " __input
-  fi
-
-  if [[ -z "$__input" ]]; then
-    __input="$__effective"
-  fi
-
-  printf -v "$__var_name" '%s' "$__input"
-}
-
-prompt_secret() {
-  local __var_name="$1"
-  local __prompt="$2"
-  local __default_masked=""
-  if [[ -n "${!__var_name:-}" ]]; then
-    __default_masked="****"
-  fi
-
-  local __input
-  if [[ -n "$__default_masked" ]]; then
-    read -r -s -p "$__prompt [$__default_masked]: " __input
-  else
-    read -r -s -p "$__prompt: " __input
-  fi
-  echo
-
-  if [[ -z "$__input" ]]; then
-    __input="${!__var_name:-}"
-  fi
-
-  printf -v "$__var_name" '%s' "$__input"
-}
-
-OUT_FILE=""
 FORCE_LOGIN=0
+AUTO_FILL=0
+declare -A overrides
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --write|-w)
-      if [[ $# -lt 2 ]]; then
-        echo "ERROR: --write requires a FILE argument" >&2
-        exit 1
-      fi
-      OUT_FILE="$2"
-      shift 2
+    --auto-fill)
+      AUTO_FILL=1
+      shift
       ;;
     --login)
       FORCE_LOGIN=1
@@ -92,6 +58,13 @@ while [[ $# -gt 0 ]]; do
       usage
       exit 0
       ;;
+    *=*)
+      # Store overrides
+      key="${1%=*}"
+      value="${1#*=}"
+      overrides["$key"]="$value"
+      shift
+      ;;
     *)
       echo "ERROR: Unknown option: $1" >&2
       usage
@@ -100,19 +73,12 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [[ -n "$OUT_FILE" ]]; then
-  mkdir -p "$(dirname "$OUT_FILE")"
-fi
-
-have_az=1
 if ! command -v az >/dev/null 2>&1; then
-  have_az=0
-  warn "Azure CLI (az) not found on PATH; subscription/tenant defaults will be blank."
+  warn "Azure CLI (az) not found on PATH. Cannot auto-detect Azure settings."
+  AUTO_FILL=0
 fi
 
 ensure_login() {
-  [[ $have_az -eq 1 ]] || return 0
-
   if [[ $FORCE_LOGIN -eq 1 ]]; then
     info "Forcing Azure CLI login via device code..."
     az login --use-device-code >/dev/null
@@ -127,67 +93,120 @@ ensure_login() {
 
 fetch_account_field() {
   local query="$1"
-  if [[ $have_az -eq 0 ]]; then
+  if ! az account show >/dev/null 2>&1; then # Check auth every time for safety
     return 0
   fi
-
   az account show --query "$query" -o tsv 2>/dev/null || true
 }
 
-subscription_id="${AZURE_SUBSCRIPTION_ID:-}"
-tenant_id="${AZURE_TENANT_ID:-}"
-location="${AZURE_LOCATION:-eastus}"
-resource_group="${AZURE_RESOURCE_GROUP:-}"
-vnet_name="${AZURE_VNET_NAME:-}"
-subnet_name="${AZURE_SUBNET_NAME:-}"
-nsg_name="${AZURE_NSG_NAME:-}"
-admin_username="${AZURE_ADMIN_USERNAME:-}"
-admin_password="${AZURE_ADMIN_PASSWORD:-}"
-
-ensure_login
-
-if [[ -z "$subscription_id" ]]; then
-  subscription_id="$(fetch_account_field 'id')"
-fi
-
-if [[ -z "$tenant_id" ]]; then
-  tenant_id="$(fetch_account_field 'tenantId')"
-fi
-
-prompt_value subscription_id "Azure subscription ID" "$subscription_id"
-prompt_value tenant_id "Azure tenant ID" "$tenant_id"
-prompt_value location "Azure location/region" "$location"
-prompt_value resource_group "Sandbox resource group" "$resource_group"
-prompt_value vnet_name "Sandbox virtual network name" "$vnet_name"
-prompt_value subnet_name "Sandbox subnet name" "$subnet_name"
-prompt_value nsg_name "Sandbox network security group name" "$nsg_name"
-prompt_value admin_username "Admin username for sandbox VMs" "$admin_username"
-prompt_secret admin_password "Admin password for sandbox VMs"
-
-timestamp="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
-
-emit_exports() {
-  local target="$1"
-  {
-    echo "# Azure sandbox env exports generated $timestamp"
-    printf 'export %s=%q\n' "AZURE_SUBSCRIPTION_ID" "$subscription_id"
-    printf 'export %s=%q\n' "AZURE_TENANT_ID" "$tenant_id"
-    printf 'export %s=%q\n' "AZURE_LOCATION" "$location"
-    printf 'export %s=%q\n' "AZURE_RESOURCE_GROUP" "$resource_group"
-    printf 'export %s=%q\n' "AZURE_VNET_NAME" "$vnet_name"
-    printf 'export %s=%q\n' "AZURE_SUBNET_NAME" "$subnet_name"
-    printf 'export %s=%q\n' "AZURE_NSG_NAME" "$nsg_name"
-    printf 'export %s=%q\n' "AZURE_ADMIN_USERNAME" "$admin_username"
-    printf 'export %s=%q\n' "AZURE_ADMIN_PASSWORD" "$admin_password"
-  } >"$target"
+fetch_rg_field() {
+  local rg_name="$1"
+  local query="$2"
+  if ! az account show >/dev/null 2>&1; then
+    return 0
+  fi
+  # Use the sandbox RG if --auto-fill, otherwise use the provided one
+  az group show --name "$rg_name" --query "$query" -o tsv 2>/dev/null || true
 }
 
-if [[ -n "$OUT_FILE" ]]; then
-  tmp="$(mktemp)"
-  emit_exports "$tmp"
-  mv "$tmp" "$OUT_FILE"
-  info "Wrote Azure exports to $OUT_FILE"
-  info "Source it with: source $OUT_FILE"
+
+# Prioritize: Overrides > Env Vars > Auto-fill > Defaults
+# Apply existing env vars
+AZURE_SUBSCRIPTION_ID="${AZURE_SUBSCRIPTION_ID:-$subscription_id}"
+AZURE_TENANT_ID="${AZURE_TENANT_ID:-$tenant_id}"
+AZURE_LOCATION="${AZURE_LOCATION:-$location}"
+AZURE_RESOURCE_GROUP="${AZURE_RESOURCE_GROUP:-$resource_group}"
+AZURE_VNET_NAME="${AZURE_VNET_NAME:-$vnet_name}"
+AZURE_SUBNET_NAME="${AZURE_SUBNET_NAME:-$subnet_name}"
+AZURE_NSG_NAME="${AZURE_NSG_NAME:-$nsg_name}"
+AZURE_ADMIN_USERNAME="${AZURE_ADMIN_USERNAME:-$admin_username}"
+AZURE_ADMIN_PASSWORD="${AZURE_ADMIN_PASSWORD:-$admin_password}"
+
+# Apply CLI arguments (overrides everything else)
+for key in "${!overrides[@]}"; do
+  printf -v "$key" '%s' "${overrides[$key]}"
+done
+
+# Auto-fill from Azure CLI if requested and not already set
+if [[ $AUTO_FILL -eq 1 ]]; then
+  ensure_login
+
+  AZURE_SUBSCRIPTION_ID="$(fetch_account_field 'id' || echo "$AZURE_SUBSCRIPTION_ID")"
+  AZURE_TENANT_ID="$(fetch_account_field 'tenantId' || echo "$AZURE_TENANT_ID")"
+
+  # Find a playground sandbox RG
+  if [[ -z "$AZURE_RESOURCE_GROUP" ]]; then
+    AZURE_RESOURCE_GROUP="$(az group list --query "[?contains(name, 'playground-sandbox')].name" -o tsv 2>/dev/null | head -n 1 || echo "")"
+    if [[ -z "$AZURE_RESOURCE_GROUP" ]]; then
+      warn "Could not auto-detect a 'playground-sandbox' resource group."
+    else
+      info "Auto-detected Resource Group: $AZURE_RESOURCE_GROUP"
+    fi
+  fi
+
+  # Auto-detect location from the chosen RG
+  if [[ -n "$AZURE_RESOURCE_GROUP" && -z "$AZURE_LOCATION" ]]; then
+    AZURE_LOCATION="$(fetch_rg_field "$AZURE_RESOURCE_GROUP" 'location' || echo "$AZURE_LOCATION")"
+    if [[ -n "$AZURE_LOCATION" ]]; then
+      info "Auto-detected Location from RG: $AZURE_LOCATION"
+    fi
+  fi
+
+  # Auto-detect VNet/Subnet/NSG if they exist within the RG
+  if [[ -n "$AZURE_RESOURCE_GROUP" ]]; then
+    if [[ -z "$AZURE_VNET_NAME" ]]; then
+      AZURE_VNET_NAME="$(az network vnet list --resource-group "$AZURE_RESOURCE_GROUP" --query "[0].name" -o tsv 2>/dev/null || echo "$AZURE_VNET_NAME")"
+      if [[ -n "$AZURE_VNET_NAME" ]]; then
+        info "Auto-detected VNet: $AZURE_VNET_NAME"
+      fi
+    fi
+    if [[ -n "$AZURE_VNET_NAME" && -z "$AZURE_SUBNET_NAME" ]]; then
+      AZURE_SUBNET_NAME="$(az network vnet subnet list --resource-group "$AZURE_RESOURCE_GROUP" --vnet-name "$AZURE_VNET_NAME" --query "[0].name" -o tsv 2>/dev/null || echo "$AZURE_SUBNET_NAME")"
+      if [[ -n "$AZURE_SUBNET_NAME" ]]; then
+        info "Auto-detected Subnet: $AZURE_SUBNET_NAME"
+      fi
+    fi
+    if [[ -z "$AZURE_NSG_NAME" ]]; then
+      AZURE_NSG_NAME="$(az network nsg list --resource-group "$AZURE_RESOURCE_GROUP" --query "[0].name" -o tsv 2>/dev/null || echo "$AZURE_NSG_NAME")"
+      if [[ -n "$AZURE_NSG_NAME" ]]; then
+        info "Auto-detected NSG: $AZURE_NSG_NAME"
+      fi
+    fi
+  fi
+fi
+
+# Prepare data for ERB
+ruby_code=$(cat <<RUBY_EOF
+require 'erb'
+require 'ostruct'
+require 'time'
+
+# Create an OpenStruct to hold the variables for ERB
+scope = OpenStruct.new
+scope.subscription_id = ENV.fetch('AZURE_SUBSCRIPTION_ID', "$AZURE_SUBSCRIPTION_ID")
+scope.tenant_id = ENV.fetch('AZURE_TENANT_ID', "$AZURE_TENANT_ID")
+scope.location = ENV.fetch('AZURE_LOCATION', "$AZURE_LOCATION")
+scope.resource_group = ENV.fetch('AZURE_RESOURCE_GROUP', "$AZURE_RESOURCE_GROUP")
+scope.vnet_name = ENV.fetch('AZURE_VNET_NAME', "$AZURE_VNET_NAME")
+scope.subnet_name = ENV.fetch('AZURE_SUBNET_NAME', "$AZURE_SUBNET_NAME")
+scope.nsg_name = ENV.fetch('AZURE_NSG_NAME', "$AZURE_NSG_NAME")
+scope.admin_username = ENV.fetch('AZURE_ADMIN_USERNAME', "$AZURE_ADMIN_USERNAME")
+scope.admin_password = ENV.fetch('AZURE_ADMIN_PASSWORD', "$AZURE_ADMIN_PASSWORD")
+
+# Define the template content
+template = File.read("$ERB_TEMPLATE")
+
+# Render the template
+renderer = ERB.new(template, nil, '%-')
+puts renderer.result(scope.instance_eval { binding })
+RUBY_EOF
+)
+
+# Render the ERB template using Ruby and write to OUT_FILE
+if command -v ruby >/dev/null 2>&1; then
+  ruby -r json -e "$ruby_code" > "$OUT_FILE"
+  info "Generated Azure environment file: $OUT_FILE"
 else
-  emit_exports /dev/stdout
+  warn "Ruby not found. Cannot render ERB template. Please install Ruby."
+  exit 1
 fi

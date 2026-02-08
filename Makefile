@@ -141,6 +141,10 @@ test-azure: update-roles
 .PHONY: test-azure-provision-tomcat
 test-azure-provision-tomcat: update-roles
 	@set -e; \
+	if [ ! -f "scratch/azure-sandbox.env" ]; then \
+		echo "=== Generating scratch/azure-sandbox.env ==="; \
+		./bin/azure-sandbox-env.sh --auto-fill; \
+	fi; \
 	source scratch/azure-sandbox.env; \
 	echo "=== Creating Azure VM: $$AZURE_VM_NAME ==="; \
 	az vm create \
@@ -177,6 +181,10 @@ test-azure-provision-tomcat: update-roles
 .PHONY: destroy-azure-cli
 destroy-azure-cli:
 	@set -e; \
+	if [ ! -f "scratch/azure-sandbox.env" ]; then \
+		echo "=== Generating scratch/azure-sandbox.env ==="; \
+		./bin/azure-sandbox-env.sh --auto-fill; \
+	fi; \
 	source scratch/azure-sandbox.env; \
 	echo "=== Destroying Azure VM: $$AZURE_VM_NAME ==="; \
 	az vm delete --resource-group $$AZURE_RESOURCE_GROUP --name $$AZURE_VM_NAME --yes --no-wait; \
@@ -188,6 +196,10 @@ destroy-azure-cli:
 .PHONY: test-upgrade-candidate-azure-cli
 test-upgrade-candidate-azure-cli: update-roles
 	@set -e; \
+	if [ ! -f "scratch/azure-sandbox.env" ]; then \
+		echo "=== Generating scratch/azure-sandbox.env ==="; \
+		./bin/azure-sandbox-env.sh --auto-fill; \
+	fi; \
 	source scratch/azure-sandbox.env; \
 	echo "=== 1. Creating Azure VM with Data Disk: $$AZURE_VM_NAME ==="; \
 	az vm create \

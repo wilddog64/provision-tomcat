@@ -338,6 +338,8 @@ Azure-based Kitchen tests are not wired into CI yet. To validate changes against
   make destroy-azure-cli             # Clean up Azure resources
   ```
 - Kitchen automatically loads `scratch/azure-sandbox.env` (or the file pointed to by `AZURE_ENV_FILE`) so `bundle exec kitchen test default-win11-azure` picks up the right subscription/credentials even if you forget to `source` first.
+
+- Kitchen automatically loads `scratch/azure-sandbox.env` (or the file pointed to by `AZURE_ENV_FILE`) so `bundle exec kitchen test default-win11-azure` picks up the right subscription/credentials even if you forget to `source` first.
 - Run `bin/azure-quick-vm.sh` (defaults to a Windows Server VM, auto-sources `scratch/azure-sandbox.env`, override with `--env`) to perform a quick “create + destroy” VM sanity check in the sandbox before attempting Kitchen.
 - Run `bundle exec kitchen test <suite>-<platform>` from your workstation or self-hosted runner and capture `.kitchen/logs/*` for PR notes. For Azure, start with `bundle exec kitchen test default-win11-azure`.
 - Destroy sandbox resources (`kitchen destroy --all`) before the session expires.
