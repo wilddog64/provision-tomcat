@@ -15,8 +15,15 @@ end
 %>
 ---
 driver:
-  name: vagrant
+  name: azurerm
+  use_cli_credentials: true
+  use_managed_identity: false
+  subscription_id: <%= ENV['AZURE_SUBSCRIPTION_ID'] %>
+  tenant_id: <%= ENV['AZURE_TENANT_ID'] %>
+
+.common_vagrant: &common_vagrant
   driver: virtualbox
+  vagrant_binary: <%= File.join(File.dirname(__FILE__), 'bin', 'vagrant-wrapper') %>
 
 provisioner:
   require_chef_omnibus: false
@@ -40,12 +47,18 @@ provisioner:
 
 platforms:
   - name: ubuntu-2404
+    driver:
+      <<: *common_vagrant
     driver_config:
       box: hashicorp-education/ubuntu-24-04
   - name: rockylinux9
+    driver:
+      <<: *common_vagrant
     driver_config:
       box: bento/rockylinux-9
   - name: win11
+    driver:
+      <<: *common_vagrant
     driver_config:
       box: stromweld/windows-11
       communicator: winrm
@@ -87,6 +100,7 @@ platforms:
         ansible_host: 127.0.0.1
   - name: win11-disk
     driver:
+      <<: *common_vagrant
       provision: true  # Run Vagrant provisioners (disk_setup) during kitchen create
     driver_config:
       box: stromweld/windows-11
@@ -131,9 +145,11 @@ platforms:
         ansible_host: 127.0.0.1
         install_drive: "D:"
 
-  - name: win11-baseline
-    driver_config:
-      box: windows11-tomcat112
+#  - name: win11-baseline
+#    driver:
+#      <<: *common_vagrant
+#    driver_config:
+#      box: windows11-tomcat112
       communicator: winrm
     transport:
       name: winrm
@@ -175,12 +191,12 @@ platforms:
   - name: win11-azure
     driver:
       name: azurerm
-      subscription_id: <%= ENV.fetch('AZURE_SUBSCRIPTION_ID', '00000000-0000-0000-0000-000000000000') %>
-      tenant_id: <%= ENV.fetch('AZURE_TENANT_ID', '00000000-0000-0000-0000-000000000000') %>
+      subscription_id: "28e1e42a-4438-4c30-9a5f-7d7b488fd883"
+      tenant_id: "84f1e4ea-8554-43e1-8709-f0b8589ea118"
       use_cli_credentials: true
       use_managed_identity: false
-      location: <%= ENV.fetch('AZURE_LOCATION', 'eastus') %>
-      resource_group_name: <%= ENV.fetch('AZURE_RESOURCE_GROUP', 'CHANGE_ME_RESOURCE_GROUP') %>
+      location: southcentralus
+      explicit_resource_group_name: "1-6057ce5e-playground-sandbox"
       allow_resource_group_creation: false
       delete_resource_group: false
       destroy_explicit_resource_group: false

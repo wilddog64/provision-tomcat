@@ -20,7 +20,7 @@ else
   KITCHEN_CMD ?= kitchen
 endif
 
-PLATFORMS := win11 win11-disk ubuntu-2404 rockylinux9
+PLATFORMS := win11 win11-disk ubuntu-2404 rockylinux9 win11-azure
 SUITES := default latest idempotence
 
 # Version variables for upgrade/downgrade testing
@@ -133,9 +133,48 @@ help:
 # Build extra vars for Ansible
 EXTRA_VARS := $(if $(ADO_PAT_TOKEN),ado_pat_token=$(ADO_PAT_TOKEN),)
 
-.PHONY: list-kitchen-instances
-list-kitchen-instances:
-	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) list
+.PHONY: test-azure
+test-azure: update-roles
+	@echo "=== Testing on Azure (win11-azure) ==="
+	AZURE_ENV_FILE=scratch/azure-sandbox.env KITCHEN_YAML=.kitchen.yml $(KITCHEN_CMD) test default-win11-azure
+
+.PHONY: test-azure-cli
+test-azure-cli: update-roles
+	@set -e; \
+	source scratch/azure-sandbox.env; \
+	echo "=== Creating Azure VM: $$AZURE_VM_NAME ==="; \
+	az vm create \
+		--resource-group $$AZURE_RESOURCE_GROUP \
+		--name $$AZURE_VM_NAME \
+		--image MicrosoftWindowsServer:WindowsServer:2022-datacenter-g2:latest \
+		--admin-username $$AZURE_ADMIN_USERNAME \
+		--admin-password "$$AZURE_ADMIN_PASSWORD" \
+		--location $$AZURE_LOCATION \
+		--public-ip-sku Standard \
+		--size Standard_DS1_v2; \
+	echo "=== Configuring NSG Rules ==="; \
+	az network nsg rule create --resource-group $$AZURE_RESOURCE_GROUP --nsg-name $${AZURE_VM_NAME}NSG --name AllowWinRM --priority 1010 --destination-port-ranges 5985 --access Allow --protocol Tcp --direction Inbound; \
+	az network nsg rule create --resource-group $$AZURE_RESOURCE_GROUP --nsg-name $${AZURE_VM_NAME}NSG --name AllowTomcat --priority 1020 --destination-port-ranges 8080 9080 --access Allow --protocol Tcp --direction Inbound; \
+	echo "=== Configuring WinRM Inside VM ==="; \
+	az vm run-command invoke --resource-group $$AZURE_RESOURCE_GROUP --name $$AZURE_VM_NAME --command-id RunPowerShellScript --scripts 'Set-Item -Path "WSMan:\localhost\Service\Auth\Basic" -Value $$true; Set-Item -Path "WSMan:\localhost\Service\AllowUnencrypted" -Value $$true'; \
+	echo "=== Creating Local Admin Account (testadmin) ==="; \
+	az vm run-command invoke --resource-group $$AZURE_RESOURCE_GROUP --name $$AZURE_VM_NAME --command-id RunPowerShellScript --scripts '$$Password = ConvertTo-SecureString "Password123!" -AsPlainText -Force; if (-not (Get-LocalUser -Name "testadmin" -ErrorAction SilentlyContinue)) { New-LocalUser "testadmin" -Password $$Password -Description "Ansible Admin"; Add-LocalGroupMember -Group "Administrators" -Member "testadmin" }'; \
+	echo "=== Running Ansible Playbook ==="; \
+	IP=$$(az vm show -d -g $$AZURE_RESOURCE_GROUP -n $$AZURE_VM_NAME --query publicIps -o tsv); \
+	printf "[azure]\ndefault-win11-azure ansible_host=$$IP ansible_user=testadmin ansible_password=\"Password123!\" ansible_port=5985 ansible_connection=winrm ansible_winrm_transport=basic ansible_winrm_scheme=http ansible_winrm_server_cert_validation=ignore ansible_become_method=runas ansible_become_user=azureadmin ansible_become_password=\"$$AZURE_ADMIN_PASSWORD\"\n" > scratch/azure-inventory.ini; \
+	rbenv exec bundle exec ansible-playbook -i scratch/azure-inventory.ini tests/playbook.yml \
+		-e "env=stage2 extract_build_number=16 extract_debug=False skip_migration=true tomcat_version=9.0.113 tomcat_auto_start=true"
+
+.PHONY: destroy-azure-cli
+destroy-azure-cli:
+	@set -e; \
+	source scratch/azure-sandbox.env; \
+	echo "=== Destroying Azure VM: $$AZURE_VM_NAME ==="; \
+	az vm delete --resource-group $$AZURE_RESOURCE_GROUP --name $$AZURE_VM_NAME --yes --no-wait; \
+	echo "=== Cleaning up Network Resources ==="; \
+	az network nic delete --resource-group $$AZURE_RESOURCE_GROUP --name $${AZURE_VM_NAME}VMNic --no-wait || true; \
+	az network public-ip delete --resource-group $$AZURE_RESOURCE_GROUP --name $${AZURE_VM_NAME}PublicIP --no-wait || true; \
+	az network nsg delete --resource-group $$AZURE_RESOURCE_GROUP --name $${AZURE_VM_NAME}NSG --no-wait || true;
 
 .PHONY: vagrant-up
 vagrant-up: vagrant-destroy vbox-cleanup-disks

@@ -1,0 +1,5 @@
+#!/bin/bash
+# Clear ALL Bundler and Ruby environment variables to prevent conflicts with Vagrant's embedded Ruby
+# We use env -i to start with a completely empty environment, then restore PATH.
+PATH_BACKUP="$PATH"
+env -i PATH="$PATH_BACKUP" /opt/vagrant/bin/vagrant "$@"
