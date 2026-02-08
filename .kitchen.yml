@@ -218,6 +218,64 @@ platforms:
         ansible_become_user: Administrator
         ansible_port: 5985
 
+  - name: aws-minimal-win-disk
+    driver:
+      name: ec2
+      region: us-east-1
+      availability_zone: us-east-1c
+      instance_type: t3.medium
+      associate_public_ip: true
+      subnet_id: subnet-0adcf46df0af386c4
+      security_group_ids: ["sg-00899f6779540db59"]
+      image_id: ami-06f5f29d1fe41ea03
+      block_device_mappings:
+        - device_name: /dev/sda1
+          ebs:
+            volume_size: 50
+            volume_type: gp3
+            delete_on_termination: true
+        - device_name: /dev/sdb
+          ebs:
+            volume_size: 20
+            volume_type: gp3
+            delete_on_termination: true
+    transport:
+      name: winrm
+      elevated: true
+      username: Administrator
+      winrm_transport: :negotiate
+    provisioner:
+      name: ansible_push
+      ansible_install_mode: :skip
+      pass_transport_password: true
+      generate_inv: true
+      use_instance_name: false
+      ansible_playbook_bin: <%= Dir.glob("#{File.dirname(File.dirname(__FILE__))}/.direnv/python-*/bin/ansible-playbook").first || Dir.glob("#{Dir.pwd}/.direnv/python-*/bin/ansible-playbook").first %>
+      require_ansible_repo: true
+      playbook: tests/playbook.yml
+      roles_path: ..
+      ansible_version: latest
+      ansible_host_key_checking: false
+      ansible_galaxy_role_file: requirements.yml
+      idempotency_test: false
+      chef_bootstrap_url: null
+      ansible_verbosity: 2
+      require_windows_support: true
+      extra_vars:
+        env: stage2
+        extract_build_number: 16
+        extract_debug: 'False'
+        skip_migration: true
+        ansible_connection: winrm
+        ansible_winrm_transport: ntlm
+        ansible_winrm_scheme: http
+        ansible_winrm_server_cert_validation: ignore
+        ansible_user: Administrator
+        ansible_become_method: runas
+        ansible_become_user: Administrator
+        ansible_port: 5985
+        install_drive: "D:"
+
 suites:
   - name: default
     driver:
@@ -380,5 +438,29 @@ suites:
       command: |
         # In AWS, we verify against the dynamic hostname
         INSTANCE_HOSTNAME=$(yq .hostname .kitchen/upgrade-candidate-aws-aws-minimal-win.yml)
+        echo "Verifying candidate on http://${INSTANCE_HOSTNAME}:9080"
+        curl --connect-timeout 5 --max-time 10 -f "http://${INSTANCE_HOSTNAME}:9080" || curl --connect-timeout 5 --max-time 10 "http://${INSTANCE_HOSTNAME}:9080" | grep -q "404"
+
+  - name: upgrade-candidate-aws-disk
+    provisioner:
+      playbook: tests/playbook-upgrade.yml
+      use_instance_name: false
+      generate_inv: true
+      ansible_host_key_checking: false
+      extra_vars:
+        ansible_host: "<%= ENV['ANSIBLE_HOST_OVERRIDE'] %>"
+        tomcat_candidate_delegate_host: "<%= ENV['ANSIBLE_HOST_OVERRIDE'] %>"
+        upgrade_step: 2
+        tomcat_auto_start: true
+        tomcat_candidate_enabled: true
+        tomcat_candidate_delegate: localhost
+        tomcat_candidate_delegate_port: 9080
+        tomcat_candidate_manual_control: true
+        install_drive: "D:"
+    verifier:
+      name: shell
+      command: |
+        # In AWS, we verify against the dynamic hostname
+        INSTANCE_HOSTNAME=$(yq .hostname .kitchen/upgrade-candidate-aws-disk-aws-minimal-win-disk.yml)
         echo "Verifying candidate on http://${INSTANCE_HOSTNAME}:9080"
         curl --connect-timeout 5 --max-time 10 -f "http://${INSTANCE_HOSTNAME}:9080" || curl --connect-timeout 5 --max-time 10 "http://${INSTANCE_HOSTNAME}:9080" | grep -q "404"
