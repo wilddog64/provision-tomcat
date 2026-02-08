@@ -21,7 +21,7 @@ else
   KITCHEN_CMD ?= kitchen
 endif
 
-PLATFORMS := win11 win11-disk ubuntu-2404 rockylinux9
+PLATFORMS := win11 win11-disk ubuntu-2404 rockylinux9 aws-minimal-win
 SUITES := default latest idempotence
 
 # Version variables for upgrade/downgrade testing
@@ -50,9 +50,14 @@ check: lint syntax
 	@echo "All validation checks passed."
 
 # ============================================================================
+# AWS Targets
+# ============================================================================
+.PHONY: sync-aws
+sync-aws:
+	@"$(shell pwd)/../bin/sync-aws-secrets"
 
+# ============================================================================
 # Utility Targets
-
 # ============================================================================ 
 
 .PHONY: setup
