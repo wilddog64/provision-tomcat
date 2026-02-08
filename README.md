@@ -333,6 +333,7 @@ make destroy-all      # Destroy all kitchen instances
 This role uses Test Kitchen with Vagrant for automated testing.
 
 **Documentation**:
+- **[AWS AGC Integration Plan](docs/plans/aws/kitchen-aws-integration.md)** - Plan for AWS-based testing
 - **[Development Environment Setup](docs/DEVELOPMENT-SETUP.md)** - First-time setup and prerequisites
 - **[Test Kitchen Guide](docs/TEST-KITCHEN.md)** - Using Test Kitchen for testing
 - **[Testing Upgrades](docs/TESTING-UPGRADES.md)** - Upgrade and downgrade testing procedures
@@ -605,6 +606,7 @@ See the [docs/issues](docs/issues/) directory for detailed documentation on comm
 | **[GitHub workflow_run Limitation](docs/issues/GITHUB-WORKFLOW-RUN-LIMITATION.md)** | workflow_run only works from default branch |
 | **[VirtualBox Stale Disks](docs/issues/VIRTUALBOX-STALE-DISKS.md)** | VERR_ALREADY_EXISTS when creating disks |
 | **[Multiple Deploy Keys](docs/issues/GITHUB-ACTIONS-MULTIPLE-DEPLOY-KEYS.md)** | SSH key ambiguity with multiple private repos |
+| **[AWS Kitchen Integration](docs/issues/AWS-KITCHEN-INTEGRATION.md)** | Region mismatches, WinRM connectivity, and hostname resolution issues |
 
 ## Security
 
