@@ -183,6 +183,7 @@ platforms:
       resource_group_name: <%= ENV.fetch('AZURE_RESOURCE_GROUP', 'CHANGE_ME_RESOURCE_GROUP') %>
       allow_resource_group_creation: false
       delete_resource_group: false
+      destroy_explicit_resource_group: false
       vm_name: <%= ENV.fetch('AZURE_VM_NAME', 'kqvm-win11') %>
       vm_size: <%= ENV.fetch('AZURE_VM_SIZE', 'Standard_DS1_v2') %>
       image_urn: <%= ENV.fetch('AZURE_IMAGE_URN', 'MicrosoftWindowsServer:WindowsServer:2022-datacenter-g2:latest') %>
