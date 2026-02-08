@@ -21,6 +21,7 @@ else
   KITCHEN_CMD ?= kitchen
 endif
 
+<<<<<<< HEAD
 # Keep Ansible tooling on a consistent install path to avoid
 # ansible-lint/ansible-core mismatch errors.
 ANSIBLE_LINT_BIN ?= $(shell command -v ansible-lint 2>/dev/null)
@@ -36,6 +37,9 @@ ANSIBLE_PLAYBOOK_BIN ?= $(call resolve_bin,ansible-playbook)
 ANSIBLE_GALAXY_BIN ?= $(call resolve_bin,ansible-galaxy)
 
 PLATFORMS := win11 win11-disk ubuntu-2404 rockylinux9 win11-azure
+=======
+PLATFORMS := win11 win11-disk ubuntu-2404 rockylinux9 aws-minimal-win
+>>>>>>> 5dba6f7 (feat(aws): add AWS EC2 platform to Test Kitchen configuration)
 SUITES := default latest idempotence
 
 # Version variables for upgrade/downgrade testing
@@ -87,6 +91,16 @@ check: lint syntax
 	@echo "All validation checks passed."
 
 # ============================================================================
+<<<<<<< HEAD
+=======
+# AWS Targets
+# ============================================================================
+.PHONY: sync-aws
+sync-aws:
+	@"$(shell pwd)/../bin/sync-aws-secrets"
+
+# ============================================================================
+>>>>>>> 5dba6f7 (feat(aws): add AWS EC2 platform to Test Kitchen configuration)
 # Utility Targets
 # ============================================================================ 
 
