@@ -328,11 +328,11 @@ This role uses Test Kitchen with Vagrant for automated testing.
 
 Azure-based Kitchen tests are not wired into CI yet. To validate changes against the A Cloud Guru sandbox (or a similar company Azure subscription):
 
-- **Prepare Environment**: Before running any `make` targets, generate and source the environment file:
+- **IMPORTANT**: Before running any `make` Azure targets, you *must* manually generate and source the environment file. This provides the necessary variables (like `AZURE_VM_NAME`, `AZURE_RESOURCE_GROUP`, etc.) for the CLI commands.
   ```bash
   ./bin/azure-sandbox-env.sh --auto-fill --write scratch/azure-sandbox.env
   source scratch/azure-sandbox.env
-  # Optional: For interactive login, use:
+  # Optional: For interactive login and auto-fill from current session, use:
   # ./bin/azure-sandbox-env.sh --login --auto-fill --write scratch/azure-sandbox.env
   # source scratch/azure-sandbox.env
   ```
