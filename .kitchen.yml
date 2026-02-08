@@ -652,7 +652,10 @@ suites:
       ansible_host_key_checking: false
       extra_vars:
         ansible_host: "<%= ENV['ANSIBLE_HOST_OVERRIDE'] %>"
+<<<<<<< HEAD
         tomcat_candidate_delegate_host: "<%= ENV['ANSIBLE_HOST_OVERRIDE'] %>"
+=======
+>>>>>>> b2972ce (feat(aws): add zero-downtime candidate upgrade test for AWS)
         upgrade_step: 2
         tomcat_auto_start: true
         tomcat_candidate_enabled: true
@@ -663,6 +666,7 @@ suites:
       name: shell
       command: |
         # In AWS, we verify against the dynamic hostname
+<<<<<<< HEAD
         INSTANCE_HOSTNAME=$(yq .hostname .kitchen/upgrade-candidate-aws-aws-minimal-win.yml)
         echo "Verifying candidate on http://${INSTANCE_HOSTNAME}:9080"
         curl --connect-timeout 5 --max-time 10 -f "http://${INSTANCE_HOSTNAME}:9080" || curl --connect-timeout 5 --max-time 10 "http://${INSTANCE_HOSTNAME}:9080" | grep -q "404"
@@ -717,3 +721,8 @@ suites:
 =======
         check_port "${primary_host_port}" 12 10
 >>>>>>> 0d342f8 (chore: stabilize upgrade-baseline verifier)
+=======
+        INSTANCE_HOSTNAME=$(KITCHEN_YAML=.kitchen.yml bundle exec kitchen diagnose upgrade-candidate-aws-aws-minimal-win --json | jq -r '.instances["upgrade-candidate-aws-aws-minimal-win"].state_file.hostname')
+        echo "Verifying candidate on http://${INSTANCE_HOSTNAME}:9080"
+        curl --connect-timeout 5 --max-time 10 -f "http://${INSTANCE_HOSTNAME}:9080" || curl --connect-timeout 5 --max-time 10 "http://${INSTANCE_HOSTNAME}:9080" | grep -q "404"
+>>>>>>> b2972ce (feat(aws): add zero-downtime candidate upgrade test for AWS)

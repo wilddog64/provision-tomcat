@@ -102,7 +102,14 @@ sync-aws:
 .PHONY: test-candidate-aws
 test-candidate-aws: update-roles
 	@echo "=== Testing Java + Tomcat upgrade (candidate mode) on AWS ==="
-	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) test upgrade-candidate-aws-aws-minimal-win
+	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) destroy upgrade-candidate-aws-aws-minimal-win
+	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) create upgrade-candidate-aws-aws-minimal-win
+	@echo "Fetching dynamic hostname..."
+	@hostname=$$(yq .hostname .kitchen/upgrade-candidate-aws-aws-minimal-win.yml); \
+	echo "Hostname: $$hostname"; \
+	KITCHEN_YAML=$(KITCHEN_YAML) ANSIBLE_HOST_OVERRIDE=$$hostname $(KITCHEN_CMD) converge upgrade-candidate-aws-aws-minimal-win
+	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) verify upgrade-candidate-aws-aws-minimal-win
+	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) destroy upgrade-candidate-aws-aws-minimal-win
 
 # ============================================================================
 >>>>>>> 5dba6f7 (feat(aws): add AWS EC2 platform to Test Kitchen configuration)
