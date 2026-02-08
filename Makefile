@@ -49,22 +49,14 @@ check: lint syntax
 	@echo "All validation checks passed."
 
 # ============================================================================
-
 # Utility Targets
-
 # ============================================================================ 
 
 .PHONY: setup
-
 setup:
-
 	@./scripts/setup.sh all
 
-
-
 .PHONY: deps
-
-
 deps:
 	@echo "Installing Ansible collections..."
 	ansible-galaxy collection install ansible.windows chocolatey.chocolatey -p ./collections
@@ -141,44 +133,50 @@ test-azure: update-roles
 .PHONY: test-azure-provision-tomcat
 test-azure-provision-tomcat: update-roles
 	@set -e; \
-	env_cmd="./bin/azure-sandbox-env.sh --auto-fill --write scratch/azure-sandbox.env"; \
-	echo "=== Creating Azure VM: $$($$env_cmd && cat scratch/azure-sandbox.env | grep AZURE_VM_NAME | cut -d'=' -f2 | tr -d '"') ==="; \
-	$$($$env_cmd && cat scratch/azure-sandbox.env | grep "export") az vm create \
-		--resource-group "$$($$env_cmd && cat scratch/azure-sandbox.env | grep AZURE_RESOURCE_GROUP | cut -d'=' -f2 | tr -d '"')" \
-		--name "$$($$env_cmd && cat scratch/azure-sandbox.env | grep AZURE_VM_NAME | cut -d'=' -f2 | tr -d '"')" \
+	./bin/azure-sandbox-env.sh --auto-fill --write scratch/azure-sandbox.env; \
+	source scratch/azure-sandbox.env; \
+	echo "=== Creating Azure VM: $$AZURE_VM_NAME ==="; \
+	az vm create \
+		--subscription "$$AZURE_SUBSCRIPTION_ID" \
+		--resource-group "$$AZURE_RESOURCE_GROUP" \
+		--name "$$AZURE_VM_NAME" \
 		--image MicrosoftWindowsServer:WindowsServer:2022-datacenter-g2:latest \
-		--admin-username "$$($$env_cmd && cat scratch/azure-sandbox.env | grep AZURE_ADMIN_USERNAME | cut -d'=' -f2 | tr -d '"')" \
-		--admin-password "$$($$env_cmd && cat scratch/azure-sandbox.env | grep AZURE_ADMIN_PASSWORD | cut -d'=' -f2 | tr -d '"')" \
-		--location "$$($$env_cmd && cat scratch/azure-sandbox.env | grep AZURE_LOCATION | cut -d'=' -f2 | tr -d '"')" \
+		--admin-username "$$AZURE_ADMIN_USERNAME" \
+		--admin-password "$$AZURE_ADMIN_PASSWORD" \
+		--location "$$AZURE_LOCATION" \
 		--public-ip-sku Standard \
 		--data-disk-sizes-gb 20 \
 		--size Standard_DS1_v2; \
 	echo "=== Configuring NSG Rules ==="; \
-	$$($$env_cmd && cat scratch/azure-sandbox.env | grep "export") az network nsg rule create \
-		--resource-group "$$($$env_cmd && cat scratch/azure-sandbox.env | grep AZURE_RESOURCE_GROUP | cut -d'=' -f2 | tr -d '"')" \
-		--nsg-name "$$($$env_cmd && cat scratch/azure-sandbox.env | grep AZURE_VM_NAME | cut -d'=' -f2 | tr -d '"')NSG" \
+	az network nsg rule create \
+		--subscription "$$AZURE_SUBSCRIPTION_ID" \
+		--resource-group "$$AZURE_RESOURCE_GROUP" \
+		--nsg-name "$${AZURE_VM_NAME}NSG" \
 		--name AllowWinRM --priority 1010 --destination-port-ranges 5985 --access Allow --protocol Tcp --direction Inbound; \
-	$$($$env_cmd && cat scratch/azure-sandbox.env | grep "export") az network nsg rule create \
-		--resource-group "$$($$env_cmd && cat scratch/azure-sandbox.env | grep AZURE_RESOURCE_GROUP | cut -d'=' -f2 | tr -d '"')" \
-		--nsg-name "$$($$env_cmd && cat scratch/azure-sandbox.env | grep AZURE_VM_NAME | cut -d'=' -f2 | tr -d '"')NSG" \
+	az network nsg rule create \
+		--subscription "$$AZURE_SUBSCRIPTION_ID" \
+		--resource-group "$$AZURE_RESOURCE_GROUP" \
+		--nsg-name "$${AZURE_VM_NAME}NSG" \
 		--name AllowTomcat --priority 1020 --destination-port-ranges 8080 9080 --access Allow --protocol Tcp --direction Inbound; \
 	echo "=== Configuring WinRM Inside VM ==="; \
-	$$($$env_cmd && cat scratch/azure-sandbox.env | grep "export") az vm run-command invoke \
-		--resource-group "$$($$env_cmd && cat scratch/azure-sandbox.env | grep AZURE_RESOURCE_GROUP | cut -d'=' -f2 | tr -d '"')" \
-		--name "$$($$env_cmd && cat scratch/azure-sandbox.env | grep AZURE_VM_NAME | cut -d'=' -f2 | tr -d '"')" \
+	az vm run-command invoke \
+		--subscription "$$AZURE_SUBSCRIPTION_ID" \
+		--resource-group "$$AZURE_RESOURCE_GROUP" \
+		--name "$$AZURE_VM_NAME" \
 		--command-id RunPowerShellScript --scripts 'Set-Item -Path "WSMan:\localhost\Service\Auth\Basic" -Value $$true; Set-Item -Path "WSMan:\localhost\Service\AllowUnencrypted" -Value $$true'; \
 	echo "=== Creating Local Admin Account (testadmin) ==="; \
-	$$($$env_cmd && cat scratch/azure-sandbox.env | grep "export") az vm run-command invoke \
-		--resource-group "$$($$env_cmd && cat scratch/azure-sandbox.env | grep AZURE_RESOURCE_GROUP | cut -d'=' -f2 | tr -d '"')" \
-		--name "$$($$env_cmd && cat scratch/azure-sandbox.env | grep AZURE_VM_NAME | cut -d'=' -f2 | tr -d '"')" \
+	az vm run-command invoke \
+		--subscription "$$AZURE_SUBSCRIPTION_ID" \
+		--resource-group "$$AZURE_RESOURCE_GROUP" \
+		--name "$$AZURE_VM_NAME" \
 		--command-id RunPowerShellScript --scripts '$$Password = ConvertTo-SecureString "Password123!" -AsPlainText -Force; if (-not (Get-LocalUser -Name "testadmin" -ErrorAction SilentlyContinue)) { New-LocalUser "testadmin" -Password $$Password -Description "Ansible Admin"; Add-LocalGroupMember -Group "Administrators" -Member "testadmin" }'; \
 	echo "=== Running Ansible Playbook ==="; \
-	IP=$$($$env_cmd && cat scratch/azure-sandbox.env | grep "export") az vm show \
-		-d -g "$$($$env_cmd && cat scratch/azure-sandbox.env | grep AZURE_RESOURCE_GROUP | cut -d'=' -f2 | tr -d '"')" \
-		-n "$$($$env_cmd && cat scratch/azure-sandbox.env | grep AZURE_VM_NAME | cut -d'=' -f2 | tr -d '"')" \
-		--query publicIps -o tsv); \
-	printf "[azure]\ndefault-win11-azure ansible_host=$$IP ansible_user=testadmin ansible_password=\"Password123!\" ansible_port=5985 ansible_connection=winrm ansible_winrm_transport=basic ansible_winrm_scheme=http ansible_winrm_server_cert_validation=ignore ansible_become_method=runas ansible_become_user=azureadmin ansible_become_password=\"$$($$env_cmd && cat scratch/azure-sandbox.env | grep AZURE_ADMIN_PASSWORD | cut -d'=' -f2 | tr -d '"')\"\n" > scratch/azure-inventory.ini; \
-	$$($$env_cmd && cat scratch/azure-sandbox.env | grep "export") rbenv exec bundle exec ansible-playbook -i scratch/azure-inventory.ini tests/playbook.yml \
+	IP=$$(az vm show \
+		--subscription "$$AZURE_SUBSCRIPTION_ID" \
+		-d -g "$$AZURE_RESOURCE_GROUP" \
+		-n "$$AZURE_VM_NAME" --query publicIps -o tsv); \
+	printf "[azure]\ndefault-win11-azure ansible_host=$$IP ansible_user=testadmin ansible_password=\"Password123!\" ansible_port=5985 ansible_connection=winrm ansible_winrm_transport=basic ansible_winrm_scheme=http ansible_winrm_server_cert_validation=ignore ansible_become_method=runas ansible_become_user=azureadmin ansible_become_password=\"$$AZURE_ADMIN_PASSWORD\"\n" > scratch/azure-inventory.ini; \
+	rbenv exec bundle exec ansible-playbook -i scratch/azure-inventory.ini tests/playbook.yml \
 		-e "env=stage2 extract_build_number=16 extract_debug=False skip_migration=true tomcat_version=9.0.113 tomcat_auto_start=true install_drive=D:" ; \
 	echo "=== Azure VM Provisioning Complete! ==="; \
 	if [ -z "$$KEEP_AZURE_VM" ]; then \
@@ -188,74 +186,82 @@ test-azure-provision-tomcat: update-roles
 		echo "=== KEEP_AZURE_VM is set. Skipping cleanup of Azure VM and resources. ==="; \
 	fi
 
-
 .PHONY: destroy-azure-cli
 destroy-azure-cli:
 	@set -e; \
-	env_cmd="./bin/azure-sandbox-env.sh --auto-fill --write scratch/azure-sandbox.env"; \
-	echo "=== Destroying Azure VM: $$($$env_cmd && cat scratch/azure-sandbox.env | grep AZURE_VM_NAME | cut -d'=' -f2 | tr -d '"') ==="; \
-	$$($$env_cmd && cat scratch/azure-sandbox.env | grep "export") az vm delete \
-		--resource-group "$$($$env_cmd && cat scratch/azure-sandbox.env | grep AZURE_RESOURCE_GROUP | cut -d'=' -f2 | tr -d '"')" \
-		--name "$$($$env_cmd && cat scratch/azure-sandbox.env | grep AZURE_VM_NAME | cut -d'=' -f2 | tr -d '"')" \
+	source scratch/azure-sandbox.env; \
+	echo "=== Destroying Azure VM: $$AZURE_VM_NAME ==="; \
+	az vm delete \
+		--subscription "$$AZURE_SUBSCRIPTION_ID" \
+		--resource-group "$$AZURE_RESOURCE_GROUP" \
+		--name "$$AZURE_VM_NAME" \
 		--yes --no-wait; \
 	echo "=== Cleaning up Network Resources ==="; \
-	$$($$env_cmd && cat scratch/azure-sandbox.env | grep "export") az network nic delete \
-		--resource-group "$$($$env_cmd && cat scratch/azure-sandbox.env | grep AZURE_RESOURCE_GROUP | cut -d'=' -f2 | tr -d '"')" \
-		--name "$$($$env_cmd && cat scratch/azure-sandbox.env | grep AZURE_VM_NAME | cut -d'=' -f2 | tr -d '"')VMNic" \
+	az network nic delete \
+		--subscription "$$AZURE_SUBSCRIPTION_ID" \
+		--resource-group "$$AZURE_RESOURCE_GROUP" \
+		--name "$${AZURE_VM_NAME}VMNic" \
 		--no-wait || true; \
-	$$($$env_cmd && cat scratch/azure-sandbox.env | grep "export") az network public-ip delete \
-		--resource-group "$$($$env_cmd && cat scratch/azure-sandbox.env | grep AZURE_RESOURCE_GROUP | cut -d'=' -f2 | tr -d '"')" \
-		--name "$$($$env_cmd && cat scratch/azure-sandbox.env | grep AZURE_VM_NAME | cut -d'=' -f2 | tr -d '"')PublicIP" \
+	az network public-ip delete \
+		--subscription "$$AZURE_SUBSCRIPTION_ID" \
+		--resource-group "$$AZURE_RESOURCE_GROUP" \
+		--name "$${AZURE_VM_NAME}PublicIP" \
 		--no-wait || true; \
-	$$($$env_cmd && cat scratch/azure-sandbox.env | grep "export") az network nsg delete \
-		--resource-group "$$($$env_cmd && cat scratch/azure-sandbox.env | grep AZURE_RESOURCE_GROUP | cut -d'=' -f2 | tr -d '"')" \
-		--name "$$($$env_cmd && cat scratch/azure-sandbox.env | grep AZURE_VM_NAME | cut -d'=' -f2 | tr -d '"')NSG" \
+	az network nsg delete \
+		--subscription "$$AZURE_SUBSCRIPTION_ID" \
+		--resource-group "$$AZURE_RESOURCE_GROUP" \
+		--name "$$AZURE_VM_NAME" \
 		--no-wait || true;
 
 .PHONY: test-upgrade-candidate-azure-cli
 test-upgrade-candidate-azure-cli: update-roles
 	@set -e; \
-	env_cmd="./bin/azure-sandbox-env.sh --auto-fill --write scratch/azure-sandbox.env"; \
-	echo "=== 1. Creating Azure VM with Data Disk: $$($$env_cmd && cat scratch/azure-sandbox.env | grep AZURE_VM_NAME | cut -d'=' -f2 | tr -d '"') ==="; \
-	$$($$env_cmd && cat scratch/azure-sandbox.env | grep "export") az vm create \
-		--resource-group "$$($$env_cmd && cat scratch/azure-sandbox.env | grep AZURE_RESOURCE_GROUP | cut -d'=' -f2 | tr -d '"')" \
-		--name "$$($$env_cmd && cat scratch/azure-sandbox.env | grep AZURE_VM_NAME | cut -d'=' -f2 | tr -d '"')" \
+	./bin/azure-sandbox-env.sh --auto-fill --write scratch/azure-sandbox.env; \
+	source scratch/azure-sandbox.env; \
+	echo "=== 1. Creating Azure VM with Data Disk: $$AZURE_VM_NAME ==="; \
+	az vm create \
+		--subscription "$$AZURE_SUBSCRIPTION_ID" \
+		--resource-group "$$AZURE_RESOURCE_GROUP" \
+		--name "$$AZURE_VM_NAME" \
 		--image MicrosoftWindowsServer:WindowsServer:2022-datacenter-g2:latest \
-		--admin-username "$$($$env_cmd && cat scratch/azure-sandbox.env | grep AZURE_ADMIN_USERNAME | cut -d'=' -f2 | tr -d '"')" \
-		--admin-password "$$($$env_cmd && cat scratch/azure-sandbox.env | grep AZURE_ADMIN_PASSWORD | cut -d'=' -f2 | tr -d '"')" \
-		--location "$$($$env_cmd && cat scratch/azure-sandbox.env | grep AZURE_LOCATION | cut -d'=' -f2 | tr -d '"')" \
+		--admin-username "$$AZURE_ADMIN_USERNAME" \
+		--admin-password "$$AZURE_ADMIN_PASSWORD" \
+		--location "$$AZURE_LOCATION" \
 		--public-ip-sku Standard \
 		--data-disk-sizes-gb 20 \
 		--size Standard_DS1_v2; \
 	echo "=== 2. Configuring Network & WinRM ==="; \
-	$$($$env_cmd && cat scratch/azure-sandbox.env | grep "export") az network nsg rule create \
-		--resource-group "$$($$env_cmd && cat scratch/azure-sandbox.env | grep AZURE_RESOURCE_GROUP | cut -d'=' -f2 | tr -d '"')" \
-		--nsg-name "$$($$env_cmd && cat scratch/azure-sandbox.env | grep AZURE_VM_NAME | cut -d'=' -f2 | tr -d '"')NSG" \
+	az network nsg rule create \
+		--subscription "$$AZURE_SUBSCRIPTION_ID" \
+		--resource-group "$$AZURE_RESOURCE_GROUP" \
+		--nsg-name "$${AZURE_VM_NAME}NSG" \
 		--name AllowWinRM --priority 1010 --destination-port-ranges 5985 --access Allow --protocol Tcp --direction Inbound; \
-	$$($$env_cmd && cat scratch/azure-sandbox.env | grep "export") az network nsg rule create \
-		--resource-group "$$($$env_cmd && cat scratch/azure-sandbox.env | grep AZURE_RESOURCE_GROUP | cut -d'=' -f2 | tr -d '"')" \
-		--nsg-name "$$($$env_cmd && cat scratch/azure-sandbox.env | grep AZURE_VM_NAME | cut -d'=' -f2 | tr -d '"')NSG" \
+	az network nsg rule create \
+		--subscription "$$AZURE_SUBSCRIPTION_ID" \
+		--resource-group "$$AZURE_RESOURCE_GROUP" \
+		--nsg-name "$${AZURE_VM_NAME}NSG" \
 		--name AllowTomcat --priority 1020 --destination-port-ranges 8080 9080 --access Allow --protocol Tcp --direction Inbound; \
-	$$($$env_cmd && cat scratch/azure-sandbox.env | grep "export") az vm run-command invoke \
-		--resource-group "$$($$env_cmd && cat scratch/azure-sandbox.env | grep AZURE_RESOURCE_GROUP | cut -d'=' -f2 | tr -d '"')" \
-		--name "$$($$env_cmd && cat scratch/azure-sandbox.env | grep AZURE_VM_NAME | cut -d'=' -f2 | tr -d '"')" \
+	az vm run-command invoke \
+		--subscription "$$AZURE_SUBSCRIPTION_ID" \
+		--resource-group "$$AZURE_RESOURCE_GROUP" \
+		--name "$$AZURE_VM_NAME" \
 		--command-id RunPowerShellScript --scripts 'Set-Item -Path "WSMan:\localhost\Service\Auth\Basic" -Value $$true; Set-Item -Path "WSMan:\localhost\Service\AllowUnencrypted" -Value $$true'; \
 	echo "=== 3. Creating Local Admin Account (testadmin) ==="; \
-	$$($$env_cmd && cat scratch/azure-sandbox.env | grep "export") az vm run-command invoke \
-		--resource-group "$$($$env_cmd && cat scratch/azure-sandbox.env | grep AZURE_RESOURCE_GROUP | cut -d'=' -f2 | tr -d '"')" \
-		--name "$$($$env_cmd && cat scratch/azure-sandbox.env | grep AZURE_VM_NAME | cut -d'=' -f2 | tr -d '"')" \
+	az vm run-command invoke \
+		--subscription "$$AZURE_SUBSCRIPTION_ID" \
+		--resource-group "$$AZURE_RESOURCE_GROUP" \
+		--name "$$AZURE_VM_NAME" \
 		--command-id RunPowerShellScript --scripts '$$Password = ConvertTo-SecureString "Password123!" -AsPlainText -Force; if (-not (Get-LocalUser -Name "testadmin" -ErrorAction SilentlyContinue)) { New-LocalUser "testadmin" -Password $$Password -Description "Ansible Admin"; Add-LocalGroupMember -Group "Administrators" -Member "testadmin" }'; \
-	echo "=== 4. Preparing Inventory ==="; \
-	IP=$$($$env_cmd && cat scratch/azure-sandbox.env | grep "export") az vm show \
-		-d -g "$$($$env_cmd && cat scratch/azure-sandbox.env | grep AZURE_RESOURCE_GROUP | cut -d'=' -f2 | tr -d '"')" \
-		-n "$$($$env_cmd && cat scratch/azure-sandbox.env | grep AZURE_VM_NAME | cut -d'=' -f2 | tr -d '"')" \
-		--query publicIps -o tsv); \
-	printf "[azure]\ndefault-win11-azure ansible_host=$$IP ansible_user=testadmin ansible_password=\"Password123!\" ansible_port=5985 ansible_connection=winrm ansible_winrm_transport=basic ansible_winrm_scheme=http ansible_winrm_server_cert_validation=ignore ansible_become_method=runas ansible_become_user=azureadmin ansible_become_password=\"$$($$env_cmd && cat scratch/azure-sandbox.env | grep AZURE_ADMIN_PASSWORD | cut -d'=' -f2 | tr -d '"')\"\n" > scratch/azure-inventory.ini; \
+	IP=$$(az vm show \
+		--subscription "$$AZURE_SUBSCRIPTION_ID" \
+		-d -g "$$AZURE_RESOURCE_GROUP" \
+		-n "$$AZURE_VM_NAME" --query publicIps -o tsv); \
+	printf "[azure]\ndefault-win11-azure ansible_host=$$IP ansible_user=testadmin ansible_password=\"Password123!\" ansible_port=5985 ansible_connection=winrm ansible_winrm_transport=basic ansible_winrm_scheme=http ansible_winrm_server_cert_validation=ignore ansible_become_method=runas ansible_become_user=azureadmin ansible_become_password=\"$$AZURE_ADMIN_PASSWORD\"\n" > scratch/azure-inventory.ini; \
 	echo "=== 5. Step 1: Installing Initial Version (Tomcat 9.0.112 / Java 17) ==="; \
-	$$($$env_cmd && cat scratch/azure-sandbox.env | grep "export") rbenv exec bundle exec ansible-playbook -i scratch/azure-inventory.ini tests/playbook-upgrade.yml \
+	rbenv exec bundle exec ansible-playbook -i scratch/azure-inventory.ini tests/playbook-upgrade.yml \
 		-e "env=stage2 upgrade_step=1 tomcat_auto_start=true install_drive=D:"; \
 	echo "=== 6. Step 2: Installing Candidate Version (Tomcat 9.0.113 / Java 21) ==="; \
-	$$($$env_cmd && cat scratch/azure-sandbox.env | grep "export") rbenv exec bundle exec ansible-playbook -i scratch/azure-inventory.ini tests/playbook-upgrade.yml \
+	rbenv exec bundle exec ansible-playbook -i scratch/azure-inventory.ini tests/playbook-upgrade.yml \
 		-e "env=stage2 upgrade_step=2 tomcat_auto_start=true tomcat_candidate_enabled=true tomcat_candidate_delegate_host=$$IP tomcat_candidate_delegate_port=9080 install_drive=D:"; \
 	echo "=== 7. Verifying Candidate on Port 9080 ==="; \
 	curl -v --connect-timeout 5 --max-time 10 http://$$IP:9080; \
@@ -266,7 +272,6 @@ test-upgrade-candidate-azure-cli: update-roles
 	else \
 		echo "=== KEEP_AZURE_VM is set. Skipping cleanup of Azure VM and resources. ==="; \
 	fi
-
 
 .PHONY: vagrant-up
 vagrant-up: vagrant-destroy vbox-cleanup-disks
