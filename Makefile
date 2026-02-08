@@ -151,6 +151,7 @@ test-azure-cli: update-roles
 		--admin-password "$$AZURE_ADMIN_PASSWORD" \
 		--location $$AZURE_LOCATION \
 		--public-ip-sku Standard \
+		--data-disk-sizes-gb 20 \
 		--size Standard_DS1_v2; \
 	echo "=== Configuring NSG Rules ==="; \
 	az network nsg rule create --resource-group $$AZURE_RESOURCE_GROUP --nsg-name $${AZURE_VM_NAME}NSG --name AllowWinRM --priority 1010 --destination-port-ranges 5985 --access Allow --protocol Tcp --direction Inbound; \
@@ -163,7 +164,7 @@ test-azure-cli: update-roles
 	IP=$$(az vm show -d -g $$AZURE_RESOURCE_GROUP -n $$AZURE_VM_NAME --query publicIps -o tsv); \
 	printf "[azure]\ndefault-win11-azure ansible_host=$$IP ansible_user=testadmin ansible_password=\"Password123!\" ansible_port=5985 ansible_connection=winrm ansible_winrm_transport=basic ansible_winrm_scheme=http ansible_winrm_server_cert_validation=ignore ansible_become_method=runas ansible_become_user=azureadmin ansible_become_password=\"$$AZURE_ADMIN_PASSWORD\"\n" > scratch/azure-inventory.ini; \
 	rbenv exec bundle exec ansible-playbook -i scratch/azure-inventory.ini tests/playbook.yml \
-		-e "env=stage2 extract_build_number=16 extract_debug=False skip_migration=true tomcat_version=9.0.113 tomcat_auto_start=true"
+		-e "env=stage2 extract_build_number=16 extract_debug=False skip_migration=true tomcat_version=9.0.113 tomcat_auto_start=true install_drive=D:"
 
 .PHONY: destroy-azure-cli
 destroy-azure-cli:
@@ -175,6 +176,41 @@ destroy-azure-cli:
 	az network nic delete --resource-group $$AZURE_RESOURCE_GROUP --name $${AZURE_VM_NAME}VMNic --no-wait || true; \
 	az network public-ip delete --resource-group $$AZURE_RESOURCE_GROUP --name $${AZURE_VM_NAME}PublicIP --no-wait || true; \
 	az network nsg delete --resource-group $$AZURE_RESOURCE_GROUP --name $${AZURE_VM_NAME}NSG --no-wait || true;
+
+.PHONY: test-upgrade-candidate-azure-cli
+test-upgrade-candidate-azure-cli: update-roles
+	@set -e; \
+	source scratch/azure-sandbox.env; \
+	echo "=== 1. Creating Azure VM with Data Disk: $$AZURE_VM_NAME ==="; \
+	az vm create \
+		--resource-group $$AZURE_RESOURCE_GROUP \
+		--name $$AZURE_VM_NAME \
+		--image MicrosoftWindowsServer:WindowsServer:2022-datacenter-g2:latest \
+		--admin-username $$AZURE_ADMIN_USERNAME \
+		--admin-password "$$AZURE_ADMIN_PASSWORD" \
+		--location $$AZURE_LOCATION \
+		--public-ip-sku Standard \
+		--data-disk-sizes-gb 20 \
+		--size Standard_DS1_v2; \
+	echo "=== 2. Configuring Network & WinRM ==="; \
+	az network nsg rule create --resource-group $$AZURE_RESOURCE_GROUP --nsg-name $${AZURE_VM_NAME}NSG --name AllowWinRM --priority 1010 --destination-port-ranges 5985 --access Allow --protocol Tcp --direction Inbound; \
+	az network nsg rule create --resource-group $$AZURE_RESOURCE_GROUP --nsg-name $${AZURE_VM_NAME}NSG --name AllowTomcat --priority 1020 --destination-port-ranges 8080 9080 --access Allow --protocol Tcp --direction Inbound; \
+	az vm run-command invoke --resource-group $$AZURE_RESOURCE_GROUP --name $$AZURE_VM_NAME --command-id RunPowerShellScript --scripts 'Set-Item -Path "WSMan:\localhost\Service\Auth\Basic" -Value $$true; Set-Item -Path "WSMan:\localhost\Service\AllowUnencrypted" -Value $$true'; \
+	echo "=== 3. Creating Local Admin Account (testadmin) ==="; \
+	az vm run-command invoke --resource-group $$AZURE_RESOURCE_GROUP --name $$AZURE_VM_NAME --command-id RunPowerShellScript --scripts '$$Password = ConvertTo-SecureString "Password123!" -AsPlainText -Force; if (-not (Get-LocalUser -Name "testadmin" -ErrorAction SilentlyContinue)) { New-LocalUser "testadmin" -Password $$Password -Description "Ansible Admin"; Add-LocalGroupMember -Group "Administrators" -Member "testadmin" }'; \
+	echo "=== 4. Preparing Inventory ==="; \
+	IP=$$(az vm show -d -g $$AZURE_RESOURCE_GROUP -n $$AZURE_VM_NAME --query publicIps -o tsv); \
+	printf "[azure]\ndefault-win11-azure ansible_host=$$IP ansible_user=testadmin ansible_password=\"Password123!\" ansible_port=5985 ansible_connection=winrm ansible_winrm_transport=basic ansible_winrm_scheme=http ansible_winrm_server_cert_validation=ignore ansible_become_method=runas ansible_become_user=azureadmin ansible_become_password=\"$$AZURE_ADMIN_PASSWORD\"\n" > scratch/azure-inventory.ini; \
+	echo "=== 5. Step 1: Installing Initial Version (Tomcat 9.0.112 / Java 17) ==="; \
+	rbenv exec bundle exec ansible-playbook -i scratch/azure-inventory.ini tests/playbook-upgrade.yml \
+		-e "env=stage2 upgrade_step=1 tomcat_auto_start=true install_drive=D:"; \
+	echo "=== 6. Step 2: Installing Candidate Version (Tomcat 9.0.113 / Java 21) ==="; \
+	rbenv exec bundle exec ansible-playbook -i scratch/azure-inventory.ini tests/playbook-upgrade.yml \
+		-e "env=stage2 upgrade_step=2 tomcat_auto_start=true tomcat_candidate_enabled=true tomcat_candidate_delegate_host=$$IP tomcat_candidate_delegate_port=9080 install_drive=D:"; \
+	echo "=== 7. Verifying Candidate on Port 9080 ==="; \
+	curl -v --connect-timeout 5 --max-time 10 http://$$IP:9080; \
+	echo "=== Success! Cleaning up... ==="; \
+	$(MAKE) destroy-azure-cli
 
 .PHONY: vagrant-up
 vagrant-up: vagrant-destroy vbox-cleanup-disks

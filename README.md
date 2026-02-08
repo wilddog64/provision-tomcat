@@ -330,6 +330,12 @@ Azure-based Kitchen tests are not wired into CI yet. To validate changes against
 
 - Start/extend the sandbox session manually, log in with `az login --use-device-code`, and export the env vars listed in [docs/plans/azure-sandbox-kitchen.md](docs/plans/azure-sandbox-kitchen.md).
 - Use `bin/azure-sandbox-env.sh --login --write scratch/azure-sandbox.env` to capture the IDs/credentials from `az account show` and the sandbox dashboard, then `source scratch/azure-sandbox.env`.
+- **Reliable CLI Workflow**: In restricted sandboxes like ACG, use the direct CLI-based targets to bypass `kitchen-azurerm` limitations:
+  ```bash
+  make test-azure-cli                # Standard provision test
+  make test-upgrade-candidate-azure-cli # Zero-downtime candidate upgrade test
+  make destroy-azure-cli             # Clean up Azure resources
+  ```
 - Kitchen automatically loads `scratch/azure-sandbox.env` (or the file pointed to by `AZURE_ENV_FILE`) so `bundle exec kitchen test default-win11-azure` picks up the right subscription/credentials even if you forget to `source` first.
 - Run `bin/azure-quick-vm.sh` (defaults to a Windows Server VM, auto-sources `scratch/azure-sandbox.env`, override with `--env`) to perform a quick “create + destroy” VM sanity check in the sandbox before attempting Kitchen.
 - Run `bundle exec kitchen test <suite>-<platform>` from your workstation or self-hosted runner and capture `.kitchen/logs/*` for PR notes. For Azure, start with `bundle exec kitchen test default-win11-azure`.
@@ -572,6 +578,10 @@ make vbox-cleanup-disks
 ```
 
 See **[VirtualBox Stale Disks](docs/issues/VIRTUALBOX-STALE-DISKS.md)** for details.
+
+### Azure Sandbox Issues
+
+For troubleshooting common issues in the ACG Azure sandbox (Resource Group restrictions, MSI timeouts, etc.), see **[Azure Kitchen Integration Issues](../docs/issues/AZURE-KITCHEN-INTEGRATION.md)**.
 
 ## Dependencies
 
