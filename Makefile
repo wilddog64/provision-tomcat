@@ -16,9 +16,9 @@ KITCHEN_YAML ?= $(DEFAULT_KITCHEN_YAML)
 RBENV_BIN := $(shell command -v rbenv 2>/dev/null)
 ifdef RBENV_BIN
   export RBENV_VERSION := $(shell cat .ruby-version 2>/dev/null)
-  KITCHEN_CMD ?= rbenv exec kitchen
+  KITCHEN_CMD ?= rbenv exec bundle exec kitchen
 else
-  KITCHEN_CMD ?= kitchen
+  KITCHEN_CMD ?= bundle exec kitchen
 endif
 
 PLATFORMS := win11 win11-disk ubuntu-2404 rockylinux9 aws-minimal-win
@@ -56,6 +56,11 @@ check: lint syntax
 sync-aws:
 	@"$(shell pwd)/../bin/sync-aws-secrets"
 
+.PHONY: test-candidate-aws
+test-candidate-aws: update-roles
+	@echo "=== Testing Java + Tomcat upgrade (candidate mode) on AWS ==="
+	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) test upgrade-candidate-aws-aws-minimal-win
+
 # ============================================================================
 # Utility Targets
 # ============================================================================ 
@@ -69,9 +74,9 @@ setup:
 
 
 .PHONY: deps
-
-
 deps:
+	@echo "Installing Ruby dependencies..."
+	@rbenv exec bundle install || bundle install
 	@echo "Installing Ansible collections..."
 	ansible-galaxy collection install ansible.windows chocolatey.chocolatey -p ./collections
 
