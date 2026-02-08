@@ -49,22 +49,14 @@ check: lint syntax
 	@echo "All validation checks passed."
 
 # ============================================================================
-
 # Utility Targets
-
 # ============================================================================ 
 
 .PHONY: setup
-
 setup:
-
 	@./scripts/setup.sh all
 
-
-
 .PHONY: deps
-
-
 deps:
 	@echo "Installing Ansible collections..."
 	ansible-galaxy collection install ansible.windows chocolatey.chocolatey -p ./collections
@@ -103,53 +95,31 @@ help:
 	@echo "  vbox-cleanup-disks      # Clean up stale VirtualBox disk registrations"
 	@echo "  fix-vbox-locks          # Fix locked/stuck VirtualBox VMs"
 	@echo ""
+	@echo "Azure Targets (require az login):"
+	@echo "  test-azure-provision-tomcat   # Standard provision test on Azure VM"
+	@echo "  test-azure-upgrade-candidate # Zero-downtime candidate upgrade test"
+	@echo "  test-azure-destroy           # Destroy all Azure resources created by these tests"
+	@echo ""
 	@echo "Quick test (default suite):"
 	@$(foreach p,$(PLATFORMS),echo "  test-$(p)           # kitchen test default-$(p)" &&) true
 	@echo ""
-	@echo "Upgrade/Downgrade Testing:"
-	@echo "  test-upgrade-win11      # Test Java (17→21) + Tomcat (9.0.112→9.0.113) upgrade"
-	@echo "  test-upgrade-candidate-win11 # Same as above but exercises candidate workflow"
-	@echo "  test-upgrade-baseline-win11 # Run upgrade step 2 on baseline box (candidate workflow only)"
-	@echo "  candidate-cleanup-win11    # Remove candidate config + destroy upgrade VM"
-	@echo "  upgrade-cleanup-win11   # Cleanup upgrade test VM"
-	@echo "  test-downgrade-win11    # Test Java (21→17) + Tomcat (9.0.113→9.0.112) downgrade"
-	@echo "  downgrade-cleanup-win11 # Cleanup downgrade test VM"
-	@echo "  test-upgrade-candidate-stack # Run normal upgrade + candidate workflow + cleanup"
-	@echo ""
-	@echo "Test specific suite on platform:"
-	@$(foreach p,$(PLATFORMS),$(foreach s,$(SUITES),echo "  test-$(s)-$(p)     # kitchen test $(s)-$(p)" &&)) true
-	@echo ""
-	@echo "Test all suites on a platform:"
-	@$(foreach p,$(PLATFORMS),echo "  test-all-$(p)       # Run all test suites on $(p)" &&) true
-	@echo ""
-	@echo "Converge/Verify/Destroy (default suite):"
-	@$(foreach p,$(PLATFORMS),echo "  converge-$(p)       # kitchen converge default-$(p)" &&) true
-	@$(foreach p,$(PLATFORMS),echo "  verify-$(p)         # kitchen verify default-$(p)" &&) true
-	@$(foreach p,$(PLATFORMS),echo "  destroy-$(p)        # kitchen destroy all $(p) instances" &&) true
-	@echo ""
 	@echo "Override KITCHEN_YAML=/path/to/.kitchen.yml when needed."
-	@echo "See TESTING-UPGRADES.md for detailed upgrade testing documentation."
 
 # Build extra vars for Ansible
 EXTRA_VARS := $(if $(ADO_PAT_TOKEN),ado_pat_token=$(ADO_PAT_TOKEN),)
 
-.PHONY: test-azure
-test-azure: update-roles
-	@echo "=== Testing on Azure (win11-azure) ==="
-	AZURE_ENV_FILE=scratch/azure-sandbox.env KITCHEN_YAML=.kitchen.yml $(KITCHEN_CMD) test default-win11-azure
-
 .PHONY: test-azure-provision-tomcat
 test-azure-provision-tomcat: update-roles
 	@set -e; \
-	./bin/azure-sandbox-env.sh --auto-fill --write scratch/azure-sandbox.env > /dev/null; \
+	echo "=== Detecting Azure Environment ==="; \
+	SUB=$$(az account show --query id -o tsv); \
+	RG=$$(az group list --query "[?contains(name, 'playground-sandbox')].name" -o tsv | head -n 1); \
+	LOC=$$(az group show --name "$$RG" --query location -o tsv); \
 	MY_IP=$$(curl -s https://api.ipify.org); \
-	SUB=$$(grep "export AZURE_SUBSCRIPTION_ID" scratch/azure-sandbox.env | cut -d'=' -f2 | tr -d '"'); \
-	RG=$$(grep "export AZURE_RESOURCE_GROUP" scratch/azure-sandbox.env | cut -d'=' -f2 | tr -d '"'); \
-	NAME=$$(grep "export AZURE_VM_NAME" scratch/azure-sandbox.env | cut -d'=' -f2 | tr -d '"'); \
-	LOC=$$(grep "export AZURE_LOCATION" scratch/azure-sandbox.env | cut -d'=' -f2 | tr -d '"'); \
-	USER=$$(grep "export AZURE_ADMIN_USERNAME" scratch/azure-sandbox.env | cut -d'=' -f2 | tr -d '"'); \
-	PASS=$$(grep "export AZURE_ADMIN_PASSWORD" scratch/azure-sandbox.env | cut -d'=' -f2 | tr -d '"'); \
-	echo "=== Creating Azure VM: $$NAME in $$RG ==="; \
+	NAME=kqvm-win11; \
+	USER=azureadmin; \
+	PASS="ChangeM3!SecurePassword"; \
+	echo "=== Creating Azure VM: $$NAME in $$RG ($$LOC) ==="; \
 	az vm create --subscription "$$SUB" --resource-group "$$RG" --name "$$NAME" \
 		--image MicrosoftWindowsServer:WindowsServer:2022-datacenter-g2:latest \
 		--admin-username "$$USER" --admin-password "$$PASS" --location "$$LOC" \
@@ -160,25 +130,25 @@ test-azure-provision-tomcat: update-roles
 	echo "=== Configuring WinRM Inside VM ==="; \
 	az vm run-command invoke --subscription "$$SUB" --resource-group "$$RG" --name "$$NAME" --command-id RunPowerShellScript --scripts 'winrm quickconfig -q; Set-Item -Path "WSMan:\localhost\Service\Auth\Basic" -Value $$true; Set-Item -Path "WSMan:\localhost\Service\AllowUnencrypted" -Value $$true; New-NetFirewallRule -DisplayName "Allow WinRM HTTP" -Direction Inbound -LocalPort 5985 -Protocol TCP -Action Allow'; \
 	echo "=== Creating Local Admin Account (testadmin) ==="; \
-	az vm run-command invoke --subscription "$$SUB" --resource-group "$$RG" --name "$$NAME" --command-id RunPowerShellScript --scripts '$$Password = ConvertTo-SecureString "Password123!" -AsPlainText -Force; if (-not (Get-LocalUser -Name "testadmin" -ErrorAction SilentlyContinue)) { New-LocalUser "testadmin" -Password $$Password -Description "Ansible Admin"; Add-LocalGroupMember -Group "Administrators" -Member "testadmin" };'; \
-	echo "=== Running Ansible Playbook ==="; \
+	az vm run-command invoke --subscription "$$SUB" --resource-group "$$RG" --name "$$NAME" --command-id RunPowerShellScript --scripts \
+		'$$Password = ConvertTo-SecureString "Password123!" -AsPlainText -Force; if (-not (Get-LocalUser -Name "testadmin" -ErrorAction SilentlyContinue)) { New-LocalUser "testadmin" -Password $$Password -Description "Ansible Admin"; Add-LocalGroupMember -Group "Administrators" -Member "testadmin" };'; \
 	IP=$$(az vm show --subscription "$$SUB" -d -g "$$RG" -n "$$NAME" --query publicIps -o tsv); \
 	echo "=== Waiting for WinRM on $$IP:5985... ==="; \
-	for i in {1..60}; do if nc -z -w 5 $$IP 5985; then break; fi; echo "Waiting... ($$i/60)"; sleep 10; if [ $$i -eq 60 ]; then echo "Timeout"; exit 1; fi; done; \
+	for i in {1..60}; do if nc -z -w 5 $$IP 5985; then break; fi; echo "Waiting... ($$i/60)"; sleep 10; if [ $$i -eq 60 ]; then echo "Timeout waiting for WinRM"; exit 1; fi; done; \
 	sleep 10; \
-	printf "[azure]\ndefault-win11-azure ansible_host=$$IP ansible_user=testadmin ansible_password=\"Password123!\" ansible_port=5985 ansible_connection=winrm ansible_winrm_transport=basic ansible_winrm_scheme=http ansible_winrm_server_cert_validation=ignore ansible_become_method=runas ansible_become_user=azureadmin ansible_become_password=\"$$PASS\"\n" > scratch/azure-inventory.ini; \
-	rbenv exec bundle exec ansible-playbook -i scratch/azure-inventory.ini tests/playbook.yml \
+	printf "[azure]\ndefault-win11-azure ansible_host=$$IP ansible_user=testadmin ansible_password=\"Password123!\" ansible_port=5985 ansible_connection=winrm ansible_winrm_transport=basic ansible_winrm_scheme=http ansible_winrm_server_cert_validation=ignore ansible_become_method=runas ansible_become_user=$$USER ansible_become_password=\"$$PASS\"\n" > scratch/azure-inventory.ini; \
+	ansible-playbook -i scratch/azure-inventory.ini tests/playbook.yml \
 		-e "env=stage2 extract_build_number=16 extract_debug=False skip_migration=true tomcat_version=9.0.113 tomcat_auto_start=true install_drive=D:" ; \
 	echo "=== Azure VM Provisioning Complete! ==="; \
-	if [ -z "$$KEEP_AZURE_VM" ]; then echo "=== Cleaning up... ==="; $(MAKE) destroy-azure-cli; else echo "=== Keeping VM... ==="; fi
+	if [ -z "$$KEEP_AZURE_VM" ]; then echo "=== Cleaning up... ==="; $(MAKE) test-azure-destroy; else echo "=== KEEP_AZURE_VM is set. Skipping cleanup. ==="; fi
 
-.PHONY: destroy-azure-cli
-destroy-azure-cli:
+.PHONY: test-azure-destroy
+test-azure-destroy:
 	@set -e; \
-	./bin/azure-sandbox-env.sh --auto-fill --write scratch/azure-sandbox.env > /dev/null; \
-	SUB=$$(grep "export AZURE_SUBSCRIPTION_ID" scratch/azure-sandbox.env | cut -d'=' -f2 | tr -d '"'); \
-	RG=$$(grep "export AZURE_RESOURCE_GROUP" scratch/azure-sandbox.env | cut -d'=' -f2 | tr -d '"'); \
-	NAME=$$(grep "export AZURE_VM_NAME" scratch/azure-sandbox.env | cut -d'=' -f2 | tr -d '"'); \
+	echo "=== Detecting Azure Environment for Cleanup ==="; \
+	SUB=$$(az account show --query id -o tsv); \
+	RG=$$(az group list --query "[?contains(name, 'playground-sandbox')].name" -o tsv | head -n 1); \
+	NAME=kqvm-win11; \
 	echo "=== Destroying Azure VM: $$NAME in $$RG ==="; \
 	az vm delete --subscription "$$SUB" --resource-group "$$RG" --name "$$NAME" --yes --no-wait; \
 	echo "=== Cleaning up Network Resources ==="; \
@@ -186,17 +156,17 @@ destroy-azure-cli:
 	az network public-ip delete --subscription "$$SUB" --resource-group "$$RG" --name "$${NAME}PublicIP" --no-wait || true; \
 	az network nsg delete --subscription "$$SUB" --resource-group "$$RG" --name "$${NAME}NSG" --no-wait || true;
 
-.PHONY: test-upgrade-candidate-azure-cli
-test-upgrade-candidate-azure-cli: update-roles
+.PHONY: test-azure-upgrade-candidate
+test-azure-upgrade-candidate: update-roles
 	@set -e; \
-	./bin/azure-sandbox-env.sh --auto-fill --write scratch/azure-sandbox.env > /dev/null; \
+	echo "=== Detecting Azure Environment ==="; \
+	SUB=$$(az account show --query id -o tsv); \
+	RG=$$(az group list --query "[?contains(name, 'playground-sandbox')].name" -o tsv | head -n 1); \
+	LOC=$$(az group show --name "$$RG" --query location -o tsv); \
 	MY_IP=$$(curl -s https://api.ipify.org); \
-	SUB=$$(grep "export AZURE_SUBSCRIPTION_ID" scratch/azure-sandbox.env | cut -d'=' -f2 | tr -d '"'); \
-	RG=$$(grep "export AZURE_RESOURCE_GROUP" scratch/azure-sandbox.env | cut -d'=' -f2 | tr -d '"'); \
-	NAME=$$(grep "export AZURE_VM_NAME" scratch/azure-sandbox.env | cut -d'=' -f2 | tr -d '"'); \
-	LOC=$$(grep "export AZURE_LOCATION" scratch/azure-sandbox.env | cut -d'=' -f2 | tr -d '"'); \
-	USER=$$(grep "export AZURE_ADMIN_USERNAME" scratch/azure-sandbox.env | cut -d'=' -f2 | tr -d '"'); \
-	PASS=$$(grep "export AZURE_ADMIN_PASSWORD" scratch/azure-sandbox.env | cut -d'=' -f2 | tr -d '"'); \
+	NAME=kqvm-win11; \
+	USER=azureadmin; \
+	PASS="ChangeM3!SecurePassword"; \
 	echo "=== 1. Creating Azure VM: $$NAME ==="; \
 	az vm create --subscription "$$SUB" --resource-group "$$RG" --name "$$NAME" \
 		--image MicrosoftWindowsServer:WindowsServer:2022-datacenter-g2:latest \
@@ -207,19 +177,21 @@ test-upgrade-candidate-azure-cli: update-roles
 	az network nsg rule create --subscription "$$SUB" --resource-group "$$RG" --nsg-name "$${NAME}NSG" --name AllowTomcat --priority 1020 --destination-port-ranges 8080 9080 --access Allow --protocol Tcp --direction Inbound --source-address-prefixes "$$MY_IP"; \
 	echo "=== 3. Configuring WinRM & Local Admin ==="; \
 	az vm run-command invoke --subscription "$$SUB" --resource-group "$$RG" --name "$$NAME" --command-id RunPowerShellScript --scripts 'winrm quickconfig -q; Set-Item -Path "WSMan:\localhost\Service\Auth\Basic" -Value $$true; Set-Item -Path "WSMan:\localhost\Service\AllowUnencrypted" -Value $$true; New-NetFirewallRule -DisplayName "Allow WinRM HTTP" -Direction Inbound -LocalPort 5985 -Protocol TCP -Action Allow'; \
-	az vm run-command invoke --subscription "$$SUB" --resource-group "$$RG" --name "$$NAME" --command-id RunPowerShellScript --scripts '$$Password = ConvertTo-SecureString "Password123!" -AsPlainText -Force; if (-not (Get-LocalUser -Name "testadmin" -ErrorAction SilentlyContinue)) { New-LocalUser "testadmin" -Password $$Password -Description "Ansible Admin"; Add-LocalGroupMember -Group "Administrators" -Member "testadmin" };'; \
+	az vm run-command invoke --subscription "$$SUB" --resource-group "$$RG" --name "$$NAME" --command-id RunPowerShellScript --scripts \
+		'$$Password = ConvertTo-SecureString "Password123!" -AsPlainText -Force; if (-not (Get-LocalUser -Name "testadmin" -ErrorAction SilentlyContinue)) { New-LocalUser "testadmin" -Password $$Password -Description "Ansible Admin"; Add-LocalGroupMember -Group "Administrators" -Member "testadmin" };'; \
 	IP=$$(az vm show --subscription "$$SUB" -d -g "$$RG" -n "$$NAME" --query publicIps -o tsv); \
 	echo "=== Waiting for WinRM on $$IP:5985... ==="; \
-	for i in {1..60}; do if nc -z -w 5 $$IP 5985; then break; fi; echo "Waiting... ($$i/60)"; sleep 10; if [ $$i -eq 60 ]; then echo "Timeout"; exit 1; fi; done; \
+	for i in {1..60}; do if nc -z -w 5 $$IP 5985; then break; fi; echo "Waiting... ($$i/60)"; sleep 10; if [ $$i -eq 60 ]; then echo "Timeout waiting for WinRM"; exit 1; fi; done; \
 	sleep 10; \
-	printf "[azure]\ndefault-win11-azure ansible_host=$$IP ansible_user=testadmin ansible_password=\"Password123!\" ansible_port=5985 ansible_connection=winrm ansible_winrm_transport=basic ansible_winrm_scheme=http ansible_winrm_server_cert_validation=ignore ansible_become_method=runas ansible_become_user=azureadmin ansible_become_password=\"$$PASS\"\n" > scratch/azure-inventory.ini; \
+	printf "[azure]\ndefault-win11-azure ansible_host=$$IP ansible_user=testadmin ansible_password=\"Password123!\" ansible_port=5985 ansible_connection=winrm ansible_winrm_transport=basic ansible_winrm_scheme=http ansible_winrm_server_cert_validation=ignore ansible_become_method=runas ansible_become_user=$$USER ansible_become_password=\"$$PASS\"\n" > scratch/azure-inventory.ini; \
 	echo "=== 5. Step 1: Installing Initial Version ==="; \
-	rbenv exec bundle exec ansible-playbook -i scratch/azure-inventory.ini tests/playbook-upgrade.yml -e "env=stage2 upgrade_step=1 tomcat_auto_start=true install_drive=D:"; \
+	ansible-playbook -i scratch/azure-inventory.ini tests/playbook-upgrade.yml -e "env=stage2 upgrade_step=1 tomcat_auto_start=true install_drive=D:"; \
 	echo "=== 6. Step 2: Installing Candidate Version ==="; \
-	rbenv exec bundle exec ansible-playbook -i scratch/azure-inventory.ini tests/playbook-upgrade.yml -e "env=stage2 upgrade_step=2 tomcat_auto_start=true tomcat_candidate_enabled=true tomcat_candidate_delegate_host=$$IP tomcat_candidate_delegate_port=9080 install_drive=D:"; \
+	ansible-playbook -i scratch/azure-inventory.ini tests/playbook-upgrade.yml -e "env=stage2 upgrade_step=2 tomcat_auto_start=true tomcat_candidate_enabled=true tomcat_candidate_delegate_host=$$IP tomcat_candidate_delegate_port=9080 install_drive=D:"; \
 	echo "=== 7. Verifying Candidate on Port 9080 ==="; \
 	curl -v --connect-timeout 5 --max-time 10 http://$$IP:9080; \
-	if [ -z "$$KEEP_AZURE_VM" ]; then echo "=== Cleaning up... ==="; $(MAKE) destroy-azure-cli; else echo "=== Keeping VM... ==="; fi
+	echo "=== Success! Test Complete. ==="; \
+	if [ -z "$$KEEP_AZURE_VM" ]; then echo "=== Cleaning up... ==="; $(MAKE) test-azure-destroy; else echo "=== KEEP_AZURE_VM is set. Skipping cleanup. ==="; fi
 
 .PHONY: vagrant-up
 vagrant-up: vagrant-destroy vbox-cleanup-disks
