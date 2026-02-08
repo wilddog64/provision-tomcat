@@ -142,6 +142,7 @@ test-azure: update-roles
 test-azure-provision-tomcat: update-roles
 	@set -e; \
 	./bin/azure-sandbox-env.sh --auto-fill --write scratch/azure-sandbox.env > /dev/null; \
+	MY_IP=$$(curl -s https://api.ipify.org); \
 	SUB=$$(grep "export AZURE_SUBSCRIPTION_ID" scratch/azure-sandbox.env | cut -d'=' -f2 | tr -d '"'); \
 	RG=$$(grep "export AZURE_RESOURCE_GROUP" scratch/azure-sandbox.env | cut -d'=' -f2 | tr -d '"'); \
 	NAME=$$(grep "export AZURE_VM_NAME" scratch/azure-sandbox.env | cut -d'=' -f2 | tr -d '"'); \
@@ -153,17 +154,17 @@ test-azure-provision-tomcat: update-roles
 		--image MicrosoftWindowsServer:WindowsServer:2022-datacenter-g2:latest \
 		--admin-username "$$USER" --admin-password "$$PASS" --location "$$LOC" \
 		--public-ip-sku Standard --data-disk-sizes-gb 20 --size Standard_DS1_v2; \
-	echo "=== Configuring NSG Rules ==="; \
-	az network nsg rule create --subscription "$$SUB" --resource-group "$$RG" --nsg-name "$${NAME}NSG" --name AllowWinRM --priority 1010 --destination-port-ranges 5985 --access Allow --protocol Tcp --direction Inbound; \
-	az network nsg rule create --subscription "$$SUB" --resource-group "$$RG" --nsg-name "$${NAME}NSG" --name AllowTomcat --priority 1020 --destination-port-ranges 8080 9080 --access Allow --protocol Tcp --direction Inbound; \
+	echo "=== Configuring NSG Rules (Source IP: $$MY_IP) ==="; \
+	az network nsg rule create --subscription "$$SUB" --resource-group "$$RG" --nsg-name "$${NAME}NSG" --name AllowWinRM --priority 1010 --destination-port-ranges 5985 --access Allow --protocol Tcp --direction Inbound --source-address-prefixes "$$MY_IP"; \
+	az network nsg rule create --subscription "$$SUB" --resource-group "$$RG" --nsg-name "$${NAME}NSG" --name AllowTomcat --priority 1020 --destination-port-ranges 8080 9080 --access Allow --protocol Tcp --direction Inbound --source-address-prefixes "$$MY_IP"; \
 	echo "=== Configuring WinRM Inside VM ==="; \
-	az vm run-command invoke --subscription "$$SUB" --resource-group "$$RG" --name "$$NAME" --command-id RunPowerShellScript --scripts 'Set-Item -Path "WSMan:\localhost\Service\Auth\Basic" -Value $$true; Set-Item -Path "WSMan:\localhost\Service\AllowUnencrypted" -Value $$true'; \
+	az vm run-command invoke --subscription "$$SUB" --resource-group "$$RG" --name "$$NAME" --command-id RunPowerShellScript --scripts 'winrm quickconfig -q; Set-Item -Path "WSMan:\localhost\Service\Auth\Basic" -Value $$true; Set-Item -Path "WSMan:\localhost\Service\AllowUnencrypted" -Value $$true; New-NetFirewallRule -DisplayName "Allow WinRM HTTP" -Direction Inbound -LocalPort 5985 -Protocol TCP -Action Allow'; \
 	echo "=== Creating Local Admin Account (testadmin) ==="; \
 	az vm run-command invoke --subscription "$$SUB" --resource-group "$$RG" --name "$$NAME" --command-id RunPowerShellScript --scripts '$$Password = ConvertTo-SecureString "Password123!" -AsPlainText -Force; if (-not (Get-LocalUser -Name "testadmin" -ErrorAction SilentlyContinue)) { New-LocalUser "testadmin" -Password $$Password -Description "Ansible Admin"; Add-LocalGroupMember -Group "Administrators" -Member "testadmin" };'; \
 	echo "=== Running Ansible Playbook ==="; \
 	IP=$$(az vm show --subscription "$$SUB" -d -g "$$RG" -n "$$NAME" --query publicIps -o tsv); \
 	echo "=== Waiting for WinRM on $$IP:5985... ==="; \
-	for i in {1..60}; do if nc -z -w 5 $$IP 5985; then break; fi; echo "Waiting... ($$i/60)"; sleep 10; done; \
+	for i in {1..60}; do if nc -z -w 5 $$IP 5985; then break; fi; echo "Waiting... ($$i/60)"; sleep 10; if [ $$i -eq 60 ]; then echo "Timeout"; exit 1; fi; done; \
 	sleep 10; \
 	printf "[azure]\ndefault-win11-azure ansible_host=$$IP ansible_user=testadmin ansible_password=\"Password123!\" ansible_port=5985 ansible_connection=winrm ansible_winrm_transport=basic ansible_winrm_scheme=http ansible_winrm_server_cert_validation=ignore ansible_become_method=runas ansible_become_user=azureadmin ansible_become_password=\"$$PASS\"\n" > scratch/azure-inventory.ini; \
 	rbenv exec bundle exec ansible-playbook -i scratch/azure-inventory.ini tests/playbook.yml \
@@ -189,6 +190,7 @@ destroy-azure-cli:
 test-upgrade-candidate-azure-cli: update-roles
 	@set -e; \
 	./bin/azure-sandbox-env.sh --auto-fill --write scratch/azure-sandbox.env > /dev/null; \
+	MY_IP=$$(curl -s https://api.ipify.org); \
 	SUB=$$(grep "export AZURE_SUBSCRIPTION_ID" scratch/azure-sandbox.env | cut -d'=' -f2 | tr -d '"'); \
 	RG=$$(grep "export AZURE_RESOURCE_GROUP" scratch/azure-sandbox.env | cut -d'=' -f2 | tr -d '"'); \
 	NAME=$$(grep "export AZURE_VM_NAME" scratch/azure-sandbox.env | cut -d'=' -f2 | tr -d '"'); \
@@ -200,15 +202,15 @@ test-upgrade-candidate-azure-cli: update-roles
 		--image MicrosoftWindowsServer:WindowsServer:2022-datacenter-g2:latest \
 		--admin-username "$$USER" --admin-password "$$PASS" --location "$$LOC" \
 		--public-ip-sku Standard --data-disk-sizes-gb 20 --size Standard_DS1_v2; \
-	echo "=== 2. Configuring NSG Rules ==="; \
-	az network nsg rule create --subscription "$$SUB" --resource-group "$$RG" --nsg-name "$${NAME}NSG" --name AllowWinRM --priority 1010 --destination-port-ranges 5985 --access Allow --protocol Tcp --direction Inbound; \
-	az network nsg rule create --subscription "$$SUB" --resource-group "$$RG" --nsg-name "$${NAME}NSG" --name AllowTomcat --priority 1020 --destination-port-ranges 8080 9080 --access Allow --protocol Tcp --direction Inbound; \
+	echo "=== 2. Configuring NSG Rules (Source IP: $$MY_IP) ==="; \
+	az network nsg rule create --subscription "$$SUB" --resource-group "$$RG" --nsg-name "$${NAME}NSG" --name AllowWinRM --priority 1010 --destination-port-ranges 5985 --access Allow --protocol Tcp --direction Inbound --source-address-prefixes "$$MY_IP"; \
+	az network nsg rule create --subscription "$$SUB" --resource-group "$$RG" --nsg-name "$${NAME}NSG" --name AllowTomcat --priority 1020 --destination-port-ranges 8080 9080 --access Allow --protocol Tcp --direction Inbound --source-address-prefixes "$$MY_IP"; \
 	echo "=== 3. Configuring WinRM & Local Admin ==="; \
-	az vm run-command invoke --subscription "$$SUB" --resource-group "$$RG" --name "$$NAME" --command-id RunPowerShellScript --scripts 'Set-Item -Path "WSMan:\localhost\Service\Auth\Basic" -Value $$true; Set-Item -Path "WSMan:\localhost\Service\AllowUnencrypted" -Value $$true'; \
+	az vm run-command invoke --subscription "$$SUB" --resource-group "$$RG" --name "$$NAME" --command-id RunPowerShellScript --scripts 'winrm quickconfig -q; Set-Item -Path "WSMan:\localhost\Service\Auth\Basic" -Value $$true; Set-Item -Path "WSMan:\localhost\Service\AllowUnencrypted" -Value $$true; New-NetFirewallRule -DisplayName "Allow WinRM HTTP" -Direction Inbound -LocalPort 5985 -Protocol TCP -Action Allow'; \
 	az vm run-command invoke --subscription "$$SUB" --resource-group "$$RG" --name "$$NAME" --command-id RunPowerShellScript --scripts '$$Password = ConvertTo-SecureString "Password123!" -AsPlainText -Force; if (-not (Get-LocalUser -Name "testadmin" -ErrorAction SilentlyContinue)) { New-LocalUser "testadmin" -Password $$Password -Description "Ansible Admin"; Add-LocalGroupMember -Group "Administrators" -Member "testadmin" };'; \
 	IP=$$(az vm show --subscription "$$SUB" -d -g "$$RG" -n "$$NAME" --query publicIps -o tsv); \
 	echo "=== Waiting for WinRM on $$IP:5985... ==="; \
-	for i in {1..60}; do if nc -z -w 5 $$IP 5985; then break; fi; echo "Waiting... ($$i/60)"; sleep 10; done; \
+	for i in {1..60}; do if nc -z -w 5 $$IP 5985; then break; fi; echo "Waiting... ($$i/60)"; sleep 10; if [ $$i -eq 60 ]; then echo "Timeout"; exit 1; fi; done; \
 	sleep 10; \
 	printf "[azure]\ndefault-win11-azure ansible_host=$$IP ansible_user=testadmin ansible_password=\"Password123!\" ansible_port=5985 ansible_connection=winrm ansible_winrm_transport=basic ansible_winrm_scheme=http ansible_winrm_server_cert_validation=ignore ansible_become_method=runas ansible_become_user=azureadmin ansible_become_password=\"$$PASS\"\n" > scratch/azure-inventory.ini; \
 	echo "=== 5. Step 1: Installing Initial Version ==="; \
