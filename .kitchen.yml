@@ -241,6 +241,7 @@ platforms:
 <<<<<<< HEAD
   - name: win11-azure
     driver:
+<<<<<<< HEAD
       name: azurerm
       subscription_id: <%= ENV.fetch('AZURE_SUBSCRIPTION_ID', '28e1e42a-4438-4c30-9a5f-7d7b488fd883') %>
       tenant_id: <%= ENV.fetch('AZURE_TENANT_ID', '84f1e4ea-8554-43e1-8709-f0b8589ea118') %>
@@ -271,6 +272,16 @@ platforms:
         netsh advfirewall firewall add rule name="WinRM5985" dir=in action=allow protocol=TCP localport=5985
         netsh advfirewall firewall add rule name="HTTP8080" dir=in action=allow protocol=TCP localport=8080
         netsh advfirewall firewall add rule name="HTTP9080" dir=in action=allow protocol=TCP localport=9080
+=======
+      name: ec2
+      region: us-east-1
+      availability_zone: us-east-1c
+      instance_type: t3.micro
+      associate_public_ip: true
+      subnet_id: subnet-0adcf46df0af386c4
+      security_group_ids: ["sg-00899f6779540db59"]
+      image_id: ami-06f5f29d1fe41ea03
+>>>>>>> e21dd4e (fix(aws): use yq for dynamic hostname injection in candidate test)
     transport:
       name: winrm
       elevated: true
@@ -653,9 +664,13 @@ suites:
       extra_vars:
         ansible_host: "<%= ENV['ANSIBLE_HOST_OVERRIDE'] %>"
 <<<<<<< HEAD
+<<<<<<< HEAD
         tomcat_candidate_delegate_host: "<%= ENV['ANSIBLE_HOST_OVERRIDE'] %>"
 =======
 >>>>>>> b2972ce (feat(aws): add zero-downtime candidate upgrade test for AWS)
+=======
+        tomcat_candidate_delegate_host: "<%= ENV['ANSIBLE_HOST_OVERRIDE'] %>"
+>>>>>>> e21dd4e (fix(aws): use yq for dynamic hostname injection in candidate test)
         upgrade_step: 2
         tomcat_auto_start: true
         tomcat_candidate_enabled: true
@@ -666,6 +681,7 @@ suites:
       name: shell
       command: |
         # In AWS, we verify against the dynamic hostname
+<<<<<<< HEAD
 <<<<<<< HEAD
         INSTANCE_HOSTNAME=$(yq .hostname .kitchen/upgrade-candidate-aws-aws-minimal-win.yml)
         echo "Verifying candidate on http://${INSTANCE_HOSTNAME}:9080"
@@ -723,6 +739,9 @@ suites:
 >>>>>>> 0d342f8 (chore: stabilize upgrade-baseline verifier)
 =======
         INSTANCE_HOSTNAME=$(KITCHEN_YAML=.kitchen.yml bundle exec kitchen diagnose upgrade-candidate-aws-aws-minimal-win --json | jq -r '.instances["upgrade-candidate-aws-aws-minimal-win"].state_file.hostname')
+=======
+        INSTANCE_HOSTNAME=$(yq .hostname .kitchen/upgrade-candidate-aws-aws-minimal-win.yml)
+>>>>>>> e21dd4e (fix(aws): use yq for dynamic hostname injection in candidate test)
         echo "Verifying candidate on http://${INSTANCE_HOSTNAME}:9080"
         curl --connect-timeout 5 --max-time 10 -f "http://${INSTANCE_HOSTNAME}:9080" || curl --connect-timeout 5 --max-time 10 "http://${INSTANCE_HOSTNAME}:9080" | grep -q "404"
 >>>>>>> b2972ce (feat(aws): add zero-downtime candidate upgrade test for AWS)
