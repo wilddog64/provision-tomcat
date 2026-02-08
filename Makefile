@@ -22,6 +22,7 @@ else
 endif
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 # Keep Ansible tooling on a consistent install path to avoid
 # ansible-lint/ansible-core mismatch errors.
 ANSIBLE_LINT_BIN ?= $(shell command -v ansible-lint 2>/dev/null)
@@ -40,6 +41,9 @@ PLATFORMS := win11 win11-disk ubuntu-2404 rockylinux9 win11-azure
 =======
 PLATFORMS := win11 win11-disk ubuntu-2404 rockylinux9 aws-minimal-win
 >>>>>>> 5dba6f7 (feat(aws): add AWS EC2 platform to Test Kitchen configuration)
+=======
+PLATFORMS := win11 win11-disk ubuntu-2404 rockylinux9 aws-minimal-win aws-minimal-win-disk
+>>>>>>> 3efd77f (feat(aws): add support for EC2 instances with secondary D: drive)
 SUITES := default latest idempotence
 
 # Version variables for upgrade/downgrade testing
@@ -114,6 +118,22 @@ test-candidate-aws: update-roles
 	KITCHEN_YAML=$(KITCHEN_YAML) ANSIBLE_HOST_OVERRIDE=$$hostname $(KITCHEN_CMD) converge upgrade-candidate-aws-aws-minimal-win
 	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) verify upgrade-candidate-aws-aws-minimal-win
 	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) destroy upgrade-candidate-aws-aws-minimal-win
+
+.PHONY: test-candidate-aws-disk
+test-candidate-aws-disk: update-roles
+	@if ps aux | grep -E "[k]itchen.*upgrade-candidate-aws-disk" > /dev/null; then \
+		echo "Error: Another candidate test process is already running!"; \
+		exit 1; \
+	fi
+	@echo "=== Testing Java + Tomcat upgrade (candidate mode) on AWS (D: drive) ==="
+	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) destroy upgrade-candidate-aws-disk-aws-minimal-win-disk
+	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) create upgrade-candidate-aws-disk-aws-minimal-win-disk
+	@echo "Fetching dynamic hostname..."
+	@hostname=$$(yq .hostname .kitchen/upgrade-candidate-aws-disk-aws-minimal-win-disk.yml); \
+	echo "Hostname: $$hostname"; \
+	KITCHEN_YAML=$(KITCHEN_YAML) ANSIBLE_HOST_OVERRIDE=$$hostname $(KITCHEN_CMD) converge upgrade-candidate-aws-disk-aws-minimal-win-disk
+	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) verify upgrade-candidate-aws-disk-aws-minimal-win-disk
+	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) destroy upgrade-candidate-aws-disk-aws-minimal-win-disk
 
 # ============================================================================
 >>>>>>> 5dba6f7 (feat(aws): add AWS EC2 platform to Test Kitchen configuration)
