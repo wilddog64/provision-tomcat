@@ -324,39 +324,37 @@ This role uses Test Kitchen with Vagrant for automated testing.
 - **[Controller Lookup Plugins](docs/plugins/CONTROLLER-LOOKUP-PLUGINS.md)** - How the controller-side port/HTTP checks work
 - **[Azure Sandbox Test Kitchen Plan](docs/plans/azure-sandbox-kitchen.md)** - Step-by-step plan for running Kitchen suites inside an ACG Azure sandbox
 
-### Azure Sandbox (Manual Workflow)
+### Azure Testing (CLI Workflow)
 
-Azure-based Kitchen tests are not wired into CI yet. To validate changes against the A Cloud Guru sandbox (or a similar company Azure subscription):
+In restricted sandboxes (like ACG or corporate environments) where Test Kitchen drivers fail, use the following self-contained targets. These require an active `az login`.
 
-- **IMPORTANT**: Before running any `make` Azure targets, you *must* manually generate and source the environment file. This provides the necessary variables (like `AZURE_VM_NAME`, `AZURE_RESOURCE_GROUP`, etc.) for the CLI commands.
-  ```bash
-  ./bin/azure-sandbox-env.sh --auto-fill --write scratch/azure-sandbox.env
-  source scratch/azure-sandbox.env
-  # Optional: For interactive login and auto-fill from current session, use:
-  # ./bin/azure-sandbox-env.sh --login --auto-fill --write scratch/azure-sandbox.env
-  # source scratch/azure-sandbox.env
-  ```
-- **CI/CD Integration**: For automated pipelines, set environment variables directly or pass them as arguments to `azure-sandbox-env.sh`.
-  Example for a CI pipeline that logs in using `az login` (which sets AZURE_SUBSCRIPTION_ID, AZURE_TENANT_ID etc.):
-  ```bash
-  # Authenticate Azure CLI in CI (e.g., via Service Principal login)
-  # az login --service-principal -u $AZURE_CLIENT_ID -p $AZURE_CLIENT_SECRET --tenant $AZURE_TENANT_ID
+#### Standard Usage (Auto-detection)
+Run these directly after `az login`. The script will auto-detect your subscription and any resource group containing `playground-sandbox`.
+```bash
+make test-azure-provision-tomcat   # Full provision test
+make test-azure-upgrade-candidate # Zero-downtime upgrade test
+make test-azure-destroy           # Teardown all resources
+```
 
-  # Generate environment file non-interactively for the current session
-  ./bin/azure-sandbox-env.sh --auto-fill AZURE_ADMIN_PASSWORD="$AZURE_VM_ADMIN_PASSWORD" --write scratch/azure-sandbox.env
-  source scratch/azure-sandbox.env
+#### Universal Overrides (Corporate Sandboxes)
+You can override any parameter by passing it as an environment variable. This is useful if your company uses specific resource group names or hardened images.
+```bash
+# Example: Use a specific RG and a different location
+AZURE_RESOURCE_GROUP=my-company-rg AZURE_LOCATION=westeurope make test-azure-provision-tomcat
 
-  # Now run your make targets
-  make test-azure-provision-tomcat
-  ```
-- **Reliable CLI Workflow**: In restricted sandboxes like ACG, use the direct CLI-based targets to bypass `kitchen-azurerm` limitations:
-  ```bash
-  make test-azure-provision-tomcat # Standard provision test
-  make test-upgrade-candidate-azure-cli # Zero-downtime candidate upgrade test
-  KEEP_AZURE_VM=1 make test-azure-provision-tomcat # Provision and keep VM
-  make destroy-azure-cli             # Clean up Azure resources
-  ```
-- Kitchen automatically loads `scratch/azure-sandbox.env` (or the file pointed to by `AZURE_ENV_FILE`) so `bundle exec kitchen test default-win11-azure` picks up the right subscription/credentials even if you forget to `source` first.
+# Example: Use a custom hardened Windows image
+AZURE_IMAGE=My Hardened Image Name make test-azure-provision-tomcat
+```
+
+| Variable | Default (Fallback) | Description |
+| --- | --- | --- |
+| `AZURE_RESOURCE_GROUP` | Auto-detected | Existing group to deploy into |
+| `AZURE_LOCATION` | Auto-detected from RG | Region for resources |
+| `AZURE_IMAGE` | Windows Server 2022 | URN or name of the VM image |
+| `AZURE_VM_NAME` | `kqvm-win11` | Name of the VM and related resources |
+| `KEEP_AZURE_VM` | `0` (null) | Set to `1` to skip automatic destroy |
+
+For troubleshooting common issues (Resource Group restrictions, WinRM timeouts, IPv6 mismatches), see **[Azure Integration Issues](../docs/issues/AZURE-KITCHEN-INTEGRATION.md)**.
 - Kitchen automatically loads `scratch/azure-sandbox.env` (or the file pointed to by `AZURE_ENV_FILE`) so `bundle exec kitchen test default-win11-azure` picks up the right subscription/credentials even if you forget to `source` first.
 - Run `bin/azure-quick-vm.sh` (defaults to a Windows Server VM, auto-sources `scratch/azure-sandbox.env`, override with `--env`) to perform a quick “create + destroy” VM sanity check in the sandbox before attempting Kitchen.
 - Run `bundle exec kitchen test <suite>-<platform>` from your workstation or self-hosted runner and capture `.kitchen/logs/*` for PR notes. For Azure, start with `bundle exec kitchen test default-win11-azure`.
