@@ -138,8 +138,8 @@ test-azure: update-roles
 	@echo "=== Testing on Azure (win11-azure) ==="
 	AZURE_ENV_FILE=scratch/azure-sandbox.env KITCHEN_YAML=.kitchen.yml $(KITCHEN_CMD) test default-win11-azure
 
-.PHONY: test-azure-cli
-test-azure-cli: update-roles
+.PHONY: test-azure-provision-tomcat
+test-azure-provision-tomcat: update-roles
 	@set -e; \
 	source scratch/azure-sandbox.env; \
 	echo "=== Creating Azure VM: $$AZURE_VM_NAME ==="; \
@@ -164,7 +164,15 @@ test-azure-cli: update-roles
 	IP=$$(az vm show -d -g $$AZURE_RESOURCE_GROUP -n $$AZURE_VM_NAME --query publicIps -o tsv); \
 	printf "[azure]\ndefault-win11-azure ansible_host=$$IP ansible_user=testadmin ansible_password=\"Password123!\" ansible_port=5985 ansible_connection=winrm ansible_winrm_transport=basic ansible_winrm_scheme=http ansible_winrm_server_cert_validation=ignore ansible_become_method=runas ansible_become_user=azureadmin ansible_become_password=\"$$AZURE_ADMIN_PASSWORD\"\n" > scratch/azure-inventory.ini; \
 	rbenv exec bundle exec ansible-playbook -i scratch/azure-inventory.ini tests/playbook.yml \
-		-e "env=stage2 extract_build_number=16 extract_debug=False skip_migration=true tomcat_version=9.0.113 tomcat_auto_start=true install_drive=D:"
+		-e "env=stage2 extract_build_number=16 extract_debug=False skip_migration=true tomcat_version=9.0.113 tomcat_auto_start=true install_drive=D:" ; \
+	echo "=== Azure VM Provisioning Complete! ==="; \
+	if [ -z "$$KEEP_AZURE_VM" ]; then \
+		echo "=== Cleaning up Azure VM and resources... ==="; \
+		$(MAKE) destroy-azure-cli; \
+	else \
+		echo "=== KEEP_AZURE_VM is set. Skipping cleanup of Azure VM and resources. ==="; \
+	fi
+
 
 .PHONY: destroy-azure-cli
 destroy-azure-cli:
@@ -209,8 +217,14 @@ test-upgrade-candidate-azure-cli: update-roles
 		-e "env=stage2 upgrade_step=2 tomcat_auto_start=true tomcat_candidate_enabled=true tomcat_candidate_delegate_host=$$IP tomcat_candidate_delegate_port=9080 install_drive=D:"; \
 	echo "=== 7. Verifying Candidate on Port 9080 ==="; \
 	curl -v --connect-timeout 5 --max-time 10 http://$$IP:9080; \
-	echo "=== Success! Cleaning up... ==="; \
-	$(MAKE) destroy-azure-cli
+	echo "=== Success! Test Complete. ==="; \
+	if [ -z "$$KEEP_AZURE_VM" ]; then \
+		echo "=== Cleaning up Azure VM and resources... ==="; \
+		$(MAKE) destroy-azure-cli; \
+	else \
+		echo "=== KEEP_AZURE_VM is set. Skipping cleanup of Azure VM and resources. ==="; \
+	fi
+
 
 .PHONY: vagrant-up
 vagrant-up: vagrant-destroy vbox-cleanup-disks

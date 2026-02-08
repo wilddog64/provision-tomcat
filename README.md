@@ -332,8 +332,9 @@ Azure-based Kitchen tests are not wired into CI yet. To validate changes against
 - Use `bin/azure-sandbox-env.sh --login --write scratch/azure-sandbox.env` to capture the IDs/credentials from `az account show` and the sandbox dashboard, then `source scratch/azure-sandbox.env`.
 - **Reliable CLI Workflow**: In restricted sandboxes like ACG, use the direct CLI-based targets to bypass `kitchen-azurerm` limitations:
   ```bash
-  make test-azure-cli                # Standard provision test
+  make test-azure-provision-tomcat # Standard provision test
   make test-upgrade-candidate-azure-cli # Zero-downtime candidate upgrade test
+  KEEP_AZURE_VM=1 make test-azure-provision-tomcat # Provision and keep VM
   make destroy-azure-cli             # Clean up Azure resources
   ```
 - Kitchen automatically loads `scratch/azure-sandbox.env` (or the file pointed to by `AZURE_ENV_FILE`) so `bundle exec kitchen test default-win11-azure` picks up the right subscription/credentials even if you forget to `source` first.
