@@ -336,6 +336,19 @@ Azure-based Kitchen tests are not wired into CI yet. To validate changes against
   # ./bin/azure-sandbox-env.sh --login --auto-fill --write scratch/azure-sandbox.env
   # source scratch/azure-sandbox.env
   ```
+- **CI/CD Integration**: For automated pipelines, set environment variables directly or pass them as arguments to `azure-sandbox-env.sh`.
+  Example for a CI pipeline that logs in using `az login` (which sets AZURE_SUBSCRIPTION_ID, AZURE_TENANT_ID etc.):
+  ```bash
+  # Authenticate Azure CLI in CI (e.g., via Service Principal login)
+  # az login --service-principal -u $AZURE_CLIENT_ID -p $AZURE_CLIENT_SECRET --tenant $AZURE_TENANT_ID
+
+  # Generate environment file non-interactively for the current session
+  ./bin/azure-sandbox-env.sh --auto-fill AZURE_ADMIN_PASSWORD="$AZURE_VM_ADMIN_PASSWORD" --write scratch/azure-sandbox.env
+  source scratch/azure-sandbox.env
+
+  # Now run your make targets
+  make test-azure-provision-tomcat
+  ```
 - **Reliable CLI Workflow**: In restricted sandboxes like ACG, use the direct CLI-based targets to bypass `kitchen-azurerm` limitations:
   ```bash
   make test-azure-provision-tomcat # Standard provision test
