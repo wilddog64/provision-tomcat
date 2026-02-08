@@ -58,6 +58,10 @@ sync-aws:
 
 .PHONY: test-candidate-aws
 test-candidate-aws: update-roles
+	@if ps aux | grep -E "[k]itchen.*upgrade-candidate-aws" > /dev/null; then \
+		echo "Error: Another candidate test process is already running!"; \
+		exit 1; \
+	fi
 	@echo "=== Testing Java + Tomcat upgrade (candidate mode) on AWS ==="
 	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) destroy upgrade-candidate-aws-aws-minimal-win
 	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) create upgrade-candidate-aws-aws-minimal-win
