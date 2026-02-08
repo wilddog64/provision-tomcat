@@ -29,6 +29,13 @@ JAVA_NEW_VERSION ?= 21
 TOMCAT_OLD_VERSION ?= 9.0.112
 TOMCAT_NEW_VERSION ?= 9.0.113
 
+# Azure sandbox configuration (overridable)
+AZURE_IMAGE ?= MicrosoftWindowsServer:WindowsServer:2022-datacenter-g2:latest
+AZURE_VM_SIZE ?= Standard_DS1_v2
+AZURE_VM_NAME ?= kqvm-win11
+AZURE_ADMIN_USERNAME ?= azureadmin
+AZURE_ADMIN_PASSWORD ?= ChangeM3!SecurePassword
+
 .DEFAULT_GOAL := help
 
 # ============================================================================ 
@@ -113,17 +120,19 @@ test-azure-provision-tomcat: update-roles
 	@set -e; \
 	echo "=== Detecting Azure Environment ==="; \
 	SUB=$$(az account show --query id -o tsv); \
-	RG=$$(az group list --query "[?contains(name, 'playground-sandbox')].name" -o tsv | head -n 1); \
+	RG=$(AZURE_RESOURCE_GROUP); \
+	if [ -z "$$RG" ]; then RG=$$(az group list --query "[?contains(name, 'playground-sandbox')].name" -o tsv | head -n 1); fi; \
 	LOC=$$(az group show --name "$$RG" --query location -o tsv); \
 	MY_IP=$$(curl -s https://api.ipify.org); \
-	NAME=kqvm-win11; \
-	USER=azureadmin; \
-	PASS="ChangeM3!SecurePassword"; \
+	NAME=$(AZURE_VM_NAME); \
+	USER=$(AZURE_ADMIN_USERNAME); \
+	PASS="$(AZURE_ADMIN_PASSWORD)"; \
+	IMAGE="$(AZURE_IMAGE)"; \
+	SIZE="$(AZURE_VM_SIZE)"; \
 	echo "=== Creating Azure VM: $$NAME in $$RG ($$LOC) ==="; \
 	az vm create --subscription "$$SUB" --resource-group "$$RG" --name "$$NAME" \
-		--image MicrosoftWindowsServer:WindowsServer:2022-datacenter-g2:latest \
-		--admin-username "$$USER" --admin-password "$$PASS" --location "$$LOC" \
-		--public-ip-sku Standard --data-disk-sizes-gb 20 --size Standard_DS1_v2; \
+		--image "$$IMAGE" --admin-username "$$USER" --admin-password "$$PASS" --location "$$LOC" \
+		--public-ip-sku Standard --data-disk-sizes-gb 20 --size "$$SIZE"; \
 	echo "=== Configuring NSG Rules (Source IP: $$MY_IP) ==="; \
 	az network nsg rule create --subscription "$$SUB" --resource-group "$$RG" --nsg-name "$${NAME}NSG" --name AllowWinRM --priority 1010 --destination-port-ranges 5985 --access Allow --protocol Tcp --direction Inbound --source-address-prefixes "$$MY_IP"; \
 	az network nsg rule create --subscription "$$SUB" --resource-group "$$RG" --nsg-name "$${NAME}NSG" --name AllowTomcat --priority 1020 --destination-port-ranges 8080 9080 --access Allow --protocol Tcp --direction Inbound --source-address-prefixes "$$MY_IP"; \
@@ -147,8 +156,9 @@ test-azure-destroy:
 	@set -e; \
 	echo "=== Detecting Azure Environment for Cleanup ==="; \
 	SUB=$$(az account show --query id -o tsv); \
-	RG=$$(az group list --query "[?contains(name, 'playground-sandbox')].name" -o tsv | head -n 1); \
-	NAME=kqvm-win11; \
+	RG=$(AZURE_RESOURCE_GROUP); \
+	if [ -z "$$RG" ]; then RG=$$(az group list --query "[?contains(name, 'playground-sandbox')].name" -o tsv | head -n 1); fi; \
+	NAME=$(AZURE_VM_NAME); \
 	echo "=== Destroying Azure VM: $$NAME in $$RG ==="; \
 	az vm delete --subscription "$$SUB" --resource-group "$$RG" --name "$$NAME" --yes --no-wait; \
 	echo "=== Cleaning up Network Resources ==="; \
@@ -161,17 +171,19 @@ test-azure-upgrade-candidate: update-roles
 	@set -e; \
 	echo "=== Detecting Azure Environment ==="; \
 	SUB=$$(az account show --query id -o tsv); \
-	RG=$$(az group list --query "[?contains(name, 'playground-sandbox')].name" -o tsv | head -n 1); \
+	RG=$(AZURE_RESOURCE_GROUP); \
+	if [ -z "$$RG" ]; then RG=$$(az group list --query "[?contains(name, 'playground-sandbox')].name" -o tsv | head -n 1); fi; \
 	LOC=$$(az group show --name "$$RG" --query location -o tsv); \
 	MY_IP=$$(curl -s https://api.ipify.org); \
-	NAME=kqvm-win11; \
-	USER=azureadmin; \
-	PASS="ChangeM3!SecurePassword"; \
+	NAME=$(AZURE_VM_NAME); \
+	USER=$(AZURE_ADMIN_USERNAME); \
+	PASS="$(AZURE_ADMIN_PASSWORD)"; \
+	IMAGE="$(AZURE_IMAGE)"; \
+	SIZE="$(AZURE_VM_SIZE)"; \
 	echo "=== 1. Creating Azure VM: $$NAME ==="; \
 	az vm create --subscription "$$SUB" --resource-group "$$RG" --name "$$NAME" \
-		--image MicrosoftWindowsServer:WindowsServer:2022-datacenter-g2:latest \
-		--admin-username "$$USER" --admin-password "$$PASS" --location "$$LOC" \
-		--public-ip-sku Standard --data-disk-sizes-gb 20 --size Standard_DS1_v2; \
+		--image "$$IMAGE" --admin-username "$$USER" --admin-password "$$PASS" --location "$$LOC" \
+		--public-ip-sku Standard --data-disk-sizes-gb 20 --size "$$SIZE"; \
 	echo "=== 2. Configuring NSG Rules (Source IP: $$MY_IP) ==="; \
 	az network nsg rule create --subscription "$$SUB" --resource-group "$$RG" --nsg-name "$${NAME}NSG" --name AllowWinRM --priority 1010 --destination-port-ranges 5985 --access Allow --protocol Tcp --direction Inbound --source-address-prefixes "$$MY_IP"; \
 	az network nsg rule create --subscription "$$SUB" --resource-group "$$RG" --nsg-name "$${NAME}NSG" --name AllowTomcat --priority 1020 --destination-port-ranges 8080 9080 --access Allow --protocol Tcp --direction Inbound --source-address-prefixes "$$MY_IP"; \
@@ -191,7 +203,7 @@ test-azure-upgrade-candidate: update-roles
 	echo "=== 7. Verifying Candidate on Port 9080 ==="; \
 	curl -v --connect-timeout 5 --max-time 10 http://$$IP:9080; \
 	echo "=== Success! Test Complete. ==="; \
-	if [ -z "$$KEEP_AZURE_VM" ]; then echo "=== Cleaning up... ==="; $(MAKE) test-azure-destroy; else echo "=== KEEP_AZURE_VM is set. Skipping cleanup. ==="; fi
+	if [ -z "$$KEEP_AZURE_VM" ]; then echo "=== Cleaning up... ==="; $(MAKE) test-azure-destroy; else echo "=== Keeping VM... ==="; fi
 
 .PHONY: vagrant-up
 vagrant-up: vagrant-destroy vbox-cleanup-disks
