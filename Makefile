@@ -29,7 +29,12 @@ JAVA_NEW_VERSION ?= 21
 TOMCAT_OLD_VERSION ?= 9.0.112
 TOMCAT_NEW_VERSION ?= 9.0.113
 
-# Azure sandbox configuration (overridable)
+# ============================================================================ 
+# Azure Configuration (Universal Overrides)
+# ============================================================================ 
+AZURE_SUBSCRIPTION_ID ?= 
+AZURE_RESOURCE_GROUP ?= 
+AZURE_LOCATION ?= 
 AZURE_IMAGE ?= MicrosoftWindowsServer:WindowsServer:2022-datacenter-g2:latest
 AZURE_VM_SIZE ?= Standard_DS1_v2
 AZURE_VM_NAME ?= kqvm-win11
@@ -84,28 +89,19 @@ help:
 	@echo "Utility:"
 	@echo "  list-kitchen-instances  # List all kitchen instances"
 	@echo "  update-roles            # Update test roles from parent directory"
-	@echo "  vagrant-up              # Re-create and start Vagrant VM (default: stromweld/windows-11)"
-	@echo "  vagrant-up-disk         # Bring up VM with windows11-disk box (D: drive)"
-	@echo "  vagrant-up-baseline     # Bring up VM with windows11-tomcat112 box"
+	@echo "  vagrant-up              # Re-create and start Vagrant VM"
 	@echo "  vagrant-login           # PowerShell into Vagrant VM"
-	@echo "  vagrant-ssh             # Alias for vagrant-login"
 	@echo "  vagrant-disk-setup      # Initialize and format D: drive"
 	@echo "  vagrant-provision       # Provision Tomcat + Java (default playbook)"
-	@echo "  vagrant-provision-step1 # Provision older Tomcat 9.0.112 + Java 17"
-	@echo "  vagrant-provision-step2 # Provision newer Tomcat 9.0.113 + Java 21"
-	@echo "  vagrant-build-baseline  # Build baseline box with D: drive + Tomcat + Java"
-	@echo "  vagrant-build-baseline-minimal # Build minimal box with D: drive only"
-	@echo "  vagrant-update-baseline # Rebuild baseline Win11 + Tomcat 9.0.112 box"
-	@echo "  vagrant-upgrade-demo    # Run upgrade-only demo via Vagrantfile-upgrade (append KEEP to skip destroy)"
-	@echo "  vagrant-destroy         # Destroy current Vagrant VM (default Vagrantfile)"
-	@echo "  vagrant-destroy-upgrade # Destroy VM defined by Vagrantfile-upgrade"
-	@echo "  vbox-cleanup-disks      # Clean up stale VirtualBox disk registrations"
-	@echo "  fix-vbox-locks          # Fix locked/stuck VirtualBox VMs"
 	@echo ""
 	@echo "Azure Targets (require az login):"
 	@echo "  test-azure-provision-tomcat   # Standard provision test on Azure VM"
 	@echo "  test-azure-upgrade-candidate # Zero-downtime candidate upgrade test"
 	@echo "  test-azure-destroy           # Destroy all Azure resources created by these tests"
+	@echo ""
+	@echo "  Usage with Overrides:"
+	@echo "    AZURE_RESOURCE_GROUP=my-rg make test-azure-provision-tomcat"
+	@echo "    AZURE_IMAGE=my-image-urn make test-azure-provision-tomcat"
 	@echo ""
 	@echo "Quick test (default suite):"
 	@$(foreach p,$(PLATFORMS),echo "  test-$(p)           # kitchen test default-$(p)" &&) true
@@ -119,10 +115,12 @@ EXTRA_VARS := $(if $(ADO_PAT_TOKEN),ado_pat_token=$(ADO_PAT_TOKEN),)
 test-azure-provision-tomcat: update-roles
 	@set -e; \
 	echo "=== Detecting Azure Environment ==="; \
-	SUB=$$(az account show --query id -o tsv); \
+	SUB=$(AZURE_SUBSCRIPTION_ID); \
+	if [ -z "$$SUB" ]; then SUB=$$(az account show --query id -o tsv); fi; \
 	RG=$(AZURE_RESOURCE_GROUP); \
 	if [ -z "$$RG" ]; then RG=$$(az group list --query "[?contains(name, 'playground-sandbox')].name" -o tsv | head -n 1); fi; \
-	LOC=$$(az group show --name "$$RG" --query location -o tsv); \
+	LOC=$(AZURE_LOCATION); \
+	if [ -z "$$LOC" ]; then LOC=$$(az group show --name "$$RG" --query location -o tsv); fi; \
 	MY_IP=$$(curl -s https://api.ipify.org); \
 	NAME=$(AZURE_VM_NAME); \
 	USER=$(AZURE_ADMIN_USERNAME); \
@@ -155,7 +153,8 @@ test-azure-provision-tomcat: update-roles
 test-azure-destroy:
 	@set -e; \
 	echo "=== Detecting Azure Environment for Cleanup ==="; \
-	SUB=$$(az account show --query id -o tsv); \
+	SUB=$(AZURE_SUBSCRIPTION_ID); \
+	if [ -z "$$SUB" ]; then SUB=$$(az account show --query id -o tsv); fi; \
 	RG=$(AZURE_RESOURCE_GROUP); \
 	if [ -z "$$RG" ]; then RG=$$(az group list --query "[?contains(name, 'playground-sandbox')].name" -o tsv | head -n 1); fi; \
 	NAME=$(AZURE_VM_NAME); \
@@ -170,10 +169,12 @@ test-azure-destroy:
 test-azure-upgrade-candidate: update-roles
 	@set -e; \
 	echo "=== Detecting Azure Environment ==="; \
-	SUB=$$(az account show --query id -o tsv); \
+	SUB=$(AZURE_SUBSCRIPTION_ID); \
+	if [ -z "$$SUB" ]; then SUB=$$(az account show --query id -o tsv); fi; \
 	RG=$(AZURE_RESOURCE_GROUP); \
 	if [ -z "$$RG" ]; then RG=$$(az group list --query "[?contains(name, 'playground-sandbox')].name" -o tsv | head -n 1); fi; \
-	LOC=$$(az group show --name "$$RG" --query location -o tsv); \
+	LOC=$(AZURE_LOCATION); \
+	if [ -z "$$LOC" ]; then LOC=$$(az group show --name "$$RG" --query location -o tsv); fi; \
 	MY_IP=$$(curl -s https://api.ipify.org); \
 	NAME=$(AZURE_VM_NAME); \
 	USER=$(AZURE_ADMIN_USERNAME); \
