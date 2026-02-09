@@ -6,8 +6,9 @@ on:
   workflow_dispatch:
 >>>>>>> 7d48ca4 (refactor(ci): combine validation and integration into single workflow)
   push:
-    branches: [main]
+    branches: [main, azure-dev, aws-dev, vagrant-dev]
   pull_request:
+<<<<<<< HEAD
     branches: [main]
 <<<<<<< HEAD
   workflow_dispatch:
@@ -27,6 +28,9 @@ jobs:
           echo "HOME=$HOME"
           ls -la "$HOME" || echo "Cannot access HOME directory"
 =======
+=======
+    branches: [main, azure-dev, aws-dev, vagrant-dev]
+>>>>>>> f3a4c98 (feat(ci): switch to pull_request triggers for aws workflow)
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -35,7 +39,6 @@ concurrency:
 jobs:
   lint:
     name: Validation
-    # Security: Only run on push, manual dispatch, or PRs from same repo (not forks)
     if: >
       github.event_name == 'push' ||
       github.event_name == 'workflow_dispatch' ||
@@ -54,27 +57,22 @@ jobs:
       - name: Install SSH Keys and Config
         run: |
           mkdir -p ~/.ssh
-
           echo "${{ secrets.WINDOWS_BASE_DEPLOY_KEY }}" > ~/.ssh/id_windows_base
           chmod 600 ~/.ssh/id_windows_base
-
           echo "${{ secrets.PROVISION_WINDOWS_SECURITY_DEPLOY_KEY }}" > ~/.ssh/id_provision_security
           chmod 600 ~/.ssh/id_provision_security
-
           cat <<EOF > ~/.ssh/config
           Host windows-base-repo
             HostName github.com
             User git
             IdentityFile ~/.ssh/id_windows_base
             IdentitiesOnly yes
-
           Host provision-security-repo
             HostName github.com
             User git
             IdentityFile ~/.ssh/id_provision_security
             IdentitiesOnly yes
           EOF
-
           ssh-keyscan github.com >> ~/.ssh/known_hosts
           chmod 700 ~/.ssh
 
@@ -103,19 +101,20 @@ jobs:
           ANSIBLE_ROLES_PATH: ${{ github.workspace }}/roles
         run: make check
 
-  kitchen-test:
-    name: Integration Tests
+  vagrant-test:
+    name: Vagrant Integration Tests
     needs: lint
+    if: contains(github.ref, 'vagrant-dev') || contains(github.base_ref, 'vagrant-dev') || github.ref == 'refs/heads/main'
     runs-on: [self-hosted, macOS]
     env:
       ANSIBLE_ROLES_PATH: ${{ github.workspace }}/roles
       OBJC_DISABLE_INITIALIZE_FORK_SAFETY: YES
       VAGRANT_IGNORE_WINRM_PLUGIN: YES
     steps:
-      - name: Checkout provision-tomcat
+      - name: Checkout
         uses: actions/checkout@v4
-
       - name: Cleanup Stale VMs
+<<<<<<< HEAD
         run: |
 <<<<<<< HEAD
           echo "Cleaning up stale VirtualBox VMs..."
@@ -339,8 +338,42 @@ jobs:
 =======
 >>>>>>> 97314b9 (ci: fix step order - checkout before cleanup)
       - name: Checkout provision-java
+=======
+        run: ./bin/cleanup-vagrant.sh
+      - name: Run Vagrant Tests
+        run: bundle exec make test-upgrade-baseline-win11
+
+  azure-test:
+    name: Azure Integration Tests
+    needs: lint
+    if: contains(github.ref, 'azure-dev') || contains(github.base_ref, 'azure-dev')
+    runs-on: [self-hosted, macOS]
+    steps:
+      - name: Checkout
+>>>>>>> f3a4c98 (feat(ci): switch to pull_request triggers for aws workflow)
         uses: actions/checkout@v4
+      - name: Login to Azure
+        run: |
+          az login --service-principal -u ${{ secrets.AZURE_CLIENT_ID }} \
+            -p ${{ secrets.AZURE_CLIENT_SECRET }} --tenant ${{ secrets.AZURE_TENANT_ID }}
+      - name: Run Azure Test
+        run: make test-azure-provision-tomcat
+        env:
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
+
+  aws-test:
+    name: AWS Integration Tests
+    needs: lint
+    if: contains(github.ref, 'aws-dev') || contains(github.base_ref, 'aws-dev')
+    runs-on: [self-hosted, macOS]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
+<<<<<<< HEAD
           repository: wilddog64/provision-java
           path: roles/provision-java
 
@@ -483,3 +516,10 @@ jobs:
 =======
           ./bin/cleanup-vagrant.sh
 >>>>>>> 513b2af (ci: implement robust cleanup script for stale instances)
+=======
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+      - name: Run AWS Test
+        run: make test-aws-provision-tomcat
+>>>>>>> f3a4c98 (feat(ci): switch to pull_request triggers for aws workflow)
