@@ -2,10 +2,8 @@ name: CI
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
   pull_request:
-    branches: [main]
+    branches: [main, azure-dev, aws-dev, vagrant-dev]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -14,11 +12,7 @@ concurrency:
 jobs:
   lint:
     name: Validation
-    # Security: Only run on push, manual dispatch, or PRs from same repo (not forks)
-    if: >
-      github.event_name == 'push' ||
-      github.event_name == 'workflow_dispatch' ||
-      github.event.pull_request.head.repo.full_name == github.repository
+    if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
       - name: Checkout provision-tomcat
@@ -33,27 +27,22 @@ jobs:
       - name: Install SSH Keys and Config
         run: |
           mkdir -p ~/.ssh
-
           echo "${{ secrets.WINDOWS_BASE_DEPLOY_KEY }}" > ~/.ssh/id_windows_base
           chmod 600 ~/.ssh/id_windows_base
-
           echo "${{ secrets.PROVISION_WINDOWS_SECURITY_DEPLOY_KEY }}" > ~/.ssh/id_provision_security
           chmod 600 ~/.ssh/id_provision_security
-
           cat <<EOF > ~/.ssh/config
           Host windows-base-repo
             HostName github.com
             User git
             IdentityFile ~/.ssh/id_windows_base
             IdentitiesOnly yes
-
           Host provision-security-repo
             HostName github.com
             User git
             IdentityFile ~/.ssh/id_provision_security
             IdentitiesOnly yes
           EOF
-
           ssh-keyscan github.com >> ~/.ssh/known_hosts
           chmod 700 ~/.ssh
 
@@ -71,164 +60,53 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          pip install -r requirements.txt
           pip install ansible-lint
-
-      - name: Install Ansible collections
-        run: make deps
 
       - name: Run Validation
         env:
           ANSIBLE_ROLES_PATH: ${{ github.workspace }}/roles
         run: make check
 
-  kitchen-test:
-    name: Integration Tests
+  test-azure:
+    name: Azure Integration
     needs: lint
-    runs-on: [self-hosted, macOS]
-    env:
-      ANSIBLE_ROLES_PATH: ${{ github.workspace }}/roles
-      OBJC_DISABLE_INITIALIZE_FORK_SAFETY: YES
-      VAGRANT_IGNORE_WINRM_PLUGIN: YES
+    if: contains(github.head_ref, 'azure')
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout provision-tomcat
+      - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Cleanup Stale VMs
-        run: |
-          chmod +x bin/cleanup-vagrant.sh
-          ./bin/cleanup-vagrant.sh
-
-      - name: Checkout provision-java
-        uses: actions/checkout@v4
+      - name: Azure Login
+        uses: azure/login@v2
         with:
-          repository: wilddog64/provision-java
-          path: roles/provision-java
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - name: Run Azure Test
+        run: make test-azure-provision-tomcat
 
-      - name: Hotpatch provision-java
-        run: |
-          python3 -c "
-          import os
-          fpath = 'roles/provision-java/tasks/install-Windows-java.yml'
-          if os.path.exists(fpath):
-              with open(fpath, 'r') as f: content = f.read()
+  test-aws:
+    name: AWS Integration
+    needs: lint
+    if: contains(github.head_ref, 'aws')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+      - name: Run AWS Test
+        run: make test-aws-provision-tomcat
 
-              content = content.replace('regex_search', 'regex_findall')
-              content = content.replace('openjdk version', 'version')
-              content = content.replace(\", '\\\\1'\", \"\")
-              content = content.replace(\", '\\1'\", \"\")
-              content = content.replace('java_version_output.stderr', '(java_version_output.stdout + java_version_output.stderr)')
-
-              with open(fpath, 'w') as f: f.write(content)
-              print('Hotpatched provision-java task with robust regex_findall fix')
-          "
-
-      - name: Install SSH Keys and Config
-        run: |
-          mkdir -p ~/.ssh
-
-          echo "${{ secrets.WINDOWS_BASE_DEPLOY_KEY }}" > ~/.ssh/id_windows_base
-          chmod 600 ~/.ssh/id_windows_base
-
-          echo "${{ secrets.PROVISION_WINDOWS_SECURITY_DEPLOY_KEY }}" > ~/.ssh/id_provision_security
-          chmod 600 ~/.ssh/id_provision_security
-
-          cat <<EOF > ~/.ssh/config
-          Host windows-base-repo
-            HostName github.com
-            User git
-            IdentityFile ~/.ssh/id_windows_base
-            IdentitiesOnly yes
-
-          Host provision-security-repo
-            HostName github.com
-            User git
-            IdentityFile ~/.ssh/id_provision_security
-            IdentitiesOnly yes
-          EOF
-
-          ssh-keyscan github.com >> ~/.ssh/known_hosts
-          chmod 700 ~/.ssh
-
-      - name: Checkout windows-base
-        run: git clone windows-base-repo:wilddog64/windows-base.git roles/windows-base
-
-      - name: Checkout provision-windows-security
-        run: git clone provision-security-repo:wilddog64/provision-windows-security.git roles/provision-windows-security
-
-      - name: Install Dependencies
-        run: |
-          python3 -m venv .venv
-          source .venv/bin/activate
-          pip install -r requirements.txt
-
-          bundle config set --local path 'vendor/bundle'
-          bundle install
-
-          export PATH=$PWD/.venv/bin:$PATH
-
-      - name: Workaround Vagrant Bundler Conflict
-        run: |
-          mkdir -p $HOME/.local/bin
-          cat <<'EOF' > $HOME/.local/bin/vagrant
-          #!/bin/bash
-          ENV_ARGS=(
-            HOME="$HOME"
-            PATH="/opt/vagrant/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
-            TERM="${TERM:-dumb}"
-            LANG="${LANG:-en_US.UTF-8}"
-            USER="$USER"
-            SHELL="$SHELL"
-            TMPDIR="${TMPDIR:-/tmp}"
-          )
-
-          [[ -n "${SSH_AUTH_SOCK:-}" ]] && ENV_ARGS+=( SSH_AUTH_SOCK="$SSH_AUTH_SOCK" )
-          [[ -n "${VAGRANT_CWD:-}" ]]  && ENV_ARGS+=( VAGRANT_CWD="$VAGRANT_CWD" )
-
-          exec /usr/bin/env -i "${ENV_ARGS[@]}" /usr/local/bin/vagrant "$@"
-          EOF
-          chmod +x $HOME/.local/bin/vagrant
-
-          ln -sf $PWD/.venv/bin/ansible-playbook $HOME/.local/bin/ansible-playbook
-          ln -sf $PWD/.venv/bin/ansible-galaxy $HOME/.local/bin/ansible-galaxy
-
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
-
-      - name: Run Test (Upgrade Baseline Win11)
-        timeout-minutes: 20
-        run: |
-          source .venv/bin/activate
-
-          python3 - <<'EOF'
-          import os, re, sys
-
-          ansible_path = os.path.abspath('.venv/bin/ansible-playbook')
-          if not os.path.exists(ansible_path):
-              print(f"Error: {ansible_path} not found")
-              sys.exit(1)
-
-          for kfile in ['.kitchen.yml', '.kitchen-win.yml']:
-              if not os.path.exists(kfile): continue
-              with open(kfile, 'r') as f: content = f.read()
-
-              if 'ansible_playbook_bin:' in content:
-                  content = re.sub(r'ansible_playbook_bin:.*', f'ansible_playbook_bin: {ansible_path}', content)
-              else:
-                  content = content.replace('name: ansible_push', f'name: ansible_push\n      ansible_playbook_bin: {ansible_path}')
-
-              content = content.replace('connection_retries: 5', 'connection_retries: 30')
-
-              with open(kfile, 'w') as f: f.write(content)
-              print(f"Patched {kfile}")
-          EOF
-
-          echo "=== Verification of Patched .kitchen.yml ==="
-          grep "ansible_playbook_bin" .kitchen.yml | head -n 5
-          grep "connection_retries" .kitchen.yml
-
-          bundle exec make test-upgrade-baseline-win11
-
-      - name: Post-Test Cleanup
-        if: always()
-        run: |
-          ./bin/cleanup-vagrant.sh
+  test-vagrant:
+    name: Vagrant Integration
+    needs: lint
+    if: contains(github.head_ref, 'vagrant') || github.base_ref == 'main'
+    runs-on: [self-hosted, macOS]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Run Vagrant Test
+        run: make test-upgrade-baseline-win11
