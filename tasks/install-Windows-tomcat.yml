@@ -160,7 +160,7 @@
         - tomcat-install
 
     - name: Pause to allow filesystem stabilization after extraction
-      ansible.windows.win_pause:
+      ansible.builtin.pause:
         seconds: 10
       when:
         - not tomcat_target_installed.stat.exists
