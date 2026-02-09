@@ -159,6 +159,15 @@
       tags:
         - tomcat-install
 
+    - name: Pause to allow filesystem stabilization after extraction
+      ansible.windows.win_pause:
+        seconds: 10
+      when:
+        - not tomcat_target_installed.stat.exists
+        - tomcat_extract is changed
+      tags:
+        - tomcat-install
+
     - name: Verify Tomcat files were extracted
       ansible.windows.win_stat:
         path: "{{ tomcat_versioned_dir }}/bin/catalina.bat"
