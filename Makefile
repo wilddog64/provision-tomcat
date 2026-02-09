@@ -146,6 +146,16 @@ test-azure-provision-tomcat: update-roles
 	printf "[azure]\ndefault-win11-azure ansible_host=$$IP ansible_user=testadmin ansible_password=\"Password123!\" ansible_port=5985 ansible_connection=winrm ansible_winrm_transport=basic ansible_winrm_scheme=http ansible_winrm_server_cert_validation=ignore ansible_winrm_read_timeout_sec=300 ansible_become_method=runas ansible_become_user=$$USER ansible_become_password=\"$$PASS\"\n" > scratch/azure-inventory.ini; \
 	ansible-playbook -i scratch/azure-inventory.ini tests/playbook.yml \
 		-e "env=stage2 extract_build_number=16 extract_debug=False skip_migration=true tomcat_version=9.0.113 tomcat_auto_start=true install_drive=D:" ; \
+	echo "=== Verifying Tomcat Connectivity from Controller ==="; \
+	for i in {1..12}; do \
+		if curl -s --connect-timeout 5 --max-time 10 "http://$$IP:8080" > /dev/null; then \
+			echo "SUCCESS: Tomcat is reachable at http://$$IP:8080"; \
+			break; \
+		fi; \
+		echo "Waiting for Tomcat to respond... ($$i/12)"; \
+		sleep 10; \
+		if [ $$i -eq 12 ]; then echo "FAILED: Tomcat is not reachable externally"; exit 1; fi; \
+	done; \
 	echo "=== Azure VM Provisioning Complete! ==="; \
 	if [ -z "$$KEEP_AZURE_VM" ]; then echo "=== Cleaning up... ==="; $(MAKE) test-azure-destroy; else echo "=== KEEP_AZURE_VM is set. Skipping cleanup. ==="; fi
 
