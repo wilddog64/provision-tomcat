@@ -3,9 +3,9 @@ name: CI
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: [main, azure-dev, aws-dev, vagrant-dev]
   pull_request:
-    branches: [main]
+    branches: [main, azure-dev, aws-dev, vagrant-dev]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
