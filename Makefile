@@ -159,11 +159,11 @@ test-azure-destroy:
 	if [ -z "$$RG" ]; then RG=$$(az group list --query "[?contains(name, 'playground-sandbox')].name" -o tsv | head -n 1); fi; \
 	NAME=$(AZURE_VM_NAME); \
 	echo "=== Destroying Azure VM: $$NAME in $$RG ==="; \
-	az vm delete --subscription "$$SUB" --resource-group "$$RG" --name "$$NAME" --yes --no-wait; \
+	az vm delete --subscription "$$SUB" --resource-group "$$RG" --name "$$NAME" --yes; \
 	echo "=== Cleaning up Network Resources ==="; \
-	az network nic delete --subscription "$$SUB" --resource-group "$$RG" --name "$${NAME}VMNic" --no-wait || true; \
-	az network public-ip delete --subscription "$$SUB" --resource-group "$$RG" --name "$${NAME}PublicIP" --no-wait || true; \
-	az network nsg delete --subscription "$$SUB" --resource-group "$$RG" --name "$${NAME}NSG" --no-wait || true;
+	az network nic delete --subscription "$$SUB" --resource-group "$$RG" --name "$${NAME}VMNic" || true; \
+	az network public-ip delete --subscription "$$SUB" --resource-group "$$RG" --name "$${NAME}PublicIP" || true; \
+	az network nsg delete --subscription "$$SUB" --resource-group "$$RG" --name "$${NAME}NSG" || true;
 
 .PHONY: test-azure-upgrade-candidate
 test-azure-upgrade-candidate: update-roles
