@@ -1,0 +1,21 @@
+# Project Core Standards & Memory Bank Maintenance Guide
+
+## 1. Memory Bank Management
+You must maintain the project state within the `/memory-bank` directory. This is the core of our cross-agent collaboration:
+- **Initialization**: If the directory does not exist, scan the repository and create `projectbrief.md`, `systemPatterns.md`, `techContext.md`, and `activeContext.md`.
+- **Read First**: Before starting any task, you MUST read `activeContext.md` to grasp the current progress and context.
+- **Real-time Updates**: Whenever a code change, infrastructure update, or test is completed, you must synchronously update `activeContext.md` and `progress.md`.
+
+## 2. Technical Architecture Standards (DevOps & Infrastructure)
+This project involves a complex operational architecture; please adhere to the following patterns:
+- **Infrastructure**: Prioritize references to the k3s deployment logic and ArgoCD configurations defined in `systemPatterns.md`.
+- **Security Compliance**: All sensitive information must be managed via HashiCorp Vault. Writing plaintext secrets into the code is strictly prohibited.
+- **Environment Consistency**: Ensure all generated configurations (e.g., Terraform or Kubernetes Manifests) align with the consistency of our local development and production environments.
+
+## 3. Cross-Agent Handover Protocol
+Since this project alternates between using Claude Code, Cline, and Gemini:
+- **Document Decisions**: Record "Why" a decision was made in `activeContext.md`, not just "What" was done, to ensure the next agent (e.g., Claude Code) can take over effectively.
+- **TODO Tracking**: Clearly mark the pending task list in `progress.md` to prevent progress loss caused by token exhaustion or session resets.
+
+## 4. E-commerce Business Logic
+- Adhere to the existing Shopping Cart microservice architecture, ensuring API contracts are consistent with the current e-commerce infrastructure.
