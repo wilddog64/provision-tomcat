@@ -6,29 +6,6 @@
 - [x] Created `systemPatterns.md` documenting installation, upgrade, candidate, verification, and security patterns.
 - [x] Created `techContext.md` documenting stack, runtime variables, test channels, and constraints.
 - [x] Created `activeContext.md` with current state, decision rationale ("why"), and handoff notes.
-- [x] Documented tooling-consistency and Kitchen-baseline rationale in `docs/issues/TOOLING-CONSISTENCY-AND-KITCHEN-BASELINE.md`.
-- [x] Documented CI workflow regression root cause analysis and fixes in `docs/issues/CI-WORKFLOW-REGRESSIONS.md`.
-- [x] Created `docs/plans/CI-INTEGRATION-FALLBACK.md` for Azure-to-Vagrant fallback logic.
-- [x] Updated `README.md` issue links (candidate troubleshooting + Azure issue references) and added the new tooling issue link.
-- [x] Implemented CI integration fallback in `.github/workflows/ci.yml`.
-- [x] Fixed CI workflow regressions:
-    - [x] Restored `community.windows` to `make deps`.
-    - [x] Robust tool resolution in `Makefile` with PATH fallbacks.
-    - [x] Fallback for `ansible_playbook_bin` in `.kitchen.yml`.
-    - [x] Synchronized `ci.yml` by disabling `vagrant-test` job.
-- [x] Grouped local commits by intent (build/test/docs) without pushing.
-- [x] Synchronized memory-bank with a dated session update capturing what changed and why.
-- [x] Stabilized CI Infrastructure:
-    - [x] Fixed Vagrant box re-download issue by preserving `HOME`.
-    - [x] Aggressive VirtualBox stale VM and disk cleanup in `bin/vbox-cleanup-disks`.
-    - [x] Replaced removed Ansible `yaml` callback with `result_format = yaml`.
-    - [x] Optimized WinRM settings (timeouts, retries, transport) for Apple Silicon runner.
-    - [x] Disabled unstable Vagrant fallback in CI to ensure result reliability.
-    - [x] Resolved macOS `fork()` safety crashes with `OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES`.
-    - [x] Implemented persistent role symlinking to bypass runner environment isolation.
-    - [x] Refined job triggers to ensure integration tests only run on relevant branches.
-    - [x] Resolved Tomcat 404 download error by bumping to version 9.0.115.
-    - [x] Implemented aggressive workspace cleanup to prevent clone failures.
 
 ## Pending TODOs
 - [ ] Expand `systemPatterns.md` with concrete k3s/ArgoCD implementation details if/when this repository adds those assets.

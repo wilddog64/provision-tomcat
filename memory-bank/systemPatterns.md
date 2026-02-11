@@ -63,22 +63,7 @@
 - `activeContext.md` must capture both **what changed** and **why decisions were made**.
 - `progress.md` must maintain pending TODOs to prevent session-handoff loss.
 
-## 10) CI/CD Authentication Patterns
-
-
-
-### Session-Aware Self-Hosted Runner (Local-First)
-
-For sandbox environments that rotate frequently, the CI workflow leverages the existing `az` CLI session on the self-hosted runner.
-
-- **Detection**: The workflow runs `az account show` to verify an active session.
-
-- **Metadata**: `AZURE_SUBSCRIPTION_ID` and `AZURE_RESOURCE_GROUP` are dynamically resolved from the runner's context if not provided as environment variables.
-
-- **Benefits**: Eliminates the need to update GitHub Secrets for short-lived credentials.
-
-
-
-### Secret-Based Auth (Fallback/Standard)
-
-Standard GitHub Secrets (`AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, etc.) are supported for long-lived service principals or remote runners.
+## 9) Architecture Guardrail Notes from `.clinerules`
+- `.clinerules` requests prioritizing k3s/ArgoCD deployment logic references.
+- Current repository scan did not find implemented k3s/ArgoCD manifests or automation paths.
+- Pattern adopted for now: preserve this as a guardrail/constraint in memory docs and flag as a future alignment task if scope expands.
