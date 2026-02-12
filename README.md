@@ -262,7 +262,7 @@ ansible-playbook -i inventory playbook.yml --extra-vars "tomcat_version=9.0.120"
 
 ### Zero-Downtime Candidate Testing
 
-If you need to run the new Tomcat/Java build side-by-side before switching the `current` symlink, see `docs/ZERO-DOWNTIME-UPGRADES.md`. It describes how to install a temporary service on an alternate port, run smoke tests from both inside the VM and from the controller, and promote (or roll back) entirely within Ansible. For recurring problems we have hit during this process (candidate tasks skipping, controller waits failing, or port 9080 never opening), refer to `docs/CANDIDATE-TROUBLESHOOTING.md`.
+If you need to run the new Tomcat/Java build side-by-side before switching the `current` symlink, see `docs/ZERO-DOWNTIME-UPGRADES.md`. It describes how to install a temporary service on an alternate port, run smoke tests from both inside the VM and from the controller, and promote (or roll back) entirely within Ansible. For recurring problems we have hit during this process (candidate tasks skipping, controller waits failing, or port 9080 never opening), refer to `docs/issues/CANDIDATE-TROUBLESHOOTING.md`.
 
 For a one-command automated test run (including cleanup), execute `bin/test-upgrade-candidate` from the repo root. It chains together `make candidate-cleanup-win11` and `make test-upgrade-candidate-stack` so step 1, step 2, and teardown all happen sequentially.
 
@@ -319,8 +319,9 @@ This role uses Test Kitchen with Vagrant for automated testing.
 - **[Test Kitchen Guide](docs/TEST-KITCHEN.md)** - Using Test Kitchen for testing
 - **[Testing Upgrades](docs/TESTING-UPGRADES.md)** - Upgrade and downgrade testing procedures
 - **[Zero-Downtime Upgrades](docs/ZERO-DOWNTIME-UPGRADES.md)** - Candidate workflow details
-- **[Candidate Troubleshooting](docs/CANDIDATE-TROUBLESHOOTING.md)** - Common issues and fixes while exercising the candidate workflow
+- **[Candidate Troubleshooting](docs/issues/CANDIDATE-TROUBLESHOOTING.md)** - Common issues and fixes while exercising the candidate workflow
 - **[VirtualBox Stale Disks](docs/issues/VIRTUALBOX-STALE-DISKS.md)** - Fix for `VERR_ALREADY_EXISTS` errors when creating disks
+- **[Tooling Consistency & Kitchen Baseline](docs/issues/TOOLING-CONSISTENCY-AND-KITCHEN-BASELINE.md)** - Why lint/toolchain resolution and baseline Kitchen config were adjusted
 - **[Controller Lookup Plugins](docs/plugins/CONTROLLER-LOOKUP-PLUGINS.md)** - How the controller-side port/HTTP checks work
 - **[Azure Sandbox Test Kitchen Plan](docs/plans/azure-sandbox-kitchen.md)** - Step-by-step plan for running Kitchen suites inside an ACG Azure sandbox
 
@@ -354,7 +355,7 @@ AZURE_IMAGE=My Hardened Image Name make test-azure-provision-tomcat
 | `AZURE_VM_NAME` | `kqvm-win11` | Name of the VM and related resources |
 | `KEEP_AZURE_VM` | `0` (null) | Set to `1` to skip automatic destroy |
 
-For troubleshooting common issues (Resource Group restrictions, WinRM timeouts, IPv6 mismatches), see **[Azure Integration Issues](../docs/issues/AZURE-KITCHEN-INTEGRATION.md)**.
+For troubleshooting common issues (Resource Group restrictions, WinRM timeouts, IPv6 mismatches), see **[Azure Integration Issues](docs/issues/AZURE-KITCHEN-INTEGRATION.md)**.
 - Kitchen automatically loads `scratch/azure-sandbox.env` (or the file pointed to by `AZURE_ENV_FILE`) so `bundle exec kitchen test default-win11-azure` picks up the right subscription/credentials even if you forget to `source` first.
 - Run `bin/azure-quick-vm.sh` (defaults to a Windows Server VM, auto-sources `scratch/azure-sandbox.env`, override with `--env`) to perform a quick “create + destroy” VM sanity check in the sandbox before attempting Kitchen.
 - Run `bundle exec kitchen test <suite>-<platform>` from your workstation or self-hosted runner and capture `.kitchen/logs/*` for PR notes. For Azure, start with `bundle exec kitchen test default-win11-azure`.
@@ -600,7 +601,7 @@ See **[VirtualBox Stale Disks](docs/issues/VIRTUALBOX-STALE-DISKS.md)** for deta
 
 ### Azure Sandbox Issues
 
-For troubleshooting common issues in the ACG Azure sandbox (Resource Group restrictions, MSI timeouts, etc.), see **[Azure Kitchen Integration Issues](../docs/issues/AZURE-KITCHEN-INTEGRATION.md)**.
+For troubleshooting common issues in the ACG Azure sandbox (Resource Group restrictions, MSI timeouts, etc.), see **[Azure Kitchen Integration Issues](docs/issues/AZURE-KITCHEN-INTEGRATION.md)**.
 
 ## Dependencies
 
