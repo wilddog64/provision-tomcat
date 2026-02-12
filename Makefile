@@ -20,6 +20,13 @@ else
   KITCHEN_CMD ?= kitchen
 endif
 
+# Keep Ansible tooling on a consistent install path to avoid
+# ansible-lint/ansible-core mismatch errors.
+ANSIBLE_LINT_BIN ?= $(shell command -v ansible-lint 2>/dev/null)
+ANSIBLE_BIN ?= $(if $(ANSIBLE_LINT_BIN),$(dir $(ANSIBLE_LINT_BIN))ansible,$(shell command -v ansible 2>/dev/null))
+ANSIBLE_PLAYBOOK_BIN ?= $(if $(ANSIBLE_LINT_BIN),$(dir $(ANSIBLE_LINT_BIN))ansible-playbook,$(shell command -v ansible-playbook 2>/dev/null))
+ANSIBLE_GALAXY_BIN ?= $(if $(ANSIBLE_LINT_BIN),$(dir $(ANSIBLE_LINT_BIN))ansible-galaxy,$(shell command -v ansible-galaxy 2>/dev/null))
+
 PLATFORMS := win11 win11-disk ubuntu-2404 rockylinux9 win11-azure
 SUITES := default latest idempotence
 
@@ -49,12 +56,12 @@ AZURE_ADMIN_PASSWORD ?= ChangeM3!SecurePassword
 .PHONY: lint
 lint: deps
 	@echo "Running ansible-lint..."
-	ansible-lint .
+	PATH="$(dir $(ANSIBLE_LINT_BIN)):$$PATH" $(ANSIBLE_LINT_BIN) .
 
 .PHONY: syntax
 syntax: deps
 	@echo "Checking playbook syntax..."
-	ansible-playbook --syntax-check tests/playbook.yml -i tests/inventory
+	$(ANSIBLE_PLAYBOOK_BIN) --syntax-check tests/playbook.yml -i tests/inventory
 
 .PHONY: check
 check: lint syntax
@@ -71,7 +78,7 @@ setup:
 .PHONY: deps
 deps:
 	@echo "Installing Ansible collections..."
-	ansible-galaxy collection install ansible.windows chocolatey.chocolatey -p ./collections
+	$(ANSIBLE_GALAXY_BIN) collection install ansible.windows chocolatey.chocolatey -p ./collections
 
 # ============================================================================ 
 # Help
