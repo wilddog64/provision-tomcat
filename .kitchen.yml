@@ -66,9 +66,9 @@ platforms:
       elevated: true
       ssl_peer_verification: false
       port: 5985
-      winrm_transport: :negotiate
+      winrm_transport: :plaintext
       ssl: false
-      connection_retries: 10
+      connection_retries: 15
       connection_retry_sleep: 20
       operation_timeout: 600
     provisioner:
@@ -91,7 +91,7 @@ platforms:
         extract_debug: 'False'
         skip_migration: true
         ansible_connection: winrm
-        ansible_winrm_transport: negotiate
+        ansible_winrm_transport: basic
         ansible_port: 5985
         ansible_winrm_scheme: http
         ansible_winrm_server_cert_validation: ignore
@@ -117,9 +117,9 @@ platforms:
       elevated: true
       ssl_peer_verification: false
       port: 5985
-      winrm_transport: :negotiate
+      winrm_transport: :plaintext
       ssl: false
-      connection_retries: 10
+      connection_retries: 15
       connection_retry_sleep: 20
       operation_timeout: 600
     provisioner:
@@ -142,7 +142,7 @@ platforms:
         extract_debug: 'False'
         skip_migration: true
         ansible_connection: winrm
-        ansible_winrm_transport: negotiate
+        ansible_winrm_transport: basic
         ansible_port: 5985
         ansible_winrm_scheme: http
         ansible_winrm_server_cert_validation: ignore
