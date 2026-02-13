@@ -27,6 +27,9 @@
       ansible.builtin.setup:
       become: no
 
+    # NOTE: Using weak password "Password123!" for local test accounts.
+    # This is acceptable only in isolated test environments.
+    # In production, use strong passwords or integrate with directory services.
     - name: Create local test accounts
       ansible.windows.win_user:
         name: "{{ item }}"

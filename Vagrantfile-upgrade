@@ -20,13 +20,25 @@ Vagrant.configure("2") do |config|
       if vbox_list.include?(disk_file)
         uuid_match = vbox_list.match(/UUID:\s+([a-f0-9-]+).*?Location:\s+#{Regexp.escape(disk_file)}/m)
         if uuid_match
-          system("VBoxManage closemedium disk #{uuid_match[1]} --delete 2>/dev/null")
+          uuid = uuid_match[1]
+          # Check if disk is attached to any VM before closing
+          attached_vms = `VBoxManage showhdinfo #{uuid} 2>/dev/null | grep 'In use by VMs:'`.strip
+          if attached_vms.empty? || attached_vms.include?('In use by VMs:')
+            system("VBoxManage closemedium disk #{uuid} --delete 2>/dev/null")
+          else
+            warn "Warning: Disk #{disk_file} is attached to a VM. Skipping cleanup."
+          end
         end
       end
       vb.customize ['createhd', '--filename', disk_file, '--size', 50 * 1024]
     end
-    vb.customize ['storageattach', :id, '--storagectl', 'SATA Controller',
-                  '--port', 1, '--device', 0, '--type', 'hdd', '--medium', disk_file]
+    
+    # Verify the disk isn't already attached before attaching
+    vm_info = `VBoxManage showvminfo #{vb.name || 'provision-tomcat'} --machinereadable 2>/dev/null` rescue ""
+    unless vm_info.include?(disk_file)
+      vb.customize ['storageattach', :id, '--storagectl', 'SATA Controller',
+                    '--port', 1, '--device', 0, '--type', 'hdd', '--medium', disk_file]
+    end
   end
 
   # Initialize and format D: drive
