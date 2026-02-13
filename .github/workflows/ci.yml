@@ -11,6 +11,10 @@ env:
   ANSIBLE_ROLES_PATH: ${{ github.workspace }}/roles
 
 jobs:
+  validation:
+    name: Validation
+    runs-on: [self-hosted, macOS, ARM64]
+    steps:
       - name: Checkout provision-tomcat
         uses: actions/checkout@v4
         with:
