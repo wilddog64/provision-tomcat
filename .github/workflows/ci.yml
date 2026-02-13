@@ -105,11 +105,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Ruby
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: '4.0.0'
-          bundler-cache: true
+      - name: Install Ruby Dependencies
+        run: |
+          export PATH="$HOME/.rbenv/bin:$PATH"
+          eval "$(rbenv init -)"
+          bundle install
 
       - name: Login to Azure
         if: env.AZURE_AVAILABLE == 'true'

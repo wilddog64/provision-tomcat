@@ -108,17 +108,16 @@ Initialize and populate a complete `memory-bank/` for this repository according 
 
 
 
-### Session Update (2026-02-12): CI Integration Fallback Refinement
+### Session Update (2026-02-12): CI Integration Fallback Refinement (rbenv bypass)
 
 ### What Changed
-- Updated `.github/workflows/ci.yml` to include `ruby/setup-ruby@v1` with `bundler-cache: true`.
-- Corrected the fallback cleanup command to use `make vbox-cleanup-disks` instead of a non-existent script.
-- Ensured integration tests have access to all required gems (including `kitchen-azurerm`) via Bundler.
+- Replaced `ruby/setup-ruby@v1` with a manual `bundle install` using the self-hosted runner's existing `rbenv` environment.
+- Added explicit `rbenv` initialization to the workflow steps.
 
 ### Why It Was Done This Way
-- **Dependency Management:** The self-hosted runner requires an explicit `bundle install` (handled by `setup-ruby`) to resolve Kitchen plugins, even when falling back to Vagrant.
-- **Correct Tooling:** Switched to the established `vbox-cleanup-disks` target to ensure a clean hypervisor state before running Vagrant tests.
+- **Permission Constraints:** `setup-ruby` attempted to create directories in `/Users/runner`, which failed due to `EACCES` on the self-hosted macOS runner. Since the runner is already optimized with `rbenv`, leveraging the existing environment is more reliable.
+- **Environment Parity:** Using the same Ruby/rbenv setup as local development ensures consistent behavior between local and CI test executions.
 
 ### Current Handover State
-- Branch `azure-dev` has a refined and more robust integration testing path.
-- CI workflow now properly manages Ruby dependencies for all integration test types.
+- Branch `azure-dev` now uses the runner's native rbenv setup for Ruby dependencies.
+- CI workflow is tailored to the specific constraints and capabilities of the self-hosted macOS environment.
