@@ -11,24 +11,31 @@ env:
   ANSIBLE_ROLES_PATH: ${{ github.workspace }}/roles
 
 jobs:
-  validation:
-    name: Validation
-    runs-on: [self-hosted, macOS, ARM64]
-    permissions:
-      contents: read
-    steps:
       - name: Checkout provision-tomcat
         uses: actions/checkout@v4
+        with:
+          path: provision-tomcat
 
-      - name: Checkout All Roles
-        env:
-          GH_PAT: ${{ secrets.GH_PAT }}
-        run: |
-          mkdir -p roles
-          # Clone roles using HTTPS with embedded token
-          git clone https://x-access-token:${GH_PAT}@github.com/wilddog64/provision-java.git roles/provision-java
-          git clone https://x-access-token:${GH_PAT}@github.com/wilddog64/windows-base.git roles/windows-base
-          git clone https://x-access-token:${GH_PAT}@github.com/wilddog64/provision-windows-security.git roles/provision-windows-security
+      - name: Checkout provision-java
+        uses: actions/checkout@v4
+        with:
+          repository: wilddog64/provision-java
+          path: provision-tomcat/roles/provision-java
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Checkout windows-base
+        uses: actions/checkout@v4
+        with:
+          repository: wilddog64/windows-base
+          path: provision-tomcat/roles/windows-base
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Checkout provision-windows-security
+        uses: actions/checkout@v4
+        with:
+          repository: wilddog64/provision-windows-security
+          path: provision-tomcat/roles/provision-windows-security
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
@@ -87,15 +94,26 @@ jobs:
             echo "No Azure session or secrets found."
           fi
 
-      - name: Checkout All Roles
-        env:
-          GH_PAT: ${{ secrets.GH_PAT }}
-        run: |
-          mkdir -p roles
-          # Clone roles using HTTPS with embedded token
-          git clone https://x-access-token:${GH_PAT}@github.com/wilddog64/provision-java.git roles/provision-java
-          git clone https://x-access-token:${GH_PAT}@github.com/wilddog64/windows-base.git roles/windows-base
-          git clone https://x-access-token:${GH_PAT}@github.com/wilddog64/provision-windows-security.git roles/provision-windows-security
+      - name: Checkout provision-java
+        uses: actions/checkout@v4
+        with:
+          repository: wilddog64/provision-java
+          path: roles/provision-java
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Checkout windows-base
+        uses: actions/checkout@v4
+        with:
+          repository: wilddog64/windows-base
+          path: roles/windows-base
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Checkout provision-windows-security
+        uses: actions/checkout@v4
+        with:
+          repository: wilddog64/provision-windows-security
+          path: roles/provision-windows-security
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Symlink current role
         run: |
