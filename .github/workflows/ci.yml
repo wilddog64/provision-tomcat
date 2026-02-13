@@ -13,7 +13,7 @@ env:
 jobs:
   validation:
     name: Validation
-    runs-on: [self-hosted, macOS, m2-air]
+    runs-on: [self-hosted, macOS, ARM64]
     steps:
       - name: Checkout provision-tomcat
         uses: actions/checkout@v4
@@ -60,7 +60,7 @@ jobs:
 
   integration:
     name: Integration Tests (Azure or Vagrant)
-    runs-on: [self-hosted, macOS, m2-air]
+    runs-on: [self-hosted, macOS, ARM64]
     needs: validation
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && (github.head_ref == 'azure-dev' || github.head_ref == 'vagrant-dev'))
     steps:
