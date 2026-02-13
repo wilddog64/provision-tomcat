@@ -32,6 +32,7 @@ jobs:
 
       - name: Checkout All Roles
         run: |
+          rm -rf roles
           mkdir -p roles
           # Clone roles using HTTPS with GITHUB_TOKEN
           git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/wilddog64/provision-java.git roles/provision-java
@@ -100,6 +101,7 @@ jobs:
 
       - name: Checkout All Roles
         run: |
+          rm -rf roles
           mkdir -p roles
           # Clone roles using HTTPS with GITHUB_TOKEN
           git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/wilddog64/provision-java.git roles/provision-java
