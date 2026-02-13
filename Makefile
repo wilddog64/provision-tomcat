@@ -48,7 +48,8 @@ TOMCAT_NEW_VERSION ?= 9.0.113
 # ============================================================================ 
 # Dynamically resolve subscription if not provided
 AZURE_SUBSCRIPTION_ID ?= $(shell az account show --query id -o tsv 2>/dev/null)
-AZURE_RESOURCE_GROUP ?= 
+# Dynamically resolve resource group if not provided
+AZURE_RESOURCE_GROUP ?= $(shell az group list --query "[?contains(name, 'sandbox')].name" -o tsv 2>/dev/null | head -n 1)
 AZURE_LOCATION ?= 
 AZURE_IMAGE ?= MicrosoftWindowsServer:WindowsServer:2022-datacenter-g2:latest
 AZURE_VM_SIZE ?= Standard_DS1_v2
@@ -135,9 +136,7 @@ test-azure-provision-tomcat: update-roles
 	@set -e; \
 	echo "=== Detecting Azure Environment ==="; \
 	SUB=$(AZURE_SUBSCRIPTION_ID); \
-	if [ -z "$$SUB" ]; then SUB=$$(az account show --query id -o tsv); fi; \
 	RG=$(AZURE_RESOURCE_GROUP); \
-	if [ -z "$$RG" ]; then RG=$$(az group list --query "[?contains(name, 'playground-sandbox')].name" -o tsv | head -n 1); fi; \
 	LOC=$(AZURE_LOCATION); \
 	if [ -z "$$LOC" ]; then LOC=$$(az group show --name "$$RG" --query location -o tsv); fi; \
 	MY_IP=$$(curl -s https://api.ipify.org); \
@@ -200,9 +199,7 @@ test-azure-upgrade-candidate: update-roles
 	@set -e; \
 	echo "=== Detecting Azure Environment ==="; \
 	SUB=$(AZURE_SUBSCRIPTION_ID); \
-	if [ -z "$$SUB" ]; then SUB=$$(az account show --query id -o tsv); fi; \
 	RG=$(AZURE_RESOURCE_GROUP); \
-	if [ -z "$$RG" ]; then RG=$$(az group list --query "[?contains(name, 'playground-sandbox')].name" -o tsv | head -n 1); fi; \
 	LOC=$(AZURE_LOCATION); \
 	if [ -z "$$LOC" ]; then LOC=$$(az group show --name "$$RG" --query location -o tsv); fi; \
 	MY_IP=$$(curl -s https://api.ipify.org); \
