@@ -34,10 +34,10 @@ jobs:
         run: |
           rm -rf roles
           mkdir -p roles
-          # Clone roles using HTTPS with GITHUB_TOKEN
-          git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/wilddog64/provision-java.git roles/provision-java
-          git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/wilddog64/windows-base.git roles/windows-base
-          git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/wilddog64/provision-windows-security.git roles/provision-windows-security
+          # Clone roles using runner's native SSH session
+          git clone git@github.com:wilddog64/provision-java.git roles/provision-java
+          git clone git@github.com:wilddog64/windows-base.git roles/windows-base
+          git clone git@github.com:wilddog64/provision-windows-security.git roles/provision-windows-security
 
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
@@ -103,10 +103,10 @@ jobs:
         run: |
           rm -rf roles
           mkdir -p roles
-          # Clone roles using HTTPS with GITHUB_TOKEN
-          git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/wilddog64/provision-java.git roles/provision-java
-          git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/wilddog64/windows-base.git roles/windows-base
-          git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/wilddog64/provision-windows-security.git roles/provision-windows-security
+          # Clone roles using runner's native SSH session
+          git clone git@github.com:wilddog64/provision-java.git roles/provision-java
+          git clone git@github.com:wilddog64/windows-base.git roles/windows-base
+          git clone git@github.com:wilddog64/provision-windows-security.git roles/provision-windows-security
 
       - name: Symlink current role
         run: |
