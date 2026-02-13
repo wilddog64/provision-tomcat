@@ -46,7 +46,8 @@ TOMCAT_NEW_VERSION ?= 9.0.113
 # ============================================================================ 
 # Azure Configuration (Universal Overrides)
 # ============================================================================ 
-AZURE_SUBSCRIPTION_ID ?= 
+# Dynamically resolve subscription if not provided
+AZURE_SUBSCRIPTION_ID ?= $(shell az account show --query id -o tsv 2>/dev/null)
 AZURE_RESOURCE_GROUP ?= 
 AZURE_LOCATION ?= 
 AZURE_IMAGE ?= MicrosoftWindowsServer:WindowsServer:2022-datacenter-g2:latest

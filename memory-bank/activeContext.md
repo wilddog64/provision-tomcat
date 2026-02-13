@@ -137,7 +137,18 @@ Initialize and populate a complete `memory-bank/` for this repository according 
 - **WinRM timeouts:** The Apple Silicon runner exhibits high latency with Windows ARM64 guests; high timeouts and retries are necessary to prevent "deserialization failed" errors.
 - **Disabling Vagrant fallback:** Extensive testing confirmed that Windows 11 ARM64 virtualization on VirtualBox 7 is fundamentally unstable on Apple Silicon, leading to consistent PowerShell crashes. Skipping these tests prevents misleading CI failures while ensuring Azure tests remain the reliable standard.
 
+### Session Update (2026-02-13): Dynamic Azure Sandbox Detection
+
+### What Changed
+- Transitioning Azure authentication in CI from static GitHub Secrets to dynamic session detection using `az account show`.
+- Refactoring `ci.yml` to treat Azure as "available" if the runner has an active CLI session.
+- Implementing metadata resolution in `Makefile` to pull subscription and resource group info from the current account context.
+
+### Why It Was Done This Way
+- **Avoid Secret Rotations**: Sandbox environments (e.g., Pluralsight Labs) rotate frequently. Manually updating GitHub Secrets for each session is inefficient and error-prone.
+- **Leverage Self-Hosted Environment**: Since the CI runner is on the user's local machine, it can inherit the existing `az login` state, providing a seamless "Dev-to-CI" experience.
+- **Dynamic Identification**: Using `az group list` within the automation ensures the correct resource group is targeted without hardcoded IDs in the repository.
+
 ### Current Handover State
-- CI is now "green" and correctly skips unstable steps.
-- Infrastructure and tooling regressions are fully documented and resolved.
-- Role is stable for development on the `azure-dev` branch.
+- Documentation updated to reflect the "Session-Aware" pattern.
+- Next: Implement `ci.yml` and `Makefile` changes.

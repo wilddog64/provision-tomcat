@@ -100,10 +100,25 @@ jobs:
     runs-on: [self-hosted, macOS]
     env:
       ANSIBLE_ROLES_PATH: ${{ github.workspace }}/roles
-      AZURE_AVAILABLE: ${{ secrets.AZURE_CLIENT_ID != '' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Detect Azure Availability
+        id: azure_check
+        run: |
+          if az account show > /dev/null 2>&1; then
+            echo "AZURE_AVAILABLE=true" >> $GITHUB_ENV
+            echo "SESSION_MODE=true" >> $GITHUB_ENV
+            echo "Azure session detected on runner."
+          elif [ -n "${{ secrets.AZURE_CLIENT_ID }}" ]; then
+            echo "AZURE_AVAILABLE=true" >> $GITHUB_ENV
+            echo "SESSION_MODE=false" >> $GITHUB_ENV
+            echo "Azure secrets detected."
+          else
+            echo "AZURE_AVAILABLE=false" >> $GITHUB_ENV
+            echo "No Azure session or secrets found."
+          fi
 
       - name: Checkout provision-java
         uses: actions/checkout@v4
@@ -170,7 +185,7 @@ jobs:
           fi
 
       - name: Login to Azure
-        if: env.AZURE_AVAILABLE == 'true'
+        if: env.AZURE_AVAILABLE == 'true' && env.SESSION_MODE != 'true'
         run: |
           az login --service-principal -u ${{ secrets.AZURE_CLIENT_ID }} \
             -p ${{ secrets.AZURE_CLIENT_SECRET }} --tenant ${{ secrets.AZURE_TENANT_ID }}
