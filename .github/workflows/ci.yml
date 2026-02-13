@@ -184,6 +184,8 @@ jobs:
 
       - name: Pre-download Vagrant Box
         if: env.AZURE_AVAILABLE != 'true'
+        env:
+          VAGRANT_HOME: /Users/cliang/.vagrant.d
         run: |
           echo "Checking for stromweld/windows-11 box..."
           if ! ./bin/vagrant-wrapper box list | grep -q "stromweld/windows-11"; then
@@ -205,6 +207,7 @@ jobs:
         env:
           OBJC_DISABLE_INITIALIZE_FORK_SAFETY: YES
           VAGRANT_IGNORE_WINRM_PLUGIN: YES
+          VAGRANT_HOME: /Users/cliang/.vagrant.d
 
   aws-test:
     name: AWS Integration Tests

@@ -10,6 +10,27 @@ if [[ "$1" == "--dry-run" ]]; then
   echo "=== DRY RUN MODE ==="
 fi
 
+echo "Checking for stale VirtualBox VMs..."
+vms_output=$(VBoxManage list vms 2>/dev/null || true)
+
+# Remove any existing kitchen-managed VMs that might be hanging around
+while IFS= read -r line; do
+  if [[ "$line" =~ \"(kitchen-.*|windows-11-.*)\"\ \{([0-9a-f-]+)\} ]]; then
+    vm_name="${BASH_REMATCH[1]}"
+    vm_uuid="${BASH_REMATCH[2]}"
+    echo "Found potentially stale VM: $vm_name ($vm_uuid)"
+    if [[ "$DRY_RUN" == "true" ]]; then
+      echo "  [DRY RUN] Would poweroff and unregister this VM"
+    else
+      echo "  Powering off and unregistering..."
+      VBoxManage controlvm "$vm_uuid" poweroff 2>/dev/null || true
+      sleep 1
+      VBoxManage unregistervm "$vm_uuid" --delete 2>/dev/null || true
+      echo "  ✓ VM removed"
+    fi
+  fi
+done <<< "$vms_output"
+
 echo "Checking for stale VirtualBox disk registrations..."
 
 # Get list of registered hard disks
