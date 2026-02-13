@@ -94,6 +94,7 @@ platforms:
         ansible_user: vagrant
         ansible_password: vagrant
         ansible_host: 127.0.0.1
+        ansible_become_method: runas
   - name: win11-disk
     driver:
       <<: *common_vagrant
@@ -139,6 +140,7 @@ platforms:
         ansible_user: vagrant
         ansible_password: vagrant
         ansible_host: 127.0.0.1
+        ansible_become_method: runas
         install_drive: "D:"
 
 #  - name: win11-baseline
@@ -253,6 +255,7 @@ platforms:
         ansible_winrm_server_cert_validation: ignore
         ansible_user: <%= ENV.fetch('AZURE_ADMIN_USERNAME', 'azureadmin') %>
         ansible_password: <%= ENV.fetch('AZURE_ADMIN_PASSWORD', 'ChangeM3!') %>
+        ansible_become_method: runas
 
 suites:
   - name: default
