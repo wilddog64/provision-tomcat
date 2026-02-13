@@ -24,6 +24,9 @@
     - [x] Replaced removed Ansible `yaml` callback with `result_format = yaml`.
     - [x] Optimized WinRM settings (timeouts, retries, transport) for Apple Silicon runner.
     - [x] Disabled unstable Vagrant fallback in CI to ensure result reliability.
+    - [x] Resolved macOS `fork()` safety crashes with `OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES`.
+    - [x] Implemented persistent role symlinking to bypass runner environment isolation.
+    - [x] Refined job triggers to ensure integration tests only run on relevant branches.
 
 ## Pending TODOs
 - [ ] Expand `systemPatterns.md` with concrete k3s/ArgoCD implementation details if/when this repository adds those assets.

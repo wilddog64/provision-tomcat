@@ -149,6 +149,22 @@ Initialize and populate a complete `memory-bank/` for this repository according 
 - **Leverage Self-Hosted Environment**: Since the CI runner is on the user's local machine, it can inherit the existing `az login` state, providing a seamless "Dev-to-CI" experience.
 - **Dynamic Identification**: Using `az group list` within the automation ensures the correct resource group is targeted without hardcoded IDs in the repository.
 
+### Session Update (2026-02-13): Final CI Stabilization and Trigger Refinement
+
+### What Changed
+- Resolved macOS `fork()` safety crashes by setting `OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES` in the CI environment.
+- Implemented persistent role management on the self-hosted runner by symlinking from a known stable directory (`/Users/cliang/src/gitrepo/personal/ansible/`) instead of attempting complex and failing CI clones.
+- Pinnded `ansible-core` to a stable 2.15.x version and implemented manual Python virtual environment management to avoid permission issues with standard actions.
+- Refined job triggers in `ci.yml` to ensure integration tests only run on relevant branches (e.g., `azure-dev` for Azure, `aws-dev` for AWS) during `workflow_dispatch` using strict `github.ref_name` matching.
+- Improved Azure environment detection with explicit subscription setting and fallback resource groups.
+
+### Why It Was Done This Way
+- **macOS Fork Issues**: Apple's security checks on `fork()` often crash parallel processes (like Ansible workers) when crypto libraries are involved. Disabling these checks via environment variable is the standard fix for Ansible on macOS hosts.
+- **Runner Isolation**: Self-hosted runners often have restrictive environments or lack access to GitHub Secrets in certain contexts. Symlinking pre-cloned roles from the runner's native filesystem is the most reliable way to handle private dependencies in this specific setup.
+- **Trigger Noise**: Previously, `workflow_dispatch` would trigger all integration tests (Azure, Vagrant, and AWS) regardless of the branch. Restricting them by branch name keeps the CI pipeline efficient and prevents misleading failures.
+- **Ansible Stability**: System Python and latest `ansible-core` versions can be unstable on ARM64 macOS runners. Using a venv and a specific stable version ensures consistent and reproducible test runs.
+
 ### Current Handover State
-- Documentation updated to reflect the "Session-Aware" pattern.
-- Next: Implement `ci.yml` and `Makefile` changes.
+- CI pipeline is fully stabilized on the `azure-dev` branch.
+- PR #2 is updated with all stabilization fixes and trigger refinements.
+- `@copilot` has been tagged for a formal re-review of the implementation.

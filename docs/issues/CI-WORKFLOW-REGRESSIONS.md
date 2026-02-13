@@ -25,6 +25,10 @@ The CI workflow failed following the "Tooling Consistency" update due to several
 8.  **Ansible Callback Plugin Removal:** `ansible.cfg` used `stdout_callback = yaml`, which was removed in `community.general` version 12.0.0 (superseded by `result_format = yaml` in the default callback).
 9.  **WinRM Transport Incompatibility:** Attempting to use `negotiate` transport for WinRM failed because the guest OS version did not support it, causing connection timeouts.
 10. **Apple Silicon Virtualization Instability:** Windows 11 ARM64 running on VirtualBox 7 (Apple Silicon host) consistently experienced PowerShell process crashes (`STATUS_ACCESS_VIOLATION`), resulting in "Module result deserialization failed" errors in Ansible.
+11. **macOS `fork()` Safety Crashes:** Ansible parallel processes (workers) failed with cryptic `A worker was found in a dead state` errors. This is caused by macOS's security restrictions on `fork()` when the parent process has initialized certain frameworks (like `libcrypto` via `cryptography`).
+12. **Self-Hosted Runner Secret Isolation:** Secrets like `GH_PAT` or SSH keys were inconsistently available to `workflow_dispatch` runs on development branches, causing "Not Found" or "Permission Denied" errors during private role checkouts.
+13. **macOS Keychain Access Denied:** Git clones via HTTPS attempted to use the macOS keychain, which was locked in the non-interactive CI session, resulting in `-25308` errors.
+14. **`actions/setup-python` Permission Failures:** The standard action attempted to create directories in `/Users/runner`, which is restricted on self-hosted runners, causing job failures.
 
 ## Resolutions (Continued)
 
@@ -34,6 +38,10 @@ The CI workflow failed following the "Tooling Consistency" update due to several
 10. **Modernize Ansible Callback:** Updated `ansible.cfg` to use `stdout_callback = default` with `result_format = yaml` for compatibility with latest collections.
 11. **Standardize WinRM Transport:** Reverted to `basic` transport for guest compatibility while maintaining high timeouts (600s) and retries (15) to mitigate runner latency.
 12. **Disable Unstable Vagrant Fallback:** Added `&& false` to the CI conditions for local Vagrant tests on the Apple Silicon runner. Integration tests now strictly require Azure to ensure reliable and non-misleading results.
+13. **Disable macOS Fork Safety:** Set `OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES` in the CI environment to allow Ansible workers to fork safely on macOS.
+14. **Persistent Role Symlinking:** To bypass recurrent authentication issues with private repositories in CI, roles are now symlinked from a known persistent directory on the runner machine (`/Users/cliang/src/gitrepo/personal/ansible/`).
+15. **Manual Virtual Environment:** Replaced `actions/setup-python` with a manual `python3 -m venv` to avoid permission issues and leverage the runner's native Python installation.
+16. **Refined Job Triggers:** Restricted integration tests to their respective branches (e.g., `azure-dev` for Azure, `aws-dev` for AWS) using `github.ref_name == '...'` to prevent unnecessary and failing test executions.
 
 ## Verification Results
 - **Validation Job:** PASSED.
