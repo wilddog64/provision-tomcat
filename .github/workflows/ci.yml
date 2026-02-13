@@ -110,7 +110,7 @@ jobs:
           if az account show > /dev/null 2>&1; then
             echo "AZURE_AVAILABLE=true" >> $GITHUB_ENV
             echo "SESSION_MODE=true" >> $GITHUB_ENV
-            
+
             # Resolve metadata explicitly
             SUB_ID=$(az account show --query id -o tsv)
             RG_NAME=$(az group list --query "[?contains(name, 'sandbox')].name" -o tsv | head -n 1)
