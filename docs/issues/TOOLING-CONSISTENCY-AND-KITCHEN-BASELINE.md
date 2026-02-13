@@ -49,6 +49,26 @@ This preserves the historical config for reference while clearly disabling that 
 
 No behavioral change. This is standard formatting hygiene and avoids EOF newline warnings in some tooling.
 
-## Follow-up consideration
+## 5) Vagrant Box Caching and VirtualBox Stability in CI
 
-If we want stronger failure mode clarity, we can add explicit guard checks in `Makefile` that fail fast with actionable messages when `ansible-lint` (or derived binaries) are not found.
+
+
+### What changed
+
+
+
+- Modified `bin/vagrant-wrapper` to preserve the `HOME` environment variable.
+
+- Explicitly set `VAGRANT_HOME: /Users/cliang/.vagrant.d` in `.github/workflows/ci.yml`.
+
+- Enhanced `bin/vbox-cleanup-disks` to aggressively power off and unregister any stale VMs starting with `kitchen-` or `windows-11-`.
+
+
+
+### Why
+
+
+
+1.  **Vagrant Box Re-downloads**: Every CI run was downloading the Windows 11 box from the internet because `vagrant-wrapper` used `env -i`, which stripped the `HOME` variable. This prevented Vagrant from finding the persistent box cache at `~/.vagrant.d`.
+
+2.  **Appliance Import Failures**: `kitchen create` would frequently fail with `VERR_ALREADY_EXISTS` because stale VM registrations or VMDK files remained from previous failed or interrupted runs. Aggressive cleanup ensures a blank slate for every integration test run.
