@@ -29,6 +29,8 @@ The CI workflow failed following the "Tooling Consistency" update due to several
 12. **Self-Hosted Runner Secret Isolation:** Secrets like `GH_PAT` or SSH keys were inconsistently available to `workflow_dispatch` runs on development branches, causing "Not Found" or "Permission Denied" errors during private role checkouts.
 13. **macOS Keychain Access Denied:** Git clones via HTTPS attempted to use the macOS keychain, which was locked in the non-interactive CI session, resulting in `-25308` errors.
 14. **`actions/setup-python` Permission Failures:** The standard action attempted to create directories in `/Users/runner`, which is restricted on self-hosted runners, causing job failures.
+15. **Tomcat Binary "Rot":** Apache frequently rotates mirror URLs, causing hardcoded version links (like 9.0.113) to return 404 Not Found errors suddenly.
+16. **Self-Hosted Workspace Pollution:** Unlike GitHub-hosted runners, the self-hosted workspace is not always guaranteed to be pristine. Residual directories (like `roles/`) caused `git clone` to fail with "destination path already exists."
 
 ## Resolutions (Continued)
 
@@ -42,6 +44,8 @@ The CI workflow failed following the "Tooling Consistency" update due to several
 14. **Persistent Role Symlinking:** To bypass recurrent authentication issues with private repositories in CI, roles are now symlinked from a known persistent directory on the runner machine (`/Users/cliang/src/gitrepo/personal/ansible/`).
 15. **Manual Virtual Environment:** Replaced `actions/setup-python` with a manual `python3 -m venv` to avoid permission issues and leverage the runner's native Python installation.
 16. **Refined Job Triggers:** Restricted integration tests to their respective branches (e.g., `azure-dev` for Azure, `aws-dev` for AWS) using `github.ref_name == '...'` to prevent unnecessary and failing test executions.
+17. **Tomcat Version Bump:** Updated to version `9.0.115` to resolve the 404 download error. Note: For long-term stability, binaries should be mirrored in a persistent store.
+18. **Aggressive Workspace Cleanup:** Added `rm -rf roles/` before symlinking or cloning to ensure a clean state on the self-hosted runner.
 
 ## Verification Results
 - **Validation Job:** PASSED.

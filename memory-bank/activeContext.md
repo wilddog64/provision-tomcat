@@ -35,6 +35,8 @@ Initialize and populate a complete `memory-bank/` for this repository according 
   - update `progress.md` checklist status.
 
 ## Risks / Follow-ups
+- **Portability vs. Stability:** The current CI solution is optimized for the local self-hosted runner (`m2-air`). It uses absolute symlinks (`/Users/cliang/...`) to bypass persistent authentication issues. This makes the CI non-portable to other runners without mirroring that exact filesystem structure.
+- **Binary Rotation:** Hardcoded Tomcat mirror URLs are prone to 404 errors when Apache rotates versions.
 - If future scope adds Kubernetes/GitOps components (k3s/ArgoCD), `systemPatterns.md` must be expanded from guardrails to concrete operational flows.
 - If this role is integrated into e-commerce shopping-cart infrastructure, API/integration contracts should be documented explicitly (currently out of direct repo scope).
 

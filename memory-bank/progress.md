@@ -27,6 +27,8 @@
     - [x] Resolved macOS `fork()` safety crashes with `OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES`.
     - [x] Implemented persistent role symlinking to bypass runner environment isolation.
     - [x] Refined job triggers to ensure integration tests only run on relevant branches.
+    - [x] Resolved Tomcat 404 download error by bumping to version 9.0.115.
+    - [x] Implemented aggressive workspace cleanup to prevent clone failures.
 
 ## Pending TODOs
 - [ ] Expand `systemPatterns.md` with concrete k3s/ArgoCD implementation details if/when this repository adds those assets.
