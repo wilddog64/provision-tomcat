@@ -20,6 +20,13 @@ jobs:
         with:
           path: provision-tomcat
 
+      - name: Setup SSH Agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: |
+            ${{ secrets.WINDOWS_BASE_SSH_KEY }}
+            ${{ secrets.PROVISION_SECURITY_SSH_KEY }}
+
       - name: Checkout All Roles
         run: |
           mkdir -p provision-tomcat/roles
@@ -83,6 +90,13 @@ jobs:
             echo "AZURE_AVAILABLE=false" >> $GITHUB_ENV
             echo "No Azure session or secrets found."
           fi
+
+      - name: Setup SSH Agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: |
+            ${{ secrets.WINDOWS_BASE_SSH_KEY }}
+            ${{ secrets.PROVISION_SECURITY_SSH_KEY }}
 
       - name: Checkout All Roles
         run: |
