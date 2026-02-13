@@ -169,6 +169,9 @@ test-azure-provision-tomcat: update-roles
 	sleep 10; \
 	mkdir -p scratch; \
 	printf "[azure]\ndefault-win11-azure ansible_host=$$IP ansible_user=testadmin ansible_password=\"Password123!\" ansible_port=5985 ansible_connection=winrm ansible_winrm_transport=basic ansible_winrm_scheme=http ansible_winrm_server_cert_validation=ignore ansible_winrm_read_timeout_sec=300 ansible_become_method=runas ansible_become_user=$$USER ansible_become_password=\"$$PASS\"\n" > scratch/azure-inventory.ini; \
+	echo "=== Verifying Ansible Connectivity (win_ping) ==="; \
+	ansible -i scratch/azure-inventory.ini -m win_ping all; \
+	echo "=== Running Integration Test ==="; \
 	ansible-playbook -i scratch/azure-inventory.ini tests/playbook.yml \
 		-e "env=stage2 extract_build_number=16 extract_debug=False skip_migration=true tomcat_version=9.0.113 tomcat_auto_start=true install_drive=D:" ; \
 	echo "=== Verifying Tomcat Connectivity from Controller ==="; \
