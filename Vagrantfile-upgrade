@@ -23,7 +23,8 @@ Vagrant.configure("2") do |config|
           uuid = uuid_match[1]
           # Check if disk is attached to any VM before closing
           attached_vms = `VBoxManage showhdinfo #{uuid} 2>/dev/null | grep 'In use by VMs:'`.strip
-          if attached_vms.empty? || attached_vms.include?('In use by VMs:')
+          # Only delete if disk is not attached to any VM
+          if attached_vms.empty? || !attached_vms.include?('In use by VMs:')
             system("VBoxManage closemedium disk #{uuid} --delete 2>/dev/null")
           else
             warn "Warning: Disk #{disk_file} is attached to a VM. Skipping cleanup."

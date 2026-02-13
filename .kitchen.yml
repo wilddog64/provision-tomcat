@@ -205,6 +205,8 @@ platforms:
       use_cli_credentials: true
       use_managed_identity: false
       location: southcentralus
+      # Resource group name - must be set via AZURE_RESOURCE_GROUP environment variable
+      # or will fail with KeyError. This ensures explicit configuration for Kitchen tests.
       explicit_resource_group_name: <%= ENV.fetch('AZURE_RESOURCE_GROUP') %>
       allow_resource_group_creation: false
       delete_resource_group: false
