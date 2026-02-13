@@ -108,10 +108,16 @@ Initialize and populate a complete `memory-bank/` for this repository according 
 
 
 
+### Session Update (2026-02-12): CI Integration Fallback Planning
+
+### What Changed
+- Created `docs/plans/CI-INTEGRATION-FALLBACK.md` to plan a detection and fallback mechanism for Azure tests.
+- Documented the strategy: Check for `AZURE_CLIENT_ID`, and if missing, fall back to `make test-win11` (Vagrant) on self-hosted runners.
+
+### Why It Was Done This Way
+- **Reliability:** Avoid workflow failures when Azure sandboxes are not active, while still ensuring that integration tests are performed on capable runners.
+- **Efficiency:** consolidate integration testing logic to provide a consistent quality signal regardless of the target cloud environment's availability.
+
 ### Current Handover State
-
-- Branch `azure-dev` contains fixes for the reported CI failure.
-
-- Critical regressions from the previous "Tooling Consistency" update have been resolved.
-
-- Memory-bank is updated with the latest rationale.
+- Branch `azure-dev` contains the latest CI stability fixes.
+- A new plan for CI fallback is documented and ready for implementation.
