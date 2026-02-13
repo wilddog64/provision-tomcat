@@ -35,10 +35,10 @@ jobs:
       - name: Checkout windows-base
         run: |
           mkdir -p provision-tomcat/roles
-          git clone https://github.com/wilddog64/windows-base.git provision-tomcat/roles/windows-base
+          git clone git@github.com:wilddog64/windows-base.git provision-tomcat/roles/windows-base
 
       - name: Checkout provision-windows-security
-        run: git clone https://github.com/wilddog64/provision-windows-security.git provision-tomcat/roles/provision-windows-security
+        run: git clone git@github.com:wilddog64/provision-windows-security.git provision-tomcat/roles/provision-windows-security
 
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
@@ -107,10 +107,10 @@ jobs:
       - name: Checkout windows-base
         run: |
           mkdir -p roles
-          git clone https://github.com/wilddog64/windows-base.git roles/windows-base
+          git clone git@github.com:wilddog64/windows-base.git roles/windows-base
 
       - name: Checkout provision-windows-security
-        run: git clone https://github.com/wilddog64/provision-windows-security.git roles/provision-windows-security
+        run: git clone git@github.com:wilddog64/provision-windows-security.git roles/provision-windows-security
 
       - name: Symlink current role
         run: |
