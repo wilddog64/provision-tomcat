@@ -183,7 +183,7 @@ jobs:
           AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
 
       - name: Pre-download Vagrant Box
-        if: env.AZURE_AVAILABLE != 'true'
+        if: env.AZURE_AVAILABLE != 'true' && false # Disabled due to VirtualBox stability issues on Apple Silicon
         env:
           VAGRANT_HOME: /Users/cliang/.vagrant.d
         run: |
@@ -199,7 +199,7 @@ jobs:
           fi
 
       - name: Fallback to Vagrant Test
-        if: env.AZURE_AVAILABLE != 'true'
+        if: env.AZURE_AVAILABLE != 'true' && false # Disabled due to VirtualBox stability issues on Apple Silicon
         run: |
           echo "WARNING: Azure credentials not found. Falling back to Vagrant (win11) integration test."
           make vbox-cleanup-disks || true

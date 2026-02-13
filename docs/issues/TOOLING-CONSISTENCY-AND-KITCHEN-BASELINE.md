@@ -71,4 +71,21 @@ No behavioral change. This is standard formatting hygiene and avoids EOF newline
 
 1.  **Vagrant Box Re-downloads**: Every CI run was downloading the Windows 11 box from the internet because `vagrant-wrapper` used `env -i`, which stripped the `HOME` variable. This prevented Vagrant from finding the persistent box cache at `~/.vagrant.d`.
 
-2.  **Appliance Import Failures**: `kitchen create` would frequently fail with `VERR_ALREADY_EXISTS` because stale VM registrations or VMDK files remained from previous failed or interrupted runs. Aggressive cleanup ensures a blank slate for every integration test run.
+## 6) Vagrant Fallback Disabled in CI
+
+### What changed
+
+- Added `&& false` to the `if` conditions for "Pre-download Vagrant Box" and "Fallback to Vagrant Test" steps in `.github/workflows/ci.yml`.
+
+### Why
+
+Extensive debugging on the `m2-air` runner confirmed that **Windows 11 ARM64 virtualization via VirtualBox 7 is highly unstable**. 
+
+Even with:
+- 8GB RAM and 4 CPUs allocated to the guest.
+- WinRM transport reverted to `basic` for compatibility.
+- Increased connection timeouts and retries.
+
+The guest PowerShell processes consistently crash with `STATUS_ACCESS_VIOLATION` (exit code `3221225477`), resulting in "Module result deserialization failed" errors in Ansible.
+
+To avoid continuous misleading CI failures, the local Vagrant fallback has been disabled. Integration tests now strictly require Azure environment availability to provide reliable results.
