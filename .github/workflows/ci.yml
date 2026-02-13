@@ -14,6 +14,8 @@ jobs:
   validation:
     name: Validation
     runs-on: [self-hosted, macOS, ARM64]
+    permissions:
+      contents: read
     steps:
       - name: Checkout provision-tomcat
         uses: actions/checkout@v4
@@ -27,24 +29,19 @@ jobs:
           path: provision-tomcat/roles/provision-java
           token: ${{ secrets.GH_PAT || github.token }}
 
-      - name: Verify SSH Keys
-        run: |
-          if [ -z "${{ secrets.WINDOWS_BASE_SSH_KEY }}" ]; then echo "WINDOWS_BASE_SSH_KEY is empty"; fi
-          if [ -z "${{ secrets.PROVISION_SECURITY_SSH_KEY }}" ]; then echo "PROVISION_SECURITY_SSH_KEY is empty"; fi
-
       - name: Checkout windows-base
         uses: actions/checkout@v4
         with:
           repository: wilddog64/windows-base
           path: provision-tomcat/roles/windows-base
-          ssh-key: ${{ secrets.WINDOWS_BASE_SSH_KEY }}
+          token: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
 
       - name: Checkout provision-windows-security
         uses: actions/checkout@v4
         with:
           repository: wilddog64/provision-windows-security
           path: provision-tomcat/roles/provision-windows-security
-          ssh-key: ${{ secrets.PROVISION_SECURITY_SSH_KEY }}
+          token: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
 
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
@@ -115,14 +112,14 @@ jobs:
         with:
           repository: wilddog64/windows-base
           path: roles/windows-base
-          ssh-key: ${{ secrets.WINDOWS_BASE_SSH_KEY }}
+          token: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
 
       - name: Checkout provision-windows-security
         uses: actions/checkout@v4
         with:
           repository: wilddog64/provision-windows-security
           path: roles/provision-windows-security
-          ssh-key: ${{ secrets.PROVISION_SECURITY_SSH_KEY }}
+          token: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
 
       - name: Symlink current role
         run: |
