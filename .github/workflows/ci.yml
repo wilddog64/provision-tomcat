@@ -23,10 +23,10 @@ jobs:
       - name: Checkout All Roles
         run: |
           mkdir -p provision-tomcat/roles
-          # Use native SSH on the runner machine
-          git clone git@github.com:wilddog64/provision-java.git provision-tomcat/roles/provision-java
-          git clone git@github.com:wilddog64/windows-base.git provision-tomcat/roles/windows-base
-          git clone git@github.com:wilddog64/provision-windows-security.git provision-tomcat/roles/provision-windows-security
+          # Clone roles using HTTPS with GITHUB_TOKEN
+          git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/wilddog64/provision-java.git provision-tomcat/roles/provision-java
+          git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/wilddog64/windows-base.git provision-tomcat/roles/windows-base
+          git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/wilddog64/provision-windows-security.git provision-tomcat/roles/provision-windows-security
 
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
@@ -88,10 +88,10 @@ jobs:
       - name: Checkout All Roles
         run: |
           mkdir -p roles
-          # Use native SSH on the runner machine
-          git clone git@github.com:wilddog64/provision-java.git roles/provision-java
-          git clone git@github.com:wilddog64/windows-base.git roles/windows-base
-          git clone git@github.com:wilddog64/provision-windows-security.git roles/provision-windows-security
+          # Clone roles using HTTPS with GITHUB_TOKEN
+          git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/wilddog64/provision-java.git roles/provision-java
+          git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/wilddog64/windows-base.git roles/windows-base
+          git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/wilddog64/provision-windows-security.git roles/provision-windows-security
 
       - name: Symlink current role
         run: |
