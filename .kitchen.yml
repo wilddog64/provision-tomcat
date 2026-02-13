@@ -59,8 +59,8 @@ platforms:
       box: stromweld/windows-11
       communicator: winrm
       customize:
-        memory: 4096
-        cpus: 2
+        memory: 8192
+        cpus: 4
     transport:
       name: winrm
       elevated: true
@@ -108,8 +108,8 @@ platforms:
       box: stromweld/windows-11
       communicator: winrm
       customize:
-        memory: 4096
-        cpus: 2
+        memory: 8192
+        cpus: 4
       vagrantfiles:
         - /Users/cliang/src/gitrepo/personal/ansible/provision-tomcat/vagrant/Vagrantfile-disk.rb
     transport:
