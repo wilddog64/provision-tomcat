@@ -70,6 +70,7 @@ platforms:
       ssl: false
       connection_retries: 10
       connection_retry_sleep: 20
+      operation_timeout: 600
     provisioner:
       name: ansible_push
       ansible_playbook_bin: <%= Dir.glob("#{Dir.pwd}/.direnv/python-*/bin/ansible-playbook").first || "ansible-playbook" %>
@@ -120,6 +121,7 @@ platforms:
       ssl: false
       connection_retries: 10
       connection_retry_sleep: 20
+      operation_timeout: 600
     provisioner:
       name: ansible_push
       ansible_playbook_bin: <%= Dir.glob("#{Dir.pwd}/.direnv/python-*/bin/ansible-playbook").first || "ansible-playbook" %>
@@ -235,6 +237,7 @@ platforms:
       ssl: false
       connection_retries: 15
       connection_retry_sleep: 10
+      operation_timeout: 600
       username: <%= ENV.fetch('AZURE_ADMIN_USERNAME', 'azureadmin') %>
       password: <%= ENV.fetch('AZURE_ADMIN_PASSWORD', 'ChangeM3!') %>
     provisioner:
