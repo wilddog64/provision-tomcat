@@ -30,18 +30,10 @@ jobs:
           token: ${{ secrets.GH_PAT || github.token }}
 
       - name: Checkout windows-base
-        uses: actions/checkout@v4
-        with:
-          repository: wilddog64/windows-base
-          path: provision-tomcat/roles/windows-base
-          token: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
+        run: git clone git@github.com:wilddog64/windows-base.git provision-tomcat/roles/windows-base
 
       - name: Checkout provision-windows-security
-        uses: actions/checkout@v4
-        with:
-          repository: wilddog64/provision-windows-security
-          path: provision-tomcat/roles/provision-windows-security
-          token: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
+        run: git clone git@github.com:wilddog64/provision-windows-security.git provision-tomcat/roles/provision-windows-security
 
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
@@ -108,18 +100,10 @@ jobs:
           token: ${{ secrets.GH_PAT || github.token }}
 
       - name: Checkout windows-base
-        uses: actions/checkout@v4
-        with:
-          repository: wilddog64/windows-base
-          path: roles/windows-base
-          token: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
+        run: git clone git@github.com:wilddog64/windows-base.git roles/windows-base
 
       - name: Checkout provision-windows-security
-        uses: actions/checkout@v4
-        with:
-          repository: wilddog64/provision-windows-security
-          path: roles/provision-windows-security
-          token: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
+        run: git clone git@github.com:wilddog64/provision-windows-security.git roles/provision-windows-security
 
       - name: Symlink current role
         run: |
