@@ -21,12 +21,14 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Checkout All Roles
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
         run: |
           mkdir -p roles
-          # Clone roles using runner's native SSH session
-          git clone git@github.com:wilddog64/provision-java.git roles/provision-java
-          git clone git@github.com:wilddog64/windows-base.git roles/windows-base
-          git clone git@github.com:wilddog64/provision-windows-security.git roles/provision-windows-security
+          # Clone roles using HTTPS with embedded token
+          git clone https://x-access-token:${GH_PAT}@github.com/wilddog64/provision-java.git roles/provision-java
+          git clone https://x-access-token:${GH_PAT}@github.com/wilddog64/windows-base.git roles/windows-base
+          git clone https://x-access-token:${GH_PAT}@github.com/wilddog64/provision-windows-security.git roles/provision-windows-security
 
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
@@ -86,12 +88,14 @@ jobs:
           fi
 
       - name: Checkout All Roles
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
         run: |
           mkdir -p roles
-          # Clone roles using runner's native SSH session
-          git clone git@github.com:wilddog64/provision-java.git roles/provision-java
-          git clone git@github.com:wilddog64/windows-base.git roles/windows-base
-          git clone git@github.com:wilddog64/provision-windows-security.git roles/provision-windows-security
+          # Clone roles using HTTPS with embedded token
+          git clone https://x-access-token:${GH_PAT}@github.com/wilddog64/provision-java.git roles/provision-java
+          git clone https://x-access-token:${GH_PAT}@github.com/wilddog64/windows-base.git roles/windows-base
+          git clone https://x-access-token:${GH_PAT}@github.com/wilddog64/provision-windows-security.git roles/provision-windows-security
 
       - name: Symlink current role
         run: |
