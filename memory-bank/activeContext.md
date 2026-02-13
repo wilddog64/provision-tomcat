@@ -66,9 +66,13 @@ Initialize and populate a complete `memory-bank/` for this repository according 
 
 ### What Changed
 
+- Documented the full regression analysis in `docs/issues/CI-WORKFLOW-REGRESSIONS.md`.
+
 - Fixed `Makefile` and `scripts/setup.sh` to include `community.windows` in the `deps` target.
 
 - Refactored `Makefile` binary resolution to be more robust (fallback to PATH if derived path fails).
+
+
 
 - Added explicit guard checks for `ansible-lint` and `ansible-playbook` in `Makefile` with clear error messages.
 

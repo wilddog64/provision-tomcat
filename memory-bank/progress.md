@@ -7,6 +7,7 @@
 - [x] Created `techContext.md` documenting stack, runtime variables, test channels, and constraints.
 - [x] Created `activeContext.md` with current state, decision rationale ("why"), and handoff notes.
 - [x] Documented tooling-consistency and Kitchen-baseline rationale in `docs/issues/TOOLING-CONSISTENCY-AND-KITCHEN-BASELINE.md`.
+- [x] Documented CI workflow regression root cause analysis and fixes in `docs/issues/CI-WORKFLOW-REGRESSIONS.md`.
 - [x] Updated `README.md` issue links (candidate troubleshooting + Azure issue references) and added the new tooling issue link.
 - [x] Fixed CI workflow regressions:
     - [x] Restored `community.windows` to `make deps`.
