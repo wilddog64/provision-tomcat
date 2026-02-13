@@ -23,33 +23,15 @@ jobs:
           path: provision-tomcat
 
       - name: Checkout provision-java
-        uses: actions/checkout@v4
-        with:
-          repository: wilddog64/provision-java
-          path: provision-tomcat/roles/provision-java
-          token: ${{ secrets.GH_PAT || github.token }}
-
-      - name: Verify SSH Access
-        run: ssh -T git@github.com || true
+        run: |
+          mkdir -p provision-tomcat/roles
+          git clone git@github.com:wilddog64/provision-java.git provision-tomcat/roles/provision-java
 
       - name: Checkout windows-base
-        env:
-          SSH_KEY: ${{ secrets.WINDOWS_BASE_SSH_KEY }}
-        run: |
-          mkdir -p ~/.ssh
-          printf "%s" "$SSH_KEY" > ~/.ssh/id_windows_base
-          chmod 600 ~/.ssh/id_windows_base
-          ssh-keyscan github.com >> ~/.ssh/known_hosts
-          GIT_SSH_COMMAND="ssh -i ~/.ssh/id_windows_base -o IdentitiesOnly=yes" git clone git@github.com:wilddog64/windows-base.git provision-tomcat/roles/windows-base
+        run: git clone git@github.com:wilddog64/windows-base.git provision-tomcat/roles/windows-base
 
       - name: Checkout provision-windows-security
-        env:
-          SSH_KEY: ${{ secrets.PROVISION_SECURITY_SSH_KEY }}
-        run: |
-          mkdir -p ~/.ssh
-          printf "%s" "$SSH_KEY" > ~/.ssh/id_provision_security
-          chmod 600 ~/.ssh/id_provision_security
-          GIT_SSH_COMMAND="ssh -i ~/.ssh/id_provision_security -o IdentitiesOnly=yes" git clone git@github.com:wilddog64/provision-windows-security.git provision-tomcat/roles/provision-windows-security
+        run: git clone git@github.com:wilddog64/provision-windows-security.git provision-tomcat/roles/provision-windows-security
 
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
@@ -109,30 +91,15 @@ jobs:
           fi
 
       - name: Checkout provision-java
-        uses: actions/checkout@v4
-        with:
-          repository: wilddog64/provision-java
-          path: roles/provision-java
-          token: ${{ secrets.GH_PAT || github.token }}
+        run: |
+          mkdir -p roles
+          git clone git@github.com:wilddog64/provision-java.git roles/provision-java
 
       - name: Checkout windows-base
-        env:
-          SSH_KEY: ${{ secrets.WINDOWS_BASE_SSH_KEY }}
-        run: |
-          mkdir -p ~/.ssh
-          printf "%s" "$SSH_KEY" > ~/.ssh/id_windows_base
-          chmod 600 ~/.ssh/id_windows_base
-          ssh-keyscan github.com >> ~/.ssh/known_hosts
-          GIT_SSH_COMMAND="ssh -i ~/.ssh/id_windows_base -o IdentitiesOnly=yes" git clone git@github.com:wilddog64/windows-base.git roles/windows-base
+        run: git clone git@github.com:wilddog64/windows-base.git roles/windows-base
 
       - name: Checkout provision-windows-security
-        env:
-          SSH_KEY: ${{ secrets.PROVISION_SECURITY_SSH_KEY }}
-        run: |
-          mkdir -p ~/.ssh
-          printf "%s" "$SSH_KEY" > ~/.ssh/id_provision_security
-          chmod 600 ~/.ssh/id_provision_security
-          GIT_SSH_COMMAND="ssh -i ~/.ssh/id_provision_security -o IdentitiesOnly=yes" git clone git@github.com:wilddog64/provision-windows-security.git roles/provision-windows-security
+        run: git clone git@github.com:wilddog64/provision-windows-security.git roles/provision-windows-security
 
       - name: Symlink current role
         run: |
