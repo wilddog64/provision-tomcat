@@ -20,13 +20,16 @@ jobs:
         with:
           path: provision-tomcat
 
+      - name: Disable Credential Helper
+        run: git config --global credential.helper ""
+
       - name: Checkout All Roles
         run: |
           mkdir -p provision-tomcat/roles
-          # Clone roles using HTTPS with GITHUB_TOKEN
-          git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/wilddog64/provision-java.git provision-tomcat/roles/provision-java
-          git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/wilddog64/windows-base.git provision-tomcat/roles/windows-base
-          git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/wilddog64/provision-windows-security.git provision-tomcat/roles/provision-windows-security
+          # Clone roles using HTTPS with GH_PAT
+          git clone https://x-access-token:${{ secrets.GH_PAT }}@github.com/wilddog64/provision-java.git provision-tomcat/roles/provision-java
+          git clone https://x-access-token:${{ secrets.GH_PAT }}@github.com/wilddog64/windows-base.git provision-tomcat/roles/windows-base
+          git clone https://x-access-token:${{ secrets.GH_PAT }}@github.com/wilddog64/provision-windows-security.git provision-tomcat/roles/provision-windows-security
 
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
@@ -85,13 +88,16 @@ jobs:
             echo "No Azure session or secrets found."
           fi
 
+      - name: Disable Credential Helper
+        run: git config --global credential.helper ""
+
       - name: Checkout All Roles
         run: |
           mkdir -p roles
-          # Clone roles using HTTPS with GITHUB_TOKEN
-          git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/wilddog64/provision-java.git roles/provision-java
-          git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/wilddog64/windows-base.git roles/windows-base
-          git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/wilddog64/provision-windows-security.git roles/provision-windows-security
+          # Clone roles using HTTPS with GH_PAT
+          git clone https://x-access-token:${{ secrets.GH_PAT }}@github.com/wilddog64/provision-java.git roles/provision-java
+          git clone https://x-access-token:${{ secrets.GH_PAT }}@github.com/wilddog64/windows-base.git roles/windows-base
+          git clone https://x-access-token:${{ secrets.GH_PAT }}@github.com/wilddog64/provision-windows-security.git roles/provision-windows-security
 
       - name: Symlink current role
         run: |
