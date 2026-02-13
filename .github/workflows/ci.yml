@@ -3,7 +3,7 @@ name: CI
 on:
   workflow_dispatch:
   push:
-    branches: [main, azure-dev, aws-dev, vagrant-dev]
+    branches: [main]
   pull_request:
     branches: [main, azure-dev, aws-dev, vagrant-dev]
 
