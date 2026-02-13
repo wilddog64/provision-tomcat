@@ -108,19 +108,17 @@ Initialize and populate a complete `memory-bank/` for this repository according 
 
 
 
-### Session Update (2026-02-12): CI Integration Fallback Implementation
+### Session Update (2026-02-12): CI Integration Fallback Refinement
 
 ### What Changed
-- Renamed `azure-test` to `integration-test` in `.github/workflows/ci.yml`.
-- Implemented logic to check `secrets.AZURE_CLIENT_ID`.
-- Added conditional steps:
-    - Run Azure tests if `AZURE_AVAILABLE` is true.
-    - Fall back to `make test-win11` (Vagrant) if `AZURE_AVAILABLE` is false.
-- Documented the plan in `docs/plans/CI-INTEGRATION-FALLBACK.md`.
+- Updated `.github/workflows/ci.yml` to include `ruby/setup-ruby@v1` with `bundler-cache: true`.
+- Corrected the fallback cleanup command to use `make vbox-cleanup-disks` instead of a non-existent script.
+- Ensured integration tests have access to all required gems (including `kitchen-azurerm`) via Bundler.
 
 ### Why It Was Done This Way
-- **Resilience:** The workflow now provides a fallback instead of a hard failure when cloud credentials are missing, ensuring integration coverage for all pushes to `azure-dev` or `main` when run on capable self-hosted infrastructure.
+- **Dependency Management:** The self-hosted runner requires an explicit `bundle install` (handled by `setup-ruby`) to resolve Kitchen plugins, even when falling back to Vagrant.
+- **Correct Tooling:** Switched to the established `vbox-cleanup-disks` target to ensure a clean hypervisor state before running Vagrant tests.
 
 ### Current Handover State
-- Branch `azure-dev` now has a resilient integration testing path.
-- CI workflow is synchronized with both cloud and local testing capabilities.
+- Branch `azure-dev` has a refined and more robust integration testing path.
+- CI workflow now properly manages Ruby dependencies for all integration test types.

@@ -105,6 +105,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '4.0.0'
+          bundler-cache: true
+
       - name: Login to Azure
         if: env.AZURE_AVAILABLE == 'true'
         run: |
@@ -122,7 +128,7 @@ jobs:
         if: env.AZURE_AVAILABLE != 'true'
         run: |
           echo "WARNING: Azure credentials not found. Falling back to Vagrant (win11) integration test."
-          ./bin/cleanup-vagrant.sh || true
+          make vbox-cleanup-disks || true
           bundle exec make test-win11
         env:
           OBJC_DISABLE_INITIALIZE_FORK_SAFETY: YES
