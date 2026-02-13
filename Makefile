@@ -41,7 +41,7 @@ SUITES := default latest idempotence
 JAVA_OLD_VERSION ?= 17
 JAVA_NEW_VERSION ?= 21
 TOMCAT_OLD_VERSION ?= 9.0.112
-TOMCAT_NEW_VERSION ?= 9.0.113
+TOMCAT_NEW_VERSION ?= 9.0.115
 
 # ============================================================================ 
 # Azure Configuration (Universal Overrides)
@@ -173,7 +173,7 @@ test-azure-provision-tomcat: update-roles
 	ansible -i scratch/azure-inventory.ini -m win_ping all; \
 	echo "=== Running Integration Test ==="; \
 	ansible-playbook -i scratch/azure-inventory.ini tests/playbook.yml \
-		-e "env=stage2 extract_build_number=16 extract_debug=False skip_migration=true tomcat_version=9.0.113 tomcat_auto_start=true install_drive=D:" ; \
+		-e "env=stage2 extract_build_number=16 extract_debug=False skip_migration=true tomcat_version=9.0.115 tomcat_auto_start=true install_drive=D:" ; \
 	echo "=== Verifying Tomcat Connectivity from Controller ==="; \
 	for i in {1..12}; do \
 		if curl -s --connect-timeout 5 --max-time 10 "http://$$IP:8080" > /dev/null; then \

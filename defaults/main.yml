@@ -2,7 +2,8 @@
 ---
 # defaults file for provision-tomcat
 install_drive: "C:"
-tomcat_version: 9.0.113  # Tomcat version to install
+tomcat_version: 9.0.115
+  # Tomcat version to install
 tomcat_major_version: 9   # Major version (used for service name and paths)
 tomcat_service_name: "Tomcat{{ tomcat_major_version }}"
 tomcat_install_dir: "{{ install_drive }}/Tomcat"  # Base installation directory
