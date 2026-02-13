@@ -19,8 +19,8 @@ jobs:
         run: |
           whoami
           pwd
-          ls -la /Users/
-          ls -la /Users/cliang/ || echo "Cannot access /Users/cliang"
+          echo "HOME=$HOME"
+          ls -la "$HOME" || echo "Cannot access HOME directory"
 
       - name: Checkout provision-tomcat
         uses: actions/checkout@v4
@@ -32,10 +32,23 @@ jobs:
         run: |
           rm -rf roles
           mkdir -p roles
-          # Symlink from known local dev paths
-          ln -sfn /Users/cliang/src/gitrepo/personal/ansible/provision-java roles/provision-java
-          ln -sfn /Users/cliang/src/gitrepo/personal/ansible/windows-base roles/windows-base
-          ln -sfn /Users/cliang/src/gitrepo/personal/ansible/provision-windows-security roles/provision-windows-security
+          # Symlink from runner dev paths (configure ANSIBLE_DEV_ROLES_PATH on self-hosted runner)
+          ROLES_BASE="${ANSIBLE_DEV_ROLES_PATH:-$HOME/src/gitrepo/personal/ansible}"
+          if [ -d "$ROLES_BASE/provision-java" ]; then
+            ln -sfn "$ROLES_BASE/provision-java" roles/provision-java
+          else
+            echo "Warning: provision-java not found at $ROLES_BASE/provision-java"
+          fi
+          if [ -d "$ROLES_BASE/windows-base" ]; then
+            ln -sfn "$ROLES_BASE/windows-base" roles/windows-base
+          else
+            echo "Warning: windows-base not found at $ROLES_BASE/windows-base"
+          fi
+          if [ -d "$ROLES_BASE/provision-windows-security" ]; then
+            ln -sfn "$ROLES_BASE/provision-windows-security" roles/provision-windows-security
+          else
+            echo "Warning: provision-windows-security not found at $ROLES_BASE/provision-windows-security"
+          fi
           # Symlink self as role
           ln -sfn .. roles/provision-tomcat
 
@@ -110,10 +123,23 @@ jobs:
         run: |
           rm -rf roles
           mkdir -p roles
-          # Symlink from known local dev paths
-          ln -sfn /Users/cliang/src/gitrepo/personal/ansible/provision-java roles/provision-java
-          ln -sfn /Users/cliang/src/gitrepo/personal/ansible/windows-base roles/windows-base
-          ln -sfn /Users/cliang/src/gitrepo/personal/ansible/provision-windows-security roles/provision-windows-security
+          # Symlink from runner dev paths (configure ANSIBLE_DEV_ROLES_PATH on self-hosted runner)
+          ROLES_BASE="${ANSIBLE_DEV_ROLES_PATH:-$HOME/src/gitrepo/personal/ansible}"
+          if [ -d "$ROLES_BASE/provision-java" ]; then
+            ln -sfn "$ROLES_BASE/provision-java" roles/provision-java
+          else
+            echo "Warning: provision-java not found at $ROLES_BASE/provision-java"
+          fi
+          if [ -d "$ROLES_BASE/windows-base" ]; then
+            ln -sfn "$ROLES_BASE/windows-base" roles/windows-base
+          else
+            echo "Warning: windows-base not found at $ROLES_BASE/windows-base"
+          fi
+          if [ -d "$ROLES_BASE/provision-windows-security" ]; then
+            ln -sfn "$ROLES_BASE/provision-windows-security" roles/provision-windows-security
+          else
+            echo "Warning: provision-windows-security not found at $ROLES_BASE/provision-windows-security"
+          fi
 
       - name: Symlink current role
         run: |
