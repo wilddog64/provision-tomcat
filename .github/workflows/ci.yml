@@ -39,10 +39,10 @@ jobs:
           ln -sfn /Users/cliang/src/gitrepo/personal/ansible/windows-base roles/windows-base
           ln -sfn /Users/cliang/src/gitrepo/personal/ansible/provision-windows-security roles/provision-windows-security
 
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
+      - name: Verify Python Environment
+        run: |
+          python3 --version
+          which python3
 
       - name: Install dependencies
         run: |
