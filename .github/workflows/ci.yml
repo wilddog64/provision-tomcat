@@ -46,15 +46,21 @@ jobs:
 
       - name: Install dependencies
         run: |
+          python3 -m venv venv
+          source venv/bin/activate
           python3 -m pip install --upgrade pip
           if [ -f requirements.txt ]; then python3 -m pip install -r requirements.txt; fi
           python3 -m pip install ansible-lint
 
       - name: Install Ansible collections
-        run: make deps
+        run: |
+          source venv/bin/activate
+          make deps
 
       - name: Run Validation
-        run: make check
+        run: |
+          source venv/bin/activate
+          make check
 
   integration:
     name: Integration Tests (Azure or Vagrant)
@@ -114,10 +120,14 @@ jobs:
           ln -sfn .. roles/provision-tomcat
 
       - name: Install Ansible collections
-        run: make deps
+        run: |
+          python3 -m venv venv
+          source venv/bin/activate
+          make deps
 
       - name: Install Ruby Dependencies
         run: |
+          source venv/bin/activate
           echo "Checking for rbenv..."
           if [ -d "$HOME/.rbenv" ]; then
             RBENV_ROOT="$HOME/.rbenv"
@@ -146,15 +156,21 @@ jobs:
 
       - name: Run Azure Test
         if: env.AZURE_AVAILABLE == 'true'
-        run: make test-azure-provision-tomcat
+        run: |
+          source venv/bin/activate
+          make test-azure-provision-tomcat
 
       - name: Pre-download Vagrant Box
         if: env.AZURE_AVAILABLE == 'false'
-        run: ./bin/vagrant-wrapper box add --provider virtualbox --force gusztavvargadr/windows-11-22h2-pro-arm64 || true
+        run: |
+          source venv/bin/activate
+          ./bin/vagrant-wrapper box add --provider virtualbox --force gusztavvargadr/windows-11-22h2-pro-arm64 || true
 
       - name: Fallback to Vagrant Test
         if: env.AZURE_AVAILABLE == 'false' && false
-        run: make test-provision-tomcat
+        run: |
+          source venv/bin/activate
+          make test-provision-tomcat
 
   aws_integration:
     name: AWS Integration Tests
