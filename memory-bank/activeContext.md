@@ -76,11 +76,17 @@ Initialize and populate a complete `memory-bank/` for this repository according 
 
 - Commented out the `vagrant-test` job in `.github/workflows/ci.yml` as it depended on the now-disabled `win11-baseline` platform.
 
+- Added `--offline` to `ansible-lint` in `Makefile` to prevent it from trying to install dependencies from `requirements.yml` via HTTPS.
+
 
 
 ### Why It Was Done This Way
 
+- **ansible-lint failure:** In CI, `ansible-lint` was attempting to install roles from `requirements.yml` using HTTPS, which failed for private repositories. Since dependencies are already pre-cloned via SSH in the workflow, `--offline` forces linting to use existing paths.
+
 - **Missing Collection:** The previous "Tooling Consistency" update accidentally omitted `community.windows` from `make deps`, causing syntax checks to fail in clean environments.
+
+
 
 - **CI/Kitchen Drift:** Disabling `win11-baseline` in `.kitchen.yml` without updating `ci.yml` caused the `vagrant-test` job to fail (instance not found).
 

@@ -64,7 +64,7 @@ AZURE_ADMIN_PASSWORD ?= ChangeM3!SecurePassword
 lint: deps
 	@if [ -z "$(ANSIBLE_LINT_BIN)" ]; then echo "ERROR: ansible-lint not found in PATH"; exit 1; fi
 	@echo "Running ansible-lint..."
-	PATH="$(dir $(ANSIBLE_LINT_BIN)):$$PATH" $(ANSIBLE_LINT_BIN) .
+	PATH="$(dir $(ANSIBLE_LINT_BIN)):$$PATH" $(ANSIBLE_LINT_BIN) --offline .
 
 .PHONY: syntax
 syntax: deps
