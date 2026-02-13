@@ -93,23 +93,40 @@ jobs:
 #      - name: Run Vagrant Tests
 #        run: bundle exec make test-upgrade-baseline-win11
 
-  azure-test:
-    name: Azure Integration Tests
+  integration-test:
+    name: Integration Tests (Azure or Vagrant)
     needs: lint
-    if: contains(github.ref, 'azure-dev') || contains(github.base_ref, 'azure-dev')
+    if: contains(github.ref, 'azure-dev') || contains(github.base_ref, 'azure-dev') || github.ref == 'refs/heads/main'
     runs-on: [self-hosted, macOS]
+    env:
+      ANSIBLE_ROLES_PATH: ${{ github.workspace }}/roles
+      AZURE_AVAILABLE: ${{ secrets.AZURE_CLIENT_ID != '' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
       - name: Login to Azure
+        if: env.AZURE_AVAILABLE == 'true'
         run: |
           az login --service-principal -u ${{ secrets.AZURE_CLIENT_ID }} \
             -p ${{ secrets.AZURE_CLIENT_SECRET }} --tenant ${{ secrets.AZURE_TENANT_ID }}
+
       - name: Run Azure Test
+        if: env.AZURE_AVAILABLE == 'true'
         run: make test-azure-provision-tomcat
         env:
           AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
+
+      - name: Fallback to Vagrant Test
+        if: env.AZURE_AVAILABLE != 'true'
+        run: |
+          echo "WARNING: Azure credentials not found. Falling back to Vagrant (win11) integration test."
+          ./bin/cleanup-vagrant.sh || true
+          bundle exec make test-win11
+        env:
+          OBJC_DISABLE_INITIALIZE_FORK_SAFETY: YES
+          VAGRANT_IGNORE_WINRM_PLUGIN: YES
 
   aws-test:
     name: AWS Integration Tests

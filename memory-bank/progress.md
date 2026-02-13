@@ -10,7 +10,7 @@
 - [x] Documented CI workflow regression root cause analysis and fixes in `docs/issues/CI-WORKFLOW-REGRESSIONS.md`.
 - [x] Created `docs/plans/CI-INTEGRATION-FALLBACK.md` for Azure-to-Vagrant fallback logic.
 - [x] Updated `README.md` issue links (candidate troubleshooting + Azure issue references) and added the new tooling issue link.
-- [ ] Implement CI integration fallback in `.github/workflows/ci.yml`.
+- [x] Implemented CI integration fallback in `.github/workflows/ci.yml`.
 - [x] Fixed CI workflow regressions:
     - [x] Restored `community.windows` to `make deps`.
     - [x] Robust tool resolution in `Makefile` with PATH fallbacks.

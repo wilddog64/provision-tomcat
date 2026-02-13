@@ -108,16 +108,19 @@ Initialize and populate a complete `memory-bank/` for this repository according 
 
 
 
-### Session Update (2026-02-12): CI Integration Fallback Planning
+### Session Update (2026-02-12): CI Integration Fallback Implementation
 
 ### What Changed
-- Created `docs/plans/CI-INTEGRATION-FALLBACK.md` to plan a detection and fallback mechanism for Azure tests.
-- Documented the strategy: Check for `AZURE_CLIENT_ID`, and if missing, fall back to `make test-win11` (Vagrant) on self-hosted runners.
+- Renamed `azure-test` to `integration-test` in `.github/workflows/ci.yml`.
+- Implemented logic to check `secrets.AZURE_CLIENT_ID`.
+- Added conditional steps:
+    - Run Azure tests if `AZURE_AVAILABLE` is true.
+    - Fall back to `make test-win11` (Vagrant) if `AZURE_AVAILABLE` is false.
+- Documented the plan in `docs/plans/CI-INTEGRATION-FALLBACK.md`.
 
 ### Why It Was Done This Way
-- **Reliability:** Avoid workflow failures when Azure sandboxes are not active, while still ensuring that integration tests are performed on capable runners.
-- **Efficiency:** consolidate integration testing logic to provide a consistent quality signal regardless of the target cloud environment's availability.
+- **Resilience:** The workflow now provides a fallback instead of a hard failure when cloud credentials are missing, ensuring integration coverage for all pushes to `azure-dev` or `main` when run on capable self-hosted infrastructure.
 
 ### Current Handover State
-- Branch `azure-dev` contains the latest CI stability fixes.
-- A new plan for CI fallback is documented and ready for implementation.
+- Branch `azure-dev` now has a resilient integration testing path.
+- CI workflow is synchronized with both cloud and local testing capabilities.
