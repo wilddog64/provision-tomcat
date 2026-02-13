@@ -161,6 +161,7 @@ test-azure-provision-tomcat: update-roles
 	echo "=== Waiting for WinRM on $$IP:5985... ==="; \
 	for i in {1..60}; do if nc -z -w 5 $$IP 5985; then break; fi; echo "Waiting... ($$i/60)"; sleep 10; if [ $$i -eq 60 ]; then echo "Timeout waiting for WinRM"; exit 1; fi; done; \
 	sleep 10; \
+	mkdir -p scratch; \
 	printf "[azure]\ndefault-win11-azure ansible_host=$$IP ansible_user=testadmin ansible_password=\"Password123!\" ansible_port=5985 ansible_connection=winrm ansible_winrm_transport=basic ansible_winrm_scheme=http ansible_winrm_server_cert_validation=ignore ansible_winrm_read_timeout_sec=300 ansible_become_method=runas ansible_become_user=$$USER ansible_become_password=\"$$PASS\"\n" > scratch/azure-inventory.ini; \
 	ansible-playbook -i scratch/azure-inventory.ini tests/playbook.yml \
 		-e "env=stage2 extract_build_number=16 extract_debug=False skip_migration=true tomcat_version=9.0.113 tomcat_auto_start=true install_drive=D:" ; \
@@ -224,6 +225,7 @@ test-azure-upgrade-candidate: update-roles
 	echo "=== Waiting for WinRM on $$IP:5985... ==="; \
 	for i in {1..60}; do if nc -z -w 5 $$IP 5985; then break; fi; echo "Waiting... ($$i/60)"; sleep 10; if [ $$i -eq 60 ]; then echo "Timeout waiting for WinRM"; exit 1; fi; done; \
 	sleep 10; \
+	mkdir -p scratch; \
 	printf "[azure]\ndefault-win11-azure ansible_host=$$IP ansible_user=testadmin ansible_password=\"Password123!\" ansible_port=5985 ansible_connection=winrm ansible_winrm_transport=basic ansible_winrm_scheme=http ansible_winrm_server_cert_validation=ignore ansible_winrm_read_timeout_sec=300 ansible_become_method=runas ansible_become_user=$$USER ansible_become_password=\"$$PASS\"\n" > scratch/azure-inventory.ini; \
 	echo "=== 5. Step 1: Installing Initial Version ==="; \
 	ansible-playbook -i scratch/azure-inventory.ini tests/playbook-upgrade.yml -e "env=stage2 upgrade_step=1 tomcat_auto_start=true install_drive=D:"; \

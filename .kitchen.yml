@@ -204,7 +204,7 @@ platforms:
       use_cli_credentials: true
       use_managed_identity: false
       location: southcentralus
-      explicit_resource_group_name: "1-6057ce5e-playground-sandbox"
+      explicit_resource_group_name: <%= ENV.fetch('AZURE_RESOURCE_GROUP', '1-6057ce5e-playground-sandbox') %>
       allow_resource_group_creation: false
       delete_resource_group: false
       destroy_explicit_resource_group: false
