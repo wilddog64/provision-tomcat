@@ -20,19 +20,30 @@ jobs:
         with:
           path: provision-tomcat
 
-      - name: Setup SSH Agent
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: |
-            ${{ secrets.WINDOWS_BASE_SSH_KEY }}
-            ${{ secrets.PROVISION_SECURITY_SSH_KEY }}
-
-      - name: Checkout All Roles
+      - name: Verify Token
         run: |
-          mkdir -p provision-tomcat/roles
-          git clone git@github.com:wilddog64/provision-java.git provision-tomcat/roles/provision-java
-          git clone git@github.com:wilddog64/windows-base.git provision-tomcat/roles/windows-base
-          git clone git@github.com:wilddog64/provision-windows-security.git provision-tomcat/roles/provision-windows-security
+          if [ -n "${{ secrets.GITHUB_TOKEN }}" ]; then echo "GITHUB_TOKEN is present"; else echo "GITHUB_TOKEN is MISSING"; fi
+
+      - name: Checkout provision-java
+        uses: actions/checkout@v4
+        with:
+          repository: wilddog64/provision-java
+          path: provision-tomcat/roles/provision-java
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Checkout windows-base
+        uses: actions/checkout@v4
+        with:
+          repository: wilddog64/windows-base
+          path: provision-tomcat/roles/windows-base
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Checkout provision-windows-security
+        uses: actions/checkout@v4
+        with:
+          repository: wilddog64/provision-windows-security
+          path: provision-tomcat/roles/provision-windows-security
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
@@ -91,19 +102,26 @@ jobs:
             echo "No Azure session or secrets found."
           fi
 
-      - name: Setup SSH Agent
-        uses: webfactory/ssh-agent@v0.9.0
+      - name: Checkout provision-java
+        uses: actions/checkout@v4
         with:
-          ssh-private-key: |
-            ${{ secrets.WINDOWS_BASE_SSH_KEY }}
-            ${{ secrets.PROVISION_SECURITY_SSH_KEY }}
+          repository: wilddog64/provision-java
+          path: roles/provision-java
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Checkout All Roles
-        run: |
-          mkdir -p roles
-          git clone git@github.com:wilddog64/provision-java.git roles/provision-java
-          git clone git@github.com:wilddog64/windows-base.git roles/windows-base
-          git clone git@github.com:wilddog64/provision-windows-security.git roles/provision-windows-security
+      - name: Checkout windows-base
+        uses: actions/checkout@v4
+        with:
+          repository: wilddog64/windows-base
+          path: roles/windows-base
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Checkout provision-windows-security
+        uses: actions/checkout@v4
+        with:
+          repository: wilddog64/provision-windows-security
+          path: roles/provision-windows-security
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Symlink current role
         run: |
