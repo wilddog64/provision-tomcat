@@ -15,10 +15,10 @@ end
 %>
 ---
 driver:
-  name: virtualbox
+  name: vagrant
 
 .common_vagrant: &common_vagrant
-  driver: virtualbox
+  driver: vagrant
   vagrant_binary: <%= File.join(File.dirname(__FILE__), 'bin', 'vagrant-wrapper') %>
 
 provisioner:
