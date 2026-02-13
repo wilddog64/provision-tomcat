@@ -27,6 +27,11 @@ jobs:
           path: provision-tomcat/roles/provision-java
           token: ${{ secrets.GH_PAT || github.token }}
 
+      - name: Verify SSH Keys
+        run: |
+          if [ -z "${{ secrets.WINDOWS_BASE_SSH_KEY }}" ]; then echo "WINDOWS_BASE_SSH_KEY is empty"; fi
+          if [ -z "${{ secrets.PROVISION_SECURITY_SSH_KEY }}" ]; then echo "PROVISION_SECURITY_SSH_KEY is empty"; fi
+
       - name: Checkout windows-base
         uses: actions/checkout@v4
         with:
