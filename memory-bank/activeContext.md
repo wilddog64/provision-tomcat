@@ -37,3 +37,29 @@ Initialize and populate a complete `memory-bank/` for this repository according 
 ## Risks / Follow-ups
 - If future scope adds Kubernetes/GitOps components (k3s/ArgoCD), `systemPatterns.md` must be expanded from guardrails to concrete operational flows.
 - If this role is integrated into e-commerce shopping-cart infrastructure, API/integration contracts should be documented explicitly (currently out of direct repo scope).
+
+---
+
+## Session Update (2026-02-12): Tooling/Docs Stabilization and Commit Grouping
+
+### What Changed
+- Reviewed current uncommitted repo changes and documented rationale in:
+  - `docs/issues/TOOLING-CONSISTENCY-AND-KITCHEN-BASELINE.md`
+- Updated `README.md` to:
+  - add a link to the new issue note,
+  - fix candidate troubleshooting path to `docs/issues/CANDIDATE-TROUBLESHOOTING.md`,
+  - normalize Azure issue links to `docs/issues/AZURE-KITCHEN-INTEGRATION.md`.
+- Local commits were grouped by intent (no push):
+  1. `cb0411b` build: consistent ansible binary resolution (`Makefile` + `.ansible-lint`)
+  2. `9229253` test: disable `win11-baseline` block + normalize CI EOF newline
+  3. `7d2f1c9` docs: rationale doc + README issue-link updates
+
+### Why It Was Done This Way
+- **Toolchain consistency:** force `ansible-lint`, `ansible-playbook`, and `ansible-galaxy` to resolve from the same environment path to reduce local/CI mismatch failures.
+- **Lint signal quality:** exclude Kitchen config files from ansible-lint because ERB-templated Kitchen YAML can produce false positives unrelated to playbook quality.
+- **Test-scope safety:** fully comment the inactive `win11-baseline` section to preserve history while preventing accidental test usage.
+- **Handover clarity:** create an issue note and README links so future agents/operators can quickly understand the rationale without re-deriving context from diffs.
+
+### Current Handover State
+- Branch `azure-dev` is ahead of origin with the three local commits above.
+- Memory-bank now reflects this decision path and rationale for cross-agent continuity.

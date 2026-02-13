@@ -6,6 +6,10 @@
 - [x] Created `systemPatterns.md` documenting installation, upgrade, candidate, verification, and security patterns.
 - [x] Created `techContext.md` documenting stack, runtime variables, test channels, and constraints.
 - [x] Created `activeContext.md` with current state, decision rationale ("why"), and handoff notes.
+- [x] Documented tooling-consistency and Kitchen-baseline rationale in `docs/issues/TOOLING-CONSISTENCY-AND-KITCHEN-BASELINE.md`.
+- [x] Updated `README.md` issue links (candidate troubleshooting + Azure issue references) and added the new tooling issue link.
+- [x] Grouped local commits by intent (build/test/docs) without pushing.
+- [x] Synchronized memory-bank with a dated session update capturing what changed and why.
 
 ## Pending TODOs
 - [ ] Expand `systemPatterns.md` with concrete k3s/ArgoCD implementation details if/when this repository adds those assets.
