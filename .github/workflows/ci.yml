@@ -109,8 +109,15 @@ jobs:
         run: |
           export RBENV_ROOT="$HOME/.rbenv"
           export PATH="$RBENV_ROOT/bin:$PATH"
-          eval "$(rbenv init -)"
-          bundle install
+          if command -v rbenv >/dev/null; then
+            eval "$(rbenv init -)"
+            rbenv versions
+            which bundle || gem install bundler
+            bundle install
+          else
+            echo "ERROR: rbenv not found at $RBENV_ROOT"
+            exit 1
+          fi
 
       - name: Login to Azure
         if: env.AZURE_AVAILABLE == 'true'
