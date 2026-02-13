@@ -15,6 +15,13 @@ jobs:
     name: Validation
     runs-on: [self-hosted, macOS, ARM64]
     steps:
+      - name: Debug Runner Environment
+        run: |
+          whoami
+          pwd
+          ls -la /Users/
+          ls -la /Users/cliang/ || echo "Cannot access /Users/cliang"
+
       - name: Checkout provision-tomcat
         uses: actions/checkout@v4
         with:
