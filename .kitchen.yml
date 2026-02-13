@@ -58,6 +58,9 @@ platforms:
     driver_config:
       box: stromweld/windows-11
       communicator: winrm
+      customize:
+        memory: 4096
+        cpus: 2
     transport:
       name: winrm
       elevated: true
@@ -65,8 +68,8 @@ platforms:
       port: 5985
       winrm_transport: :plaintext
       ssl: false
-      connection_retries: 5
-      connection_retry_sleep: 10
+      connection_retries: 10
+      connection_retry_sleep: 20
     provisioner:
       name: ansible_push
       ansible_playbook_bin: <%= Dir.glob("#{Dir.pwd}/.direnv/python-*/bin/ansible-playbook").first || "ansible-playbook" %>
@@ -103,6 +106,9 @@ platforms:
     driver_config:
       box: stromweld/windows-11
       communicator: winrm
+      customize:
+        memory: 4096
+        cpus: 2
       vagrantfiles:
         - /Users/cliang/src/gitrepo/personal/ansible/provision-tomcat/vagrant/Vagrantfile-disk.rb
     transport:
@@ -112,8 +118,8 @@ platforms:
       port: 5985
       winrm_transport: :plaintext
       ssl: false
-      connection_retries: 5
-      connection_retry_sleep: 10
+      connection_retries: 10
+      connection_retry_sleep: 20
     provisioner:
       name: ansible_push
       ansible_playbook_bin: <%= Dir.glob("#{Dir.pwd}/.direnv/python-*/bin/ansible-playbook").first || "ansible-playbook" %>
