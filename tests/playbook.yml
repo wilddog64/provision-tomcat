@@ -21,6 +21,7 @@
     - name: Wait for connection to be stable
       ansible.builtin.wait_for_connection:
         timeout: 300
+      become: no
 
     - name: Gather facts
       ansible.builtin.setup:
