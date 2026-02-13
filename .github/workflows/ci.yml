@@ -110,7 +110,15 @@ jobs:
           if az account show > /dev/null 2>&1; then
             echo "AZURE_AVAILABLE=true" >> $GITHUB_ENV
             echo "SESSION_MODE=true" >> $GITHUB_ENV
-            echo "Azure session detected on runner."
+            
+            # Resolve metadata explicitly
+            SUB_ID=$(az account show --query id -o tsv)
+            RG_NAME=$(az group list --query "[?contains(name, 'sandbox')].name" -o tsv | head -n 1)
+            
+            echo "AZURE_SUBSCRIPTION_ID=$SUB_ID" >> $GITHUB_ENV
+            echo "AZURE_RESOURCE_GROUP=$RG_NAME" >> $GITHUB_ENV
+            
+            echo "Azure session detected. Sub: $SUB_ID, RG: $RG_NAME"
           elif [ -n "${{ secrets.AZURE_CLIENT_ID }}" ]; then
             echo "AZURE_AVAILABLE=true" >> $GITHUB_ENV
             echo "SESSION_MODE=false" >> $GITHUB_ENV
