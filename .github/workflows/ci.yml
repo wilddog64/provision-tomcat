@@ -76,22 +76,22 @@ jobs:
           ANSIBLE_ROLES_PATH: ${{ github.workspace }}/roles
         run: make check
 
-  vagrant-test:
-    name: Vagrant Integration Tests
-    needs: lint
-    if: contains(github.ref, 'vagrant-dev') || contains(github.base_ref, 'vagrant-dev') || github.ref == 'refs/heads/main'
-    runs-on: [self-hosted, macOS]
-    env:
-      ANSIBLE_ROLES_PATH: ${{ github.workspace }}/roles
-      OBJC_DISABLE_INITIALIZE_FORK_SAFETY: YES
-      VAGRANT_IGNORE_WINRM_PLUGIN: YES
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Cleanup Stale VMs
-        run: ./bin/cleanup-vagrant.sh
-      - name: Run Vagrant Tests
-        run: bundle exec make test-upgrade-baseline-win11
+#  vagrant-test:
+#    name: Vagrant Integration Tests
+#    needs: lint
+#    if: contains(github.ref, 'vagrant-dev') || contains(github.base_ref, 'vagrant-dev') || github.ref == 'refs/heads/main'
+#    runs-on: [self-hosted, macOS]
+#    env:
+#      ANSIBLE_ROLES_PATH: ${{ github.workspace }}/roles
+#      OBJC_DISABLE_INITIALIZE_FORK_SAFETY: YES
+#      VAGRANT_IGNORE_WINRM_PLUGIN: YES
+#    steps:
+#      - name: Checkout
+#        uses: actions/checkout@v4
+#      - name: Cleanup Stale VMs
+#        run: ./bin/cleanup-vagrant.sh
+#      - name: Run Vagrant Tests
+#        run: bundle exec make test-upgrade-baseline-win11
 
   azure-test:
     name: Azure Integration Tests

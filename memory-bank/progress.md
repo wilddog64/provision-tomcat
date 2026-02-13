@@ -8,6 +8,11 @@
 - [x] Created `activeContext.md` with current state, decision rationale ("why"), and handoff notes.
 - [x] Documented tooling-consistency and Kitchen-baseline rationale in `docs/issues/TOOLING-CONSISTENCY-AND-KITCHEN-BASELINE.md`.
 - [x] Updated `README.md` issue links (candidate troubleshooting + Azure issue references) and added the new tooling issue link.
+- [x] Fixed CI workflow regressions:
+    - [x] Restored `community.windows` to `make deps`.
+    - [x] Robust tool resolution in `Makefile` with PATH fallbacks.
+    - [x] Fallback for `ansible_playbook_bin` in `.kitchen.yml`.
+    - [x] Synchronized `ci.yml` by disabling `vagrant-test` job.
 - [x] Grouped local commits by intent (build/test/docs) without pushing.
 - [x] Synchronized memory-bank with a dated session update capturing what changed and why.
 

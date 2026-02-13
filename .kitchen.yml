@@ -73,7 +73,7 @@ platforms:
       connection_retry_sleep: 10
     provisioner:
       name: ansible_push
-      ansible_playbook_bin: <%= Dir.glob("#{Dir.pwd}/.direnv/python-*/bin/ansible-playbook").first %>
+      ansible_playbook_bin: <%= Dir.glob("#{Dir.pwd}/.direnv/python-*/bin/ansible-playbook").first || "ansible-playbook" %>
       hosts: test-kitchen
       require_ansible_repo: true
       playbook: tests/playbook.yml
@@ -118,7 +118,7 @@ platforms:
       connection_retry_sleep: 10
     provisioner:
       name: ansible_push
-      ansible_playbook_bin: <%= Dir.glob("#{Dir.pwd}/.direnv/python-*/bin/ansible-playbook").first %>
+      ansible_playbook_bin: <%= Dir.glob("#{Dir.pwd}/.direnv/python-*/bin/ansible-playbook").first || "ansible-playbook" %>
       hosts: test-kitchen
       require_ansible_repo: true
       playbook: tests/playbook.yml
@@ -233,7 +233,7 @@ platforms:
       password: <%= ENV.fetch('AZURE_ADMIN_PASSWORD', 'ChangeM3!') %>
     provisioner:
       name: ansible_push
-      ansible_playbook_bin: <%= Dir.glob("#{Dir.pwd}/.direnv/python-*/bin/ansible-playbook").first %>
+      ansible_playbook_bin: <%= Dir.glob("#{Dir.pwd}/.direnv/python-*/bin/ansible-playbook").first || "ansible-playbook" %>
       hosts: test-kitchen
       require_ansible_repo: true
       playbook: tests/playbook.yml

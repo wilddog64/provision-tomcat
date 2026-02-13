@@ -23,9 +23,16 @@ endif
 # Keep Ansible tooling on a consistent install path to avoid
 # ansible-lint/ansible-core mismatch errors.
 ANSIBLE_LINT_BIN ?= $(shell command -v ansible-lint 2>/dev/null)
-ANSIBLE_BIN ?= $(if $(ANSIBLE_LINT_BIN),$(dir $(ANSIBLE_LINT_BIN))ansible,$(shell command -v ansible 2>/dev/null))
-ANSIBLE_PLAYBOOK_BIN ?= $(if $(ANSIBLE_LINT_BIN),$(dir $(ANSIBLE_LINT_BIN))ansible-playbook,$(shell command -v ansible-playbook 2>/dev/null))
-ANSIBLE_GALAXY_BIN ?= $(if $(ANSIBLE_LINT_BIN),$(dir $(ANSIBLE_LINT_BIN))ansible-galaxy,$(shell command -v ansible-galaxy 2>/dev/null))
+BIN_DIR := $(if $(ANSIBLE_LINT_BIN),$(dir $(ANSIBLE_LINT_BIN)),)
+
+# Helper to resolve binaries from same dir as ansible-lint or fallback to PATH
+define resolve_bin
+$(strip $(if $(BIN_DIR),$(if $(shell test -x $(BIN_DIR)$(1) && echo 1),$(BIN_DIR)$(1),$(shell command -v $(1) 2>/dev/null)),$(shell command -v $(1) 2>/dev/null)))
+endef
+
+ANSIBLE_BIN ?= $(call resolve_bin,ansible)
+ANSIBLE_PLAYBOOK_BIN ?= $(call resolve_bin,ansible-playbook)
+ANSIBLE_GALAXY_BIN ?= $(call resolve_bin,ansible-galaxy)
 
 PLATFORMS := win11 win11-disk ubuntu-2404 rockylinux9 win11-azure
 SUITES := default latest idempotence
@@ -55,11 +62,13 @@ AZURE_ADMIN_PASSWORD ?= ChangeM3!SecurePassword
 # ============================================================================ 
 .PHONY: lint
 lint: deps
+	@if [ -z "$(ANSIBLE_LINT_BIN)" ]; then echo "ERROR: ansible-lint not found in PATH"; exit 1; fi
 	@echo "Running ansible-lint..."
 	PATH="$(dir $(ANSIBLE_LINT_BIN)):$$PATH" $(ANSIBLE_LINT_BIN) .
 
 .PHONY: syntax
 syntax: deps
+	@if [ -z "$(ANSIBLE_PLAYBOOK_BIN)" ]; then echo "ERROR: ansible-playbook not found"; exit 1; fi
 	@echo "Checking playbook syntax..."
 	$(ANSIBLE_PLAYBOOK_BIN) --syntax-check tests/playbook.yml -i tests/inventory
 
@@ -78,7 +87,7 @@ setup:
 .PHONY: deps
 deps:
 	@echo "Installing Ansible collections..."
-	$(ANSIBLE_GALAXY_BIN) collection install ansible.windows chocolatey.chocolatey -p ./collections
+	$(ANSIBLE_GALAXY_BIN) collection install ansible.windows community.windows chocolatey.chocolatey -p ./collections
 
 # ============================================================================ 
 # Help

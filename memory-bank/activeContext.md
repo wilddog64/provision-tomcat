@@ -60,6 +60,40 @@ Initialize and populate a complete `memory-bank/` for this repository according 
 - **Test-scope safety:** fully comment the inactive `win11-baseline` section to preserve history while preventing accidental test usage.
 - **Handover clarity:** create an issue note and README links so future agents/operators can quickly understand the rationale without re-deriving context from diffs.
 
+### Session Update (2026-02-12): CI Failure Root Cause Analysis and Fixes
+
+
+
+### What Changed
+
+- Fixed `Makefile` and `scripts/setup.sh` to include `community.windows` in the `deps` target.
+
+- Refactored `Makefile` binary resolution to be more robust (fallback to PATH if derived path fails).
+
+- Added explicit guard checks for `ansible-lint` and `ansible-playbook` in `Makefile` with clear error messages.
+
+- Updated `.kitchen.yml` to provide a fallback for `ansible_playbook_bin` when `.direnv` is missing.
+
+- Commented out the `vagrant-test` job in `.github/workflows/ci.yml` as it depended on the now-disabled `win11-baseline` platform.
+
+
+
+### Why It Was Done This Way
+
+- **Missing Collection:** The previous "Tooling Consistency" update accidentally omitted `community.windows` from `make deps`, causing syntax checks to fail in clean environments.
+
+- **CI/Kitchen Drift:** Disabling `win11-baseline` in `.kitchen.yml` without updating `ci.yml` caused the `vagrant-test` job to fail (instance not found).
+
+- **Tooling Robustness:** The `Makefile` logic for consistent binary resolution was too rigid and would fail if binaries weren't exactly where expected; added fallbacks to ensure local and CI portability.
+
+- **Kitchen Portability:** Hardcoded `.direnv` paths in `.kitchen.yml` caused failures in CI environments where `.direnv` is not used.
+
+
+
 ### Current Handover State
-- Branch `azure-dev` is ahead of origin with the three local commits above.
-- Memory-bank now reflects this decision path and rationale for cross-agent continuity.
+
+- Branch `azure-dev` contains fixes for the reported CI failure.
+
+- Critical regressions from the previous "Tooling Consistency" update have been resolved.
+
+- Memory-bank is updated with the latest rationale.
