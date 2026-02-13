@@ -29,11 +29,36 @@ jobs:
           path: provision-tomcat/roles/provision-java
           token: ${{ secrets.GH_PAT || github.token }}
 
+      - name: Install SSH Keys and Config
+        env:
+          WINDOWS_BASE_SSH_KEY: ${{ secrets.WINDOWS_BASE_SSH_KEY }}
+          PROVISION_SECURITY_SSH_KEY: ${{ secrets.PROVISION_SECURITY_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$WINDOWS_BASE_SSH_KEY" > ~/.ssh/id_windows_base
+          chmod 600 ~/.ssh/id_windows_base
+          echo "$PROVISION_SECURITY_SSH_KEY" > ~/.ssh/id_provision_security
+          chmod 600 ~/.ssh/id_provision_security
+          cat <<EOF > ~/.ssh/config
+          Host windows-base-repo
+            HostName github.com
+            User git
+            IdentityFile ~/.ssh/id_windows_base
+            IdentitiesOnly yes
+          Host provision-security-repo
+            HostName github.com
+            User git
+            IdentityFile ~/.ssh/id_provision_security
+            IdentitiesOnly yes
+          EOF
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+          chmod 700 ~/.ssh
+
       - name: Checkout windows-base
-        run: git clone git@github.com:wilddog64/windows-base.git provision-tomcat/roles/windows-base
+        run: git clone windows-base-repo:wilddog64/windows-base.git provision-tomcat/roles/windows-base
 
       - name: Checkout provision-windows-security
-        run: git clone git@github.com:wilddog64/provision-windows-security.git provision-tomcat/roles/provision-windows-security
+        run: git clone provision-security-repo:wilddog64/provision-windows-security.git provision-tomcat/roles/provision-windows-security
 
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
@@ -99,11 +124,36 @@ jobs:
           path: roles/provision-java
           token: ${{ secrets.GH_PAT || github.token }}
 
+      - name: Install SSH Keys and Config
+        env:
+          WINDOWS_BASE_SSH_KEY: ${{ secrets.WINDOWS_BASE_SSH_KEY }}
+          PROVISION_SECURITY_SSH_KEY: ${{ secrets.PROVISION_SECURITY_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$WINDOWS_BASE_SSH_KEY" > ~/.ssh/id_windows_base
+          chmod 600 ~/.ssh/id_windows_base
+          echo "$PROVISION_SECURITY_SSH_KEY" > ~/.ssh/id_provision_security
+          chmod 600 ~/.ssh/id_provision_security
+          cat <<EOF > ~/.ssh/config
+          Host windows-base-repo
+            HostName github.com
+            User git
+            IdentityFile ~/.ssh/id_windows_base
+            IdentitiesOnly yes
+          Host provision-security-repo
+            HostName github.com
+            User git
+            IdentityFile ~/.ssh/id_provision_security
+            IdentitiesOnly yes
+          EOF
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+          chmod 700 ~/.ssh
+
       - name: Checkout windows-base
-        run: git clone git@github.com:wilddog64/windows-base.git roles/windows-base
+        run: git clone windows-base-repo:wilddog64/windows-base.git roles/windows-base
 
       - name: Checkout provision-windows-security
-        run: git clone git@github.com:wilddog64/provision-windows-security.git roles/provision-windows-security
+        run: git clone provision-security-repo:wilddog64/provision-windows-security.git roles/provision-windows-security
 
       - name: Symlink current role
         run: |
