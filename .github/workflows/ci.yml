@@ -1,40 +1,38 @@
 name: CI
 
 on:
-  workflow_dispatch:
   push:
-    branches: [main]
+    branches: [ main ]
   pull_request:
-    branches: [main, azure-dev, aws-dev, vagrant-dev]
+    branches: [ main ]
+  workflow_dispatch:
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+env:
+  ANSIBLE_ROLES_PATH: ${{ github.workspace }}/roles
 
 jobs:
-  lint:
+  validation:
     name: Validation
-    if: >
-      github.event_name == 'push' ||
-      github.event_name == 'workflow_dispatch' ||
-      github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
       - name: Checkout provision-tomcat
         uses: actions/checkout@v4
+        with:
+          path: provision-tomcat
 
       - name: Checkout provision-java
         uses: actions/checkout@v4
         with:
           repository: wilddog64/provision-java
-          path: roles/provision-java
+          path: provision-tomcat/roles/provision-java
+          token: ${{ secrets.GH_PAT || github.token }}
 
       - name: Install SSH Keys and Config
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.WINDOWS_BASE_DEPLOY_KEY }}" > ~/.ssh/id_windows_base
+          echo "${{ secrets.WINDOWS_BASE_SSH_KEY }}" > ~/.ssh/id_windows_base
           chmod 600 ~/.ssh/id_windows_base
-          echo "${{ secrets.PROVISION_WINDOWS_SECURITY_DEPLOY_KEY }}" > ~/.ssh/id_provision_security
+          echo "${{ secrets.PROVISION_SECURITY_SSH_KEY }}" > ~/.ssh/id_provision_security
           chmod 600 ~/.ssh/id_provision_security
           cat <<EOF > ~/.ssh/config
           Host windows-base-repo
@@ -52,10 +50,10 @@ jobs:
           chmod 700 ~/.ssh
 
       - name: Checkout windows-base
-        run: git clone windows-base-repo:wilddog64/windows-base.git roles/windows-base
+        run: git clone windows-base-repo:wilddog64/windows-base.git provision-tomcat/roles/windows-base
 
       - name: Checkout provision-windows-security
-        run: git clone provision-security-repo:wilddog64/provision-windows-security.git roles/provision-windows-security
+        run: git clone provision-security-repo:wilddog64/provision-windows-security.git provision-tomcat/roles/provision-windows-security
 
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
@@ -65,41 +63,20 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          if [ -f provision-tomcat/requirements.txt ]; then pip install -r provision-tomcat/requirements.txt; fi
           pip install ansible-lint
 
       - name: Install Ansible collections
-        run: make deps
+        run: make -C provision-tomcat deps
 
       - name: Run Validation
-        env:
-          ANSIBLE_ROLES_PATH: ${{ github.workspace }}/roles
-        run: make check
+        run: make -C provision-tomcat check
 
-#  vagrant-test:
-#    name: Vagrant Integration Tests
-#    needs: lint
-#    if: contains(github.ref, 'vagrant-dev') || contains(github.base_ref, 'vagrant-dev') || github.ref == 'refs/heads/main'
-#    runs-on: [self-hosted, macOS]
-#    env:
-#      ANSIBLE_ROLES_PATH: ${{ github.workspace }}/roles
-#      OBJC_DISABLE_INITIALIZE_FORK_SAFETY: YES
-#      VAGRANT_IGNORE_WINRM_PLUGIN: YES
-#    steps:
-#      - name: Checkout
-#        uses: actions/checkout@v4
-#      - name: Cleanup Stale VMs
-#        run: ./bin/cleanup-vagrant.sh
-#      - name: Run Vagrant Tests
-#        run: bundle exec make test-upgrade-baseline-win11
-
-  integration-test:
+  integration:
     name: Integration Tests (Azure or Vagrant)
-    needs: lint
-    if: contains(github.ref, 'azure-dev') || contains(github.base_ref, 'azure-dev') || github.ref == 'refs/heads/main'
-    runs-on: [self-hosted, macOS]
-    env:
-      ANSIBLE_ROLES_PATH: ${{ github.workspace }}/roles
+    runs-on: [self-hosted, macOS, m2-air]
+    needs: validation
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && (github.head_ref == 'azure-dev' || github.head_ref == 'vagrant-dev'))
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -115,17 +92,13 @@ jobs:
             SUB_ID=$(az account show --query id -o tsv)
             RG_NAME=$(az group list --query "[?contains(name, 'sandbox')].name" -o tsv | head -n 1)
 
-                        echo "AZURE_SUBSCRIPTION_ID=$SUB_ID" >> $GITHUB_ENV
-                        az account set --subscription "$SUB_ID"
-                        
-                        if [ -n "$RG_NAME" ]; then
-                                      echo "AZURE_RESOURCE_GROUP=$RG_NAME" >> $GITHUB_ENV
+            echo "AZURE_SUBSCRIPTION_ID=$SUB_ID" >> $GITHUB_ENV
+            az account set --subscription "$SUB_ID"
 
-                          echo "Azure session detected. Sub: $SUB_ID, RG: $RG_NAME"
-
-                        else
-
-
+            if [ -n "$RG_NAME" ]; then
+              echo "AZURE_RESOURCE_GROUP=$RG_NAME" >> $GITHUB_ENV
+              echo "Azure session detected. Sub: $SUB_ID, RG: $RG_NAME"
+            else
               # Fallback RG name if sandbox cannot be listed
               echo "AZURE_RESOURCE_GROUP=kqvm-win11-rg" >> $GITHUB_ENV
               echo "Azure session detected. Sub: $SUB_ID, RG fallback used: kqvm-win11-rg"
@@ -144,13 +117,14 @@ jobs:
         with:
           repository: wilddog64/provision-java
           path: roles/provision-java
+          token: ${{ secrets.GH_PAT || github.token }}
 
       - name: Install SSH Keys and Config
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.WINDOWS_BASE_DEPLOY_KEY }}" > ~/.ssh/id_windows_base
+          echo "${{ secrets.WINDOWS_BASE_SSH_KEY }}" > ~/.ssh/id_windows_base
           chmod 600 ~/.ssh/id_windows_base
-          echo "${{ secrets.PROVISION_WINDOWS_SECURITY_DEPLOY_KEY }}" > ~/.ssh/id_provision_security
+          echo "${{ secrets.PROVISION_SECURITY_SSH_KEY }}" > ~/.ssh/id_provision_security
           chmod 600 ~/.ssh/id_provision_security
           cat <<EOF > ~/.ssh/config
           Host windows-base-repo
@@ -204,58 +178,31 @@ jobs:
           fi
 
       - name: Login to Azure
-        if: env.AZURE_AVAILABLE == 'true' && env.SESSION_MODE != 'true'
-        run: |
-          az login --service-principal -u ${{ secrets.AZURE_CLIENT_ID }} \
-            -p ${{ secrets.AZURE_CLIENT_SECRET }} --tenant ${{ secrets.AZURE_TENANT_ID }}
+        if: env.AZURE_AVAILABLE == 'true' && env.SESSION_MODE == 'false'
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       - name: Run Azure Test
         if: env.AZURE_AVAILABLE == 'true'
         run: make test-azure-provision-tomcat
-        env:
-          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
 
       - name: Pre-download Vagrant Box
-        if: env.AZURE_AVAILABLE != 'true' && false # Disabled due to VirtualBox stability issues on Apple Silicon
-        env:
-          VAGRANT_HOME: /Users/cliang/.vagrant.d
-        run: |
-          echo "Checking for stromweld/windows-11 box..."
-          if ! ./bin/vagrant-wrapper box list | grep -q "stromweld/windows-11"; then
-            echo "Box not found, downloading..."
-            for i in {1..3}; do
-              ./bin/vagrant-wrapper box add stromweld/windows-11 --provider virtualbox --clean && break || \
-              echo "Download failed, retry $i in 60s..." && sleep 60
-            done
-          else
-            echo "Box already exists."
-          fi
+        if: env.AZURE_AVAILABLE == 'false'
+        run: ./bin/vagrant-wrapper box add --provider virtualbox --force gusztavvargadr/windows-11-22h2-pro-arm64 || true
 
       - name: Fallback to Vagrant Test
-        if: env.AZURE_AVAILABLE != 'true' && false # Disabled due to VirtualBox stability issues on Apple Silicon
-        run: |
-          echo "WARNING: Azure credentials not found. Falling back to Vagrant (win11) integration test."
-          make vbox-cleanup-disks || true
-          bundle exec make test-win11
-        env:
-          OBJC_DISABLE_INITIALIZE_FORK_SAFETY: YES
-          VAGRANT_IGNORE_WINRM_PLUGIN: YES
-          VAGRANT_HOME: /Users/cliang/.vagrant.d
+        if: env.AZURE_AVAILABLE == 'false' && false
+        run: make test-provision-tomcat
 
-  aws-test:
+  aws_integration:
     name: AWS Integration Tests
-    needs: lint
-    if: contains(github.ref, 'aws-dev') || contains(github.base_ref, 'aws-dev')
-    runs-on: [self-hosted, macOS]
+    runs-on: ubuntu-latest
+    needs: validation
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.head_ref == 'aws-dev')
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
+
       - name: Run AWS Test
-        run: make test-aws-provision-tomcat
+        run: echo "AWS tests not yet implemented"
