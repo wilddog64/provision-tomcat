@@ -48,8 +48,11 @@ TOMCAT_NEW_VERSION ?= 9.0.113
 # ============================================================================ 
 # Dynamically resolve subscription if not provided
 AZURE_SUBSCRIPTION_ID ?= $(shell az account show --query id -o tsv 2>/dev/null)
-# Dynamically resolve resource group if not provided
+# Dynamically resolve resource group if not provided, favoring the environment variable
 AZURE_RESOURCE_GROUP ?= $(shell az group list --query "[?contains(name, 'sandbox')].name" -o tsv 2>/dev/null | head -n 1)
+ifeq ($(AZURE_RESOURCE_GROUP),)
+  AZURE_RESOURCE_GROUP := kqvm-win11-rg
+endif
 AZURE_LOCATION ?= 
 AZURE_IMAGE ?= MicrosoftWindowsServer:WindowsServer:2022-datacenter-g2:latest
 AZURE_VM_SIZE ?= Standard_DS1_v2
