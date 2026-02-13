@@ -139,6 +139,11 @@ jobs:
       - name: Checkout provision-windows-security
         run: git clone provision-security-repo:wilddog64/provision-windows-security.git roles/provision-windows-security
 
+      - name: Symlink current role
+        run: |
+          mkdir -p roles
+          ln -sfn .. roles/provision-tomcat
+
       - name: Install Ansible collections
         run: make deps
 
