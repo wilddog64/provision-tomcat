@@ -18,6 +18,12 @@
     - [x] Synchronized `ci.yml` by disabling `vagrant-test` job.
 - [x] Grouped local commits by intent (build/test/docs) without pushing.
 - [x] Synchronized memory-bank with a dated session update capturing what changed and why.
+- [x] Stabilized CI Infrastructure:
+    - [x] Fixed Vagrant box re-download issue by preserving `HOME`.
+    - [x] Aggressive VirtualBox stale VM and disk cleanup in `bin/vbox-cleanup-disks`.
+    - [x] Replaced removed Ansible `yaml` callback with `result_format = yaml`.
+    - [x] Optimized WinRM settings (timeouts, retries, transport) for Apple Silicon runner.
+    - [x] Disabled unstable Vagrant fallback in CI to ensure result reliability.
 
 ## Pending TODOs
 - [ ] Expand `systemPatterns.md` with concrete k3s/ArgoCD implementation details if/when this repository adds those assets.
