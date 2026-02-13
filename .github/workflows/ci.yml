@@ -26,10 +26,10 @@ jobs:
       - name: Checkout All Roles
         run: |
           mkdir -p provision-tomcat/roles
-          # Clone roles using HTTPS with GH_PAT
-          git clone https://x-access-token:${{ secrets.GH_PAT }}@github.com/wilddog64/provision-java.git provision-tomcat/roles/provision-java
-          git clone https://x-access-token:${{ secrets.GH_PAT }}@github.com/wilddog64/windows-base.git provision-tomcat/roles/windows-base
-          git clone https://x-access-token:${{ secrets.GH_PAT }}@github.com/wilddog64/provision-windows-security.git provision-tomcat/roles/provision-windows-security
+          # Skip if roles already exist on self-hosted runner
+          [ -d provision-tomcat/roles/provision-java ] || git clone https://github.com/wilddog64/provision-java.git provision-tomcat/roles/provision-java
+          [ -d provision-tomcat/roles/windows-base ] || git clone https://github.com/wilddog64/windows-base.git provision-tomcat/roles/windows-base
+          [ -d provision-tomcat/roles/provision-windows-security ] || git clone https://github.com/wilddog64/provision-windows-security.git provision-tomcat/roles/provision-windows-security
 
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
@@ -94,10 +94,10 @@ jobs:
       - name: Checkout All Roles
         run: |
           mkdir -p roles
-          # Clone roles using HTTPS with GH_PAT
-          git clone https://x-access-token:${{ secrets.GH_PAT }}@github.com/wilddog64/provision-java.git roles/provision-java
-          git clone https://x-access-token:${{ secrets.GH_PAT }}@github.com/wilddog64/windows-base.git roles/windows-base
-          git clone https://x-access-token:${{ secrets.GH_PAT }}@github.com/wilddog64/provision-windows-security.git roles/provision-windows-security
+          # Skip if roles already exist on self-hosted runner
+          [ -d roles/provision-java ] || git clone https://github.com/wilddog64/provision-java.git roles/provision-java
+          [ -d roles/windows-base ] || git clone https://github.com/wilddog64/windows-base.git roles/windows-base
+          [ -d roles/provision-windows-security ] || git clone https://github.com/wilddog64/provision-windows-security.git roles/provision-windows-security
 
       - name: Symlink current role
         run: |
