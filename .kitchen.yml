@@ -18,7 +18,7 @@ driver:
   name: vagrant
 
 .common_vagrant: &common_vagrant
-  driver: vagrant
+  name: vagrant
   vagrant_binary: <%= File.join(File.dirname(__FILE__), 'bin', 'vagrant-wrapper') %>
 
 provisioner:
