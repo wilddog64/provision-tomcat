@@ -107,26 +107,24 @@ jobs:
 
       - name: Install Ruby Dependencies
         run: |
-          echo "Home: $HOME"
-          # Try to find rbenv
+          echo "Checking for rbenv..."
           if [ -d "$HOME/.rbenv" ]; then
-            export RBENV_ROOT="$HOME/.rbenv"
+            RBENV_ROOT="$HOME/.rbenv"
           elif [ -d "/usr/local/var/rbenv" ]; then
-            export RBENV_ROOT="/usr/local/var/rbenv"
+            RBENV_ROOT="/usr/local/var/rbenv"
           elif [ -d "/opt/homebrew/var/rbenv" ]; then
-            export RBENV_ROOT="/opt/homebrew/var/rbenv"
+            RBENV_ROOT="/opt/homebrew/var/rbenv"
           fi
 
           if [ -n "$RBENV_ROOT" ]; then
-            export PATH="$RBENV_ROOT/bin:$PATH"
-            eval "$(rbenv init -)"
-            rbenv versions
-            which bundle || gem install bundler
+            echo "Found rbenv at $RBENV_ROOT"
+            export PATH="$RBENV_ROOT/shims:$RBENV_ROOT/bin:$PATH"
+            export RBENV_SHELL=bash
+            bundle -v || gem install bundler
             bundle install
           else
-            echo "ERROR: rbenv not found in common locations"
-            ls -la $HOME
-            exit 1
+            echo "rbenv not found, trying system ruby/bundle"
+            bundle install || gem install bundler && bundle install
           fi
 
       - name: Login to Azure
