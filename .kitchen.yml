@@ -205,7 +205,7 @@ platforms:
       use_cli_credentials: true
       use_managed_identity: false
       location: southcentralus
-      explicit_resource_group_name: <%= ENV.fetch('AZURE_RESOURCE_GROUP') %>
+      explicit_resource_group_name: <%= ENV.fetch('AZURE_RESOURCE_GROUP') { raise 'ERROR: AZURE_RESOURCE_GROUP environment variable must be set' } %>
       allow_resource_group_creation: false
       delete_resource_group: false
       destroy_explicit_resource_group: false
@@ -240,7 +240,7 @@ platforms:
       connection_retry_sleep: 10
       operation_timeout: 600
       username: <%= ENV.fetch('AZURE_ADMIN_USERNAME', 'azureadmin') %>
-      password: <%= ENV.fetch('AZURE_ADMIN_PASSWORD') %>
+      password: <%= ENV.fetch('AZURE_ADMIN_PASSWORD') { raise 'ERROR: AZURE_ADMIN_PASSWORD environment variable must be set' } %>
     provisioner:
       name: ansible_push
       ansible_playbook_bin: <%= Dir.glob("#{Dir.pwd}/.direnv/python-*/bin/ansible-playbook").first || "ansible-playbook" %>

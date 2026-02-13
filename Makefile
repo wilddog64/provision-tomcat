@@ -151,7 +151,7 @@ test-azure-provision-tomcat: update-roles
 	USER=$(AZURE_ADMIN_USERNAME); \
 	PASS="$(AZURE_ADMIN_PASSWORD)"; \
 	if [ -z "$$PASS" ]; then echo "ERROR: AZURE_ADMIN_PASSWORD environment variable is not set."; exit 1; fi; \
-	TESTADMIN_PASSWORD="$${AZURE_TESTADMIN_PASSWORD:-$$PASS}"; \
+	TEST_ACCOUNT_PASSWORD="$${TEST_ACCOUNT_PASSWORD:-$$PASS}"; \
 	IMAGE="$(AZURE_IMAGE)"; \
 	SIZE="$(AZURE_VM_SIZE)"; \
 	echo "=== Creating Azure VM: $$NAME in $$RG ($$LOC) ==="; \
@@ -164,8 +164,8 @@ test-azure-provision-tomcat: update-roles
 	echo "=== Configuring WinRM Inside VM ==="; \
 	az vm run-command invoke --subscription "$$SUB" --resource-group "$$RG" --name "$$NAME" --command-id RunPowerShellScript --scripts 'winrm quickconfig -q; Set-Item -Path "WSMan:\localhost\Service\Auth\Basic" -Value $$true; Set-Item -Path "WSMan:\localhost\Service\AllowUnencrypted" -Value $$true; New-NetFirewallRule -DisplayName "Allow WinRM HTTP" -Direction Inbound -LocalPort 5985 -Protocol TCP -Action Allow'; \
 	echo "=== Creating Local Admin Account (testadmin) ==="; \
-	AZURE_TESTADMIN_PASSWORD="$$TESTADMIN_PASSWORD" az vm run-command invoke --subscription "$$SUB" --resource-group "$$RG" --name "$$NAME" --command-id RunPowerShellScript --scripts \
-		'$$PasswordPlain = [Environment]::GetEnvironmentVariable("AZURE_TESTADMIN_PASSWORD"); $$Password = ConvertTo-SecureString $$PasswordPlain -AsPlainText -Force; if (-not (Get-LocalUser -Name "testadmin" -ErrorAction SilentlyContinue)) { New-LocalUser "testadmin" -Password $$Password -Description "Ansible Admin"; Add-LocalGroupMember -Group "Administrators" -Member "testadmin" };'; \
+	TEST_ACCOUNT_PASSWORD_EXPORT="$$TEST_ACCOUNT_PASSWORD" az vm run-command invoke --subscription "$$SUB" --resource-group "$$RG" --name "$$NAME" --command-id RunPowerShellScript --scripts \
+		'$$PasswordPlain = [Environment]::GetEnvironmentVariable("TEST_ACCOUNT_PASSWORD_EXPORT"); $$Password = ConvertTo-SecureString $$PasswordPlain -AsPlainText -Force; if (-not (Get-LocalUser -Name "testadmin" -ErrorAction SilentlyContinue)) { New-LocalUser "testadmin" -Password $$Password -Description "Ansible Admin"; Add-LocalGroupMember -Group "Administrators" -Member "testadmin" };'; \
 	IP=$$(az vm show --subscription "$$SUB" -d -g "$$RG" -n "$$NAME" --query publicIps -o tsv); \
 	echo "=== Waiting for WinRM on $$IP:5985... ==="; \
 	for i in {1..60}; do \
@@ -187,9 +187,9 @@ test-azure-provision-tomcat: update-roles
 	sleep 10; \
 	mkdir -p scratch; \
 	chmod 700 scratch; \
-	printf "[azure]\ndefault-win11-azure ansible_host=$$IP ansible_user=testadmin ansible_password=\"$$TESTADMIN_PASSWORD\" ansible_port=5985 ansible_connection=winrm ansible_winrm_transport=basic ansible_winrm_scheme=http ansible_winrm_server_cert_validation=ignore ansible_winrm_read_timeout_sec=300 ansible_become_method=runas ansible_become_user=$$USER ansible_become_password=\"$$PASS\"\n" > scratch/azure-inventory.ini; \
+	printf "[azure]\ndefault-win11-azure ansible_host=$$IP ansible_user=testadmin ansible_password=\"$$TEST_ACCOUNT_PASSWORD\" ansible_port=5985 ansible_connection=winrm ansible_winrm_transport=basic ansible_winrm_scheme=http ansible_winrm_server_cert_validation=ignore ansible_winrm_read_timeout_sec=300 ansible_become_method=runas ansible_become_user=$$USER ansible_become_password=\"$$PASS\"\n" > scratch/azure-inventory.ini; \
 	chmod 600 scratch/azure-inventory.ini; \
-	TEST_ACCOUNT_PASSWORD="$$TESTADMIN_PASSWORD" ansible-playbook -i scratch/azure-inventory.ini tests/playbook.yml \
+	TEST_ACCOUNT_PASSWORD="$$TEST_ACCOUNT_PASSWORD" ansible-playbook -i scratch/azure-inventory.ini tests/playbook.yml \
 		-e "env=stage2 extract_build_number=16 extract_debug=False skip_migration=true tomcat_version=9.0.113 tomcat_auto_start=true install_drive=D:" ; \
 	echo "=== Verifying Tomcat Connectivity from Controller ==="; \
 	for i in {1..12}; do \

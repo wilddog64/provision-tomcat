@@ -10,7 +10,9 @@
     tomcat_install_dir: "{{ install_drive }}/Tomcat"
     java_temp_dir: "{{ install_drive }}/temp"
     tomcat_temp_dir: "{{ install_drive }}/temp"
-    # Test account password - override with -e test_account_password=YourPassword
+    # Test account password - override with -e test_account_password=YourPassword or TEST_ACCOUNT_PASSWORD env var
+    # WARNING: The default password is only suitable for ephemeral test environments and should be overridden
+    # for any environment that persists beyond a single test run.
     test_account_password: "{{ lookup('env', 'TEST_ACCOUNT_PASSWORD') | default('TestP@ssw0rd123!', true) }}"
 
     # Security account overrides for testing (uses local accounts)
