@@ -78,13 +78,19 @@ Initialize and populate a complete `memory-bank/` for this repository according 
 
 - Added `--offline` to `ansible-lint` in `Makefile` to prevent it from trying to install dependencies from `requirements.yml` via HTTPS.
 
+- Added `$(PWD)` to `ANSIBLE_ROLES_PATH` in `Makefile`'s `syntax` target to ensure the current role (`provision-tomcat`) is found during syntax checks.
+
 
 
 ### Why It Was Done This Way
 
 - **ansible-lint failure:** In CI, `ansible-lint` was attempting to install roles from `requirements.yml` using HTTPS, which failed for private repositories. Since dependencies are already pre-cloned via SSH in the workflow, `--offline` forces linting to use existing paths.
 
+- **Role resolution failure:** `ansible-playbook --syntax-check` was failing to find the `provision-tomcat` role because the repo root wasn't in the roles search path; explicitly adding `$(PWD)` fixes this.
+
 - **Missing Collection:** The previous "Tooling Consistency" update accidentally omitted `community.windows` from `make deps`, causing syntax checks to fail in clean environments.
+
+
 
 
 

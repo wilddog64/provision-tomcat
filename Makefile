@@ -70,7 +70,7 @@ lint: deps
 syntax: deps
 	@if [ -z "$(ANSIBLE_PLAYBOOK_BIN)" ]; then echo "ERROR: ansible-playbook not found"; exit 1; fi
 	@echo "Checking playbook syntax..."
-	$(ANSIBLE_PLAYBOOK_BIN) --syntax-check tests/playbook.yml -i tests/inventory
+	ANSIBLE_ROLES_PATH="$(ANSIBLE_ROLES_PATH):$(PWD)" $(ANSIBLE_PLAYBOOK_BIN) --syntax-check tests/playbook.yml -i tests/inventory
 
 .PHONY: check
 check: lint syntax
