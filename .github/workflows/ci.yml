@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
   workflow_dispatch:
 
 env:
@@ -46,9 +46,9 @@ jobs:
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          if [ -f provision-tomcat/requirements.txt ]; then pip install -r provision-tomcat/requirements.txt; fi
-          pip install ansible-lint
+          python3 -m pip install --upgrade pip
+          if [ -f provision-tomcat/requirements.txt ]; then python3 -m pip install -r provision-tomcat/requirements.txt; fi
+          python3 -m pip install ansible-lint
 
       - name: Install Ansible collections
         run: make -C provision-tomcat deps
@@ -60,7 +60,10 @@ jobs:
     name: Integration Tests (Azure or Vagrant)
     runs-on: [self-hosted, macOS, ARM64]
     needs: validation
-    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && (github.head_ref == 'azure-dev' || github.head_ref == 'vagrant-dev'))
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' &&
+       (github.head_ref == 'azure-dev' || github.head_ref == 'vagrant-dev'))
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -95,9 +98,6 @@ jobs:
             echo "AZURE_AVAILABLE=false" >> $GITHUB_ENV
             echo "No Azure session or secrets found."
           fi
-
-      - name: Disable Credential Helper
-        run: git config --global credential.helper ""
 
       - name: Checkout All Roles
         run: |
