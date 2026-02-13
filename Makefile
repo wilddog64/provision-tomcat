@@ -139,15 +139,11 @@ test-azure-provision-tomcat: update-roles
 	@set -e; \
 	echo "=== Detecting Azure Environment ==="; \
 	SUB=$(AZURE_SUBSCRIPTION_ID); \
-	if [ -z "$$SUB" ]; then echo "ERROR: Could not detect AZURE_SUBSCRIPTION_ID"; exit 1; fi; \
 	RG=$(AZURE_RESOURCE_GROUP); \
-	if [ -z "$$RG" ]; then echo "ERROR: Could not detect AZURE_RESOURCE_GROUP"; exit 1; fi; \
 	echo "Using Subscription: $$SUB"; \
 	echo "Using Resource Group: $$RG"; \
-	az account set --subscription "$$SUB"; \
 	LOC=$(AZURE_LOCATION); \
 	if [ -z "$$LOC" ]; then LOC=$$(az group show --name "$$RG" --query location -o tsv); fi; \
-	if [ -z "$$LOC" ]; then echo "ERROR: Could not detect location for RG $$RG"; exit 1; fi; \
 	echo "Using Location: $$LOC"; \
 	MY_IP=$$(curl -s https://api.ipify.org); \
 	NAME=$(AZURE_VM_NAME); \
@@ -209,15 +205,11 @@ test-azure-upgrade-candidate: update-roles
 	@set -e; \
 	echo "=== Detecting Azure Environment ==="; \
 	SUB=$(AZURE_SUBSCRIPTION_ID); \
-	if [ -z "$$SUB" ]; then echo "ERROR: Could not detect AZURE_SUBSCRIPTION_ID"; exit 1; fi; \
 	RG=$(AZURE_RESOURCE_GROUP); \
-	if [ -z "$$RG" ]; then echo "ERROR: Could not detect AZURE_RESOURCE_GROUP"; exit 1; fi; \
 	echo "Using Subscription: $$SUB"; \
 	echo "Using Resource Group: $$RG"; \
-	az account set --subscription "$$SUB"; \
 	LOC=$(AZURE_LOCATION); \
 	if [ -z "$$LOC" ]; then LOC=$$(az group show --name "$$RG" --query location -o tsv); fi; \
-	if [ -z "$$LOC" ]; then echo "ERROR: Could not detect location for RG $$RG"; exit 1; fi; \
 	echo "Using Location: $$LOC"; \
 	MY_IP=$$(curl -s https://api.ipify.org); \
 	NAME=$(AZURE_VM_NAME); \
