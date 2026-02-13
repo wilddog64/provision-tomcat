@@ -58,7 +58,7 @@ AZURE_IMAGE ?= MicrosoftWindowsServer:WindowsServer:2022-datacenter-g2:latest
 AZURE_VM_SIZE ?= Standard_DS1_v2
 AZURE_VM_NAME ?= kqvm-win11
 AZURE_ADMIN_USERNAME ?= azureadmin
-AZURE_ADMIN_PASSWORD ?= ChangeM3!SecurePassword
+AZURE_ADMIN_PASSWORD ?=
 
 .DEFAULT_GOAL := help
 
@@ -145,10 +145,13 @@ test-azure-provision-tomcat: update-roles
 	LOC=$(AZURE_LOCATION); \
 	if [ -z "$$LOC" ]; then LOC=$$(az group show --name "$$RG" --query location -o tsv); fi; \
 	echo "Using Location: $$LOC"; \
-	MY_IP=$$(curl -s https://api.ipify.org); \
+	MY_IP=$$(curl -s https://api.ipify.org || echo ""); \
+	if [ -z "$$MY_IP" ]; then echo "ERROR: Failed to retrieve public IP from ipify.org"; exit 1; fi; \
 	NAME=$(AZURE_VM_NAME); \
 	USER=$(AZURE_ADMIN_USERNAME); \
 	PASS="$(AZURE_ADMIN_PASSWORD)"; \
+	if [ -z "$$PASS" ]; then echo "ERROR: AZURE_ADMIN_PASSWORD environment variable is not set."; exit 1; fi; \
+	TESTADMIN_PASSWORD="$${AZURE_TESTADMIN_PASSWORD:-$$PASS}"; \
 	IMAGE="$(AZURE_IMAGE)"; \
 	SIZE="$(AZURE_VM_SIZE)"; \
 	echo "=== Creating Azure VM: $$NAME in $$RG ($$LOC) ==="; \
@@ -161,15 +164,32 @@ test-azure-provision-tomcat: update-roles
 	echo "=== Configuring WinRM Inside VM ==="; \
 	az vm run-command invoke --subscription "$$SUB" --resource-group "$$RG" --name "$$NAME" --command-id RunPowerShellScript --scripts 'winrm quickconfig -q; Set-Item -Path "WSMan:\localhost\Service\Auth\Basic" -Value $$true; Set-Item -Path "WSMan:\localhost\Service\AllowUnencrypted" -Value $$true; New-NetFirewallRule -DisplayName "Allow WinRM HTTP" -Direction Inbound -LocalPort 5985 -Protocol TCP -Action Allow'; \
 	echo "=== Creating Local Admin Account (testadmin) ==="; \
-	az vm run-command invoke --subscription "$$SUB" --resource-group "$$RG" --name "$$NAME" --command-id RunPowerShellScript --scripts \
-		'$$Password = ConvertTo-SecureString "Password123!" -AsPlainText -Force; if (-not (Get-LocalUser -Name "testadmin" -ErrorAction SilentlyContinue)) { New-LocalUser "testadmin" -Password $$Password -Description "Ansible Admin"; Add-LocalGroupMember -Group "Administrators" -Member "testadmin" };'; \
+	AZURE_TESTADMIN_PASSWORD="$$TESTADMIN_PASSWORD" az vm run-command invoke --subscription "$$SUB" --resource-group "$$RG" --name "$$NAME" --command-id RunPowerShellScript --scripts \
+		'$$PasswordPlain = [Environment]::GetEnvironmentVariable("AZURE_TESTADMIN_PASSWORD"); $$Password = ConvertTo-SecureString $$PasswordPlain -AsPlainText -Force; if (-not (Get-LocalUser -Name "testadmin" -ErrorAction SilentlyContinue)) { New-LocalUser "testadmin" -Password $$Password -Description "Ansible Admin"; Add-LocalGroupMember -Group "Administrators" -Member "testadmin" };'; \
 	IP=$$(az vm show --subscription "$$SUB" -d -g "$$RG" -n "$$NAME" --query publicIps -o tsv); \
 	echo "=== Waiting for WinRM on $$IP:5985... ==="; \
-	for i in {1..60}; do if nc -z -w 5 $$IP 5985; then break; fi; echo "Waiting... ($$i/60)"; sleep 10; if [ $$i -eq 60 ]; then echo "Timeout waiting for WinRM"; exit 1; fi; done; \
+	for i in {1..60}; do \
+		if nc -z -w 5 $$IP 5985; then \
+			echo "[$$( date -u +%Y-%m-%dT%H:%M:%SZ )] WinRM is reachable on $$IP:5985 (attempt $$i/60)"; \
+			break; \
+		else \
+			STATUS_CODE=$$?; \
+			echo "[$$( date -u +%Y-%m-%dT%H:%M:%SZ )] WinRM not reachable on $$IP:5985 (attempt $$i/60, nc exit $$STATUS_CODE)"; \
+		fi; \
+		if [ $$i -eq 60 ]; then \
+			echo "Timeout waiting for WinRM on $$IP:5985 after 60 attempts."; \
+			echo "=== Fetching VM instance view for diagnostics ==="; \
+			az vm get-instance-view --subscription "$$SUB" --resource-group "$$RG" --name "$$NAME" --query "{powerState:instanceView.statuses[?starts_with(code,'PowerState/')][0].displayStatus, provisioningState:provisioningState}" -o table || echo "Failed to retrieve VM instance view."; \
+			exit 1; \
+		fi; \
+		sleep 10; \
+	done; \
 	sleep 10; \
 	mkdir -p scratch; \
-	printf "[azure]\ndefault-win11-azure ansible_host=$$IP ansible_user=testadmin ansible_password=\"Password123!\" ansible_port=5985 ansible_connection=winrm ansible_winrm_transport=basic ansible_winrm_scheme=http ansible_winrm_server_cert_validation=ignore ansible_winrm_read_timeout_sec=300 ansible_become_method=runas ansible_become_user=$$USER ansible_become_password=\"$$PASS\"\n" > scratch/azure-inventory.ini; \
-	ansible-playbook -i scratch/azure-inventory.ini tests/playbook.yml \
+	chmod 700 scratch; \
+	printf "[azure]\ndefault-win11-azure ansible_host=$$IP ansible_user=testadmin ansible_password=\"$$TESTADMIN_PASSWORD\" ansible_port=5985 ansible_connection=winrm ansible_winrm_transport=basic ansible_winrm_scheme=http ansible_winrm_server_cert_validation=ignore ansible_winrm_read_timeout_sec=300 ansible_become_method=runas ansible_become_user=$$USER ansible_become_password=\"$$PASS\"\n" > scratch/azure-inventory.ini; \
+	chmod 600 scratch/azure-inventory.ini; \
+	TEST_ACCOUNT_PASSWORD="$$TESTADMIN_PASSWORD" ansible-playbook -i scratch/azure-inventory.ini tests/playbook.yml \
 		-e "env=stage2 extract_build_number=16 extract_debug=False skip_migration=true tomcat_version=9.0.113 tomcat_auto_start=true install_drive=D:" ; \
 	echo "=== Verifying Tomcat Connectivity from Controller ==="; \
 	for i in {1..12}; do \

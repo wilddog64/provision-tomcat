@@ -10,6 +10,8 @@
     tomcat_install_dir: "{{ install_drive }}/Tomcat"
     java_temp_dir: "{{ install_drive }}/temp"
     tomcat_temp_dir: "{{ install_drive }}/temp"
+    # Test account password - override with -e test_account_password=YourPassword
+    test_account_password: "{{ lookup('env', 'TEST_ACCOUNT_PASSWORD') | default('TestP@ssw0rd123!', true) }}"
 
     # Security account overrides for testing (uses local accounts)
     security_service_account: "svcTomcat"
@@ -30,7 +32,7 @@
     - name: Create local test accounts
       ansible.windows.win_user:
         name: "{{ item }}"
-        password: "Password123!"
+        password: "{{ test_account_password }}"
         password_never_expires: true
         state: present
         groups:
