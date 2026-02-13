@@ -32,15 +32,11 @@ jobs:
 
       - name: Checkout All Roles
         run: |
-          mkdir -p provision-tomcat/roles
-          # Symlink roles from persistent runner directory
-          ln -sfn /Users/cliang/ansible_roles/provision-java provision-tomcat/roles/provision-java
-          ln -sfn /Users/cliang/ansible_roles/windows-base provision-tomcat/roles/windows-base
-          ln -sfn /Users/cliang/ansible_roles/provision-windows-security provision-tomcat/roles/provision-windows-security
-          # Ensure they are up to date
-          cd /Users/cliang/ansible_roles/provision-java && git pull
-          cd /Users/cliang/ansible_roles/windows-base && git pull
-          cd /Users/cliang/ansible_roles/provision-windows-security && git pull
+          mkdir -p roles
+          # Clone roles using HTTPS with GITHUB_TOKEN
+          git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/wilddog64/provision-java.git roles/provision-java
+          git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/wilddog64/windows-base.git roles/windows-base
+          git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/wilddog64/provision-windows-security.git roles/provision-windows-security
 
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
@@ -105,14 +101,10 @@ jobs:
       - name: Checkout All Roles
         run: |
           mkdir -p roles
-          # Symlink roles from persistent runner directory
-          ln -sfn /Users/cliang/ansible_roles/provision-java roles/provision-java
-          ln -sfn /Users/cliang/ansible_roles/windows-base roles/windows-base
-          ln -sfn /Users/cliang/ansible_roles/provision-windows-security roles/provision-windows-security
-          # Ensure they are up to date
-          cd /Users/cliang/ansible_roles/provision-java && git pull
-          cd /Users/cliang/ansible_roles/windows-base && git pull
-          cd /Users/cliang/ansible_roles/provision-windows-security && git pull
+          # Clone roles using HTTPS with GITHUB_TOKEN
+          git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/wilddog64/provision-java.git roles/provision-java
+          git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/wilddog64/windows-base.git roles/windows-base
+          git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/wilddog64/provision-windows-security.git roles/provision-windows-security
 
       - name: Symlink current role
         run: |
