@@ -24,8 +24,6 @@ jobs:
 
       - name: Checkout provision-tomcat
         uses: actions/checkout@v4
-        with:
-          path: provision-tomcat
 
       - name: Disable Credential Helper
         run: git config --global credential.helper ""
@@ -38,6 +36,8 @@ jobs:
           ln -sfn /Users/cliang/src/gitrepo/personal/ansible/provision-java roles/provision-java
           ln -sfn /Users/cliang/src/gitrepo/personal/ansible/windows-base roles/windows-base
           ln -sfn /Users/cliang/src/gitrepo/personal/ansible/provision-windows-security roles/provision-windows-security
+          # Symlink self as role
+          ln -sfn .. roles/provision-tomcat
 
       - name: Verify Python Environment
         run: |
@@ -47,14 +47,14 @@ jobs:
       - name: Install dependencies
         run: |
           python3 -m pip install --upgrade pip
-          if [ -f provision-tomcat/requirements.txt ]; then python3 -m pip install -r provision-tomcat/requirements.txt; fi
+          if [ -f requirements.txt ]; then python3 -m pip install -r requirements.txt; fi
           python3 -m pip install ansible-lint
 
       - name: Install Ansible collections
-        run: make -C provision-tomcat deps
+        run: make deps
 
       - name: Run Validation
-        run: make -C provision-tomcat check
+        run: make check
 
   integration:
     name: Integration Tests (Azure or Vagrant)
