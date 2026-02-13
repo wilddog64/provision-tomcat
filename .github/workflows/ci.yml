@@ -107,15 +107,25 @@ jobs:
 
       - name: Install Ruby Dependencies
         run: |
-          export RBENV_ROOT="$HOME/.rbenv"
-          export PATH="$RBENV_ROOT/bin:$PATH"
-          if command -v rbenv >/dev/null; then
+          echo "Home: $HOME"
+          # Try to find rbenv
+          if [ -d "$HOME/.rbenv" ]; then
+            export RBENV_ROOT="$HOME/.rbenv"
+          elif [ -d "/usr/local/var/rbenv" ]; then
+            export RBENV_ROOT="/usr/local/var/rbenv"
+          elif [ -d "/opt/homebrew/var/rbenv" ]; then
+            export RBENV_ROOT="/opt/homebrew/var/rbenv"
+          fi
+
+          if [ -n "$RBENV_ROOT" ]; then
+            export PATH="$RBENV_ROOT/bin:$PATH"
             eval "$(rbenv init -)"
             rbenv versions
             which bundle || gem install bundler
             bundle install
           else
-            echo "ERROR: rbenv not found at $RBENV_ROOT"
+            echo "ERROR: rbenv not found in common locations"
+            ls -la $HOME
             exit 1
           fi
 
