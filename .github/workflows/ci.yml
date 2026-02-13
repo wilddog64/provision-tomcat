@@ -116,16 +116,16 @@ jobs:
             RG_NAME=$(az group list --query "[?contains(name, 'sandbox')].name" -o tsv | head -n 1)
 
             echo "AZURE_SUBSCRIPTION_ID=$SUB_ID" >> $GITHUB_ENV
-            
+
                         if [ -n "$RG_NAME" ]; then
-            
+
                           echo "AZURE_RESOURCE_GROUP=$RG_NAME" >> $GITHUB_ENV
-            
+
                           echo "Azure session detected. Sub: $SUB_ID, RG: $RG_NAME"
-            
+
                         else
-            
-            
+
+
               # Fallback RG name if sandbox cannot be listed
               echo "AZURE_RESOURCE_GROUP=kqvm-win11-rg" >> $GITHUB_ENV
               echo "Azure session detected. Sub: $SUB_ID, RG fallback used: kqvm-win11-rg"
