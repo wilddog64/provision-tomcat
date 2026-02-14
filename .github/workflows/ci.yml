@@ -183,6 +183,9 @@ jobs:
           AWS_DEFAULT_REGION: us-east-1
         run: |
           source venv/bin/activate
+          echo "=== Diagnostic: Verifying AMI Visibility ==="
+          aws ec2 describe-images --image-ids ami-06f5f29d1fe41ea03 --region us-east-1 --query "Images[0].ImageId" || echo "AMI NOT FOUND OR ACCESS DENIED"
+          ansible --version
           make test-aws-provision-tomcat
 
       - name: Mandatory Cleanup
