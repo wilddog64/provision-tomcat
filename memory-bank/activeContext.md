@@ -46,3 +46,7 @@ This approach balances security (explicit credential refresh) with automation (r
 ## Risks / Follow-ups
 - **AZ Drift**: If the sandbox allocation moves to a non-legacy AZ, `t2` instances may be less efficient than `t3`. Recommend periodic review of instance types against AZ capabilities.
 - **Cleanup Persistence**: While `if: always()` is implemented, manual monitoring of the AWS console is still advised during active development to ensure no orphaned resources remain due to workflow cancellation limits.
+
+## New Plan: Controlled CI Execution
+- **Problem**: Unnecessary CI workflow runs trigger during discussion or documentation updates, wasting resources and creating noise.
+- **Solution**: Implement path filtering in `ci.yml` to prevent triggers on changes to `docs/` or `memory-bank/`. Utilize Draft PRs to signal when a PR is not yet ready for full CI.
