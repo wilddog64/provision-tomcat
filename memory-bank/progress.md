@@ -21,4 +21,6 @@
 
 ## Next Suggested Operator Checks
 - [ ] Optional: run `make check` to verify lint/syntax health after broader repo changes.
-- [ ] Optional: run targeted Kitchen suite for current change scope before release.# PR Trigger
+- [ ] Optional: run targeted Kitchen suite for current change scope before release.- [x] Documented AWS-specific integration hurdles and resolutions in `docs/issues/2026-02-14-aws-integration-hurdles.md`.
+- [x] Standardized collection installation in CI using explicit Galaxy commands.
+- [x] Implemented dynamic hostname injection for Ansible via `ANSIBLE_HOST_OVERRIDE`.

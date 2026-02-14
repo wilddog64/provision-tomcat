@@ -6,6 +6,11 @@ Stabilize the AWS integration testing pipeline, achieving parity with the succes
 ## Current State Snapshot
 - AWS Integration pipeline is fully stabilized and automated on the `aws-dev` branch.
 - Created PR #6 to merge AWS stabilization into `main`.
+- Resolved critical AWS-specific hurdles:
+    - Reverted to `negotiate` transport for EC2 compatibility.
+    - Implemented dynamic `ANSIBLE_HOST_OVERRIDE` for EC2 hostname resolution.
+    - Disabled non-existent domain service accounts for sandbox parity.
+    - Fixed collection resolution via explicit Galaxy installation in CI.
 - Implemented "Zero-Touch Sync" via `.envrc` for rotating sandbox credentials.
 - Established "Conditional Fallback" pattern: Vagrant runs only if AWS is inaccessible.
 - Achieved CI portability using `DEPLOY_KEY` secrets for all private roles.
