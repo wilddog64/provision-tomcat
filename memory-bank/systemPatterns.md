@@ -65,6 +65,12 @@
 
 ## 9) Infrastructure & CI/CD Patterns
 
+### Hybrid Zero-Touch Sync
+To manage ephemeral AWS sandbox environments (such as AGC):
+- **Manual Credential Sync**: `make sync-aws` remains a manual initial step performed locally by the user to refresh OAuth/session tokens and push them to GitHub Secrets. This acknowledges the hard constraint of dynamic credential updates on sandbox recreation.
+- **Automatic Resource Discovery**: After manual credential sync, subsequent local `make` targets for AWS integration will dynamically discover resource IDs (subnet, security group, AMI) from the live sandbox using AWS APIs. These discovered IDs will then be used for the test run, automating the binding of ephemeral infrastructure to the CI configuration.
+- **Benefits**: This hybrid approach balances security (explicit credential refresh) with automation (resource ID discovery), mitigating CI fragility due to infrastructure drift.
+
 ### Zero-Touch Secret Sync
 To support rotating sandboxes without manual configuration:
 - Local `.envrc` hooks detect active AWS/Azure sessions.
