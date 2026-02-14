@@ -176,7 +176,7 @@ platforms:
     driver:
       name: ec2
       region: us-east-1
-      availability_zone: us-east-1c
+      availability_zone: us-east-1e
       instance_type: t3.micro
       associate_public_ip: true
       subnet_id: subnet-0bf736b950e25a150
@@ -228,7 +228,7 @@ platforms:
     driver:
       name: ec2
       region: us-east-1
-      availability_zone: us-east-1c
+      availability_zone: us-east-1e
       instance_type: t3.medium
       associate_public_ip: true
       subnet_id: subnet-0bf736b950e25a150
