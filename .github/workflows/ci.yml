@@ -15,6 +15,17 @@ on:
     branches: [main]
 <<<<<<< HEAD
   workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Integration environment to run (optional, defaults to branch-based)'
+        required: false
+        default: 'auto'
+        type: choice
+        options:
+          - auto
+          - aws
+          - azure
+          - vagrant
 
 env:
   ANSIBLE_ROLES_PATH: ${{ github.workspace }}/roles
@@ -373,7 +384,10 @@ jobs:
     name: AWS Integration Tests
     runs-on: [self-hosted, macOS, ARM64]
     needs: validation
-    if: github.event_name == 'pull_request' && github.head_ref == 'aws-dev'
+    if: >-
+      (github.event_name == 'pull_request' && github.head_ref == 'aws-dev') ||
+      (github.event_name == 'push' && github.ref_name == 'aws-dev') ||
+      (github.event_name == 'workflow_dispatch' && (github.ref_name == 'aws-dev' || inputs.environment == 'aws'))
     outputs:
       AWS_AVAILABLE: ${{ env.AWS_AVAILABLE }}
     steps:
@@ -615,9 +629,10 @@ jobs:
     name: Azure Integration Tests
     runs-on: [self-hosted, macOS, ARM64]
     needs: validation
-    if: |
-      (github.event_name == 'workflow_dispatch' && github.ref_name == 'azure-dev') ||
-      (github.event_name == 'pull_request' && github.head_ref == 'azure-dev')
+    if: >-
+      (github.event_name == 'pull_request' && github.head_ref == 'azure-dev') ||
+      (github.event_name == 'push' && github.ref_name == 'azure-dev') ||
+      (github.event_name == 'workflow_dispatch' && (github.ref_name == 'azure-dev' || inputs.environment == 'azure'))
     steps:
       - name: Checkout provision-tomcat
         uses: actions/checkout@v4
@@ -668,11 +683,16 @@ jobs:
   vagrant_integration:
     name: Vagrant Integration Tests
     runs-on: [self-hosted, macOS, ARM64]
-    needs: aws_integration
-    # ONLY run if AWS was NOT available AND it's a branch where we allow integration tests
+    needs: [validation, aws_integration]
     if: |
-      needs.aws_integration.outputs.AWS_AVAILABLE == 'false' &&
-      (github.event_name == 'workflow_dispatch' || contains(github.ref, 'vagrant-dev') || github.ref == 'refs/heads/main')
+      always() &&
+      needs.validation.result == 'success' &&
+      (
+        (github.event_name == 'pull_request' && github.head_ref == 'vagrant-dev') ||
+        (github.event_name == 'push' && github.ref_name == 'vagrant-dev') ||
+        (github.event_name == 'workflow_dispatch' && (github.ref_name == 'vagrant-dev' || inputs.environment == 'vagrant')) ||
+        (github.ref == 'refs/heads/main' && (needs.aws_integration.result == 'skipped' || needs.aws_integration.outputs.AWS_AVAILABLE == 'false'))
+      )
     steps:
       - name: Checkout provision-tomcat
         uses: actions/checkout@v4
