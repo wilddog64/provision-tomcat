@@ -1,28 +1,24 @@
 # Active Context
 
 ## Current Session Objective
-Address CI fragility due to ephemeral AWS sandbox resource ID changes, implementing a "Hybrid Zero-Touch Sync" strategy.
+Resolved CI failure due to AWS infrastructure drift by implementing robust dynamic resource discovery and refined CI triggers.
 
 ## Recent AWS Integration Update
-- **New Critical Error**: Encountered `The subnet ID 'subnet-0bf736b950e25a150' does not exist in the specified region us-east-1.`
-- **Root Cause**: The underlying AWS sandbox environment (specifically resource IDs like `subnet_id`) has changed or been recreated.
-- **Distinction: Credentials vs. Resource IDs**:
-    - `make sync-aws` refreshes **AWS credentials** (Access Key, Secret Key, Session Token) in GitHub Secrets. This is a manual step required when the sandbox's OAuth keys change.
-    - The current error is about **infrastructure resource IDs** (like subnet ID) hardcoded in `.kitchen.yml`. `make sync-aws` does NOT update these resource IDs.
-- **CI Fragility**: Hardcoding ephemeral resource IDs makes the CI process fragile, as changes in the sandbox infrastructure will break the tests.
+- **Fixed Critical Error**: Resolved `The subnet ID 'subnet-0bf736b950e25a150' does not exist` by improving the `discover-aws-resources` target in `Makefile`.
+- **Robust Discovery**: The discovery logic now handles missing tags by falling back to `us-east-1e` default subnets and `default` security groups, ensuring CI continuity even in fresh sandboxes.
+- **Improved CI Triggers**: Implemented Draft PR conditional execution to skip integration tests until a PR is ready for review, conserving resources.
 
 ## Solution: Hybrid Zero-Touch Sync Strategy
 Adopted a "Hybrid Zero-Touch Sync" approach as a new architectural pattern to mitigate CI fragility in ephemeral AWS sandboxes:
-1.  **Manual Credential Sync**: `make sync-aws` will remain a manual initial step performed locally by the user to refresh OAuth/session tokens and push them to GitHub Secrets. This acknowledges the hard constraint of dynamic credential updates on sandbox recreation.
-2.  **Automatic Resource Discovery**: After successful manual credential sync, subsequent local `make` targets for AWS integration will dynamically discover resource IDs (subnet, security group, AMI) from the live sandbox using AWS APIs. These discovered IDs will then be used for the test run.
-This approach balances security (explicit credential refresh) with automation (resource ID discovery), mitigating CI fragility due to infrastructure drift.
+1.  **Manual Credential Sync**: `make sync-aws` remains a manual initial step performed locally.
+2.  **Automatic Resource Discovery**: After credential sync, `make discover-aws-resources` dynamically binds ephemeral resource IDs (subnet, SG, AMI) to the test run.
+This approach successfully mitigated the CI failure and improved pipeline efficiency.
 
 ## Current State Snapshot
-- AWS Integration pipeline is fully stabilized and verified on the `aws-dev` branch (based on previous, now outdated, sandbox resources).
-- Created PR #6 to merge AWS stabilization into `main`.
-- **Sandbox Status**: AWS sandbox session was extended by the user after expiration, leading to new resource IDs. Local `make sync-aws` was performed for credentials.
-- Established "Zero-Touch Sync" via `.envrc` for rotating sandbox credentials.
-- Achieved CI portability using `DEPLOY_KEY` secrets for all private roles.
+- AWS Integration pipeline is stabilized with dynamic resource discovery.
+- `ci.yml` updated with path filtering and Draft PR logic.
+- Hardcoded fallbacks in `.kitchen.yml` updated to current sandbox state.
+- Verified `discover-aws-resources` locally against live AWS environment.
 
 ## What Was Done
 1. **Applied Fixes:** Restored missing collection to `deps` targets, implemented offline linting, and added symlink-based role resolution in `Makefile`.
@@ -47,10 +43,10 @@ This approach balances security (explicit credential refresh) with automation (r
 - **AZ Drift**: If the sandbox allocation moves to a non-legacy AZ, `t2` instances may be less efficient than `t3`. Recommend periodic review of instance types against AZ capabilities.
 - **Cleanup Persistence**: While `if: always()` is implemented, manual monitoring of the AWS console is still advised during active development to ensure no orphaned resources remain due to workflow cancellation limits.
 
-## Controlled CI Execution [PARTIALLY IMPLEMENTED]
+## Controlled CI Execution [IMPLEMENTED]
 - **Problem**: Unnecessary CI workflow runs trigger during discussion or documentation updates, wasting resources and creating noise.
 - **Solution**: Implement path filtering in `ci.yml` to prevent triggers on changes to `docs/` or `memory-bank/`. Utilize Draft PRs to signal when a PR is not yet ready for full CI.
 - **Status**:
   - [x] Path filtering implemented in `ci.yml` (excludes `docs/**` and `memory-bank/**`)
-  - [ ] Draft PR conditional execution (pending)
+  - [x] Draft PR conditional execution implemented in `ci.yml` for integration jobs.
 - **See**: `docs/plans/2026-02-14-controlled-ci-execution.md` for full details.
