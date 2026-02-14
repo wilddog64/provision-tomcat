@@ -350,6 +350,7 @@ platforms:
       elevated: true
       username: Administrator
 <<<<<<< HEAD
+<<<<<<< HEAD
       winrm_transport: :negotiate
 <<<<<<< HEAD
       port: 5985
@@ -361,6 +362,9 @@ platforms:
 >>>>>>> 5dba6f7 (feat(aws): add AWS EC2 platform to Test Kitchen configuration)
 =======
       winrm_transport: :basic
+=======
+      winrm_transport: :negotiate
+>>>>>>> 4f78405 (fix(aws): revert to negotiate transport and target specific instances to prevent loop)
       connection_retries: 15
       connection_retry_sleep: 10
       operation_timeout: 600
@@ -506,7 +510,7 @@ platforms:
       name: winrm
       elevated: true
       username: Administrator
-      winrm_transport: :basic
+      winrm_transport: :negotiate
       connection_retries: 15
       connection_retry_sleep: 10
       operation_timeout: 600
