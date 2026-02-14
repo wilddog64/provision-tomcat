@@ -16,9 +16,9 @@ AWS tests currently rely on brittle Kitchen configurations and lack the same lev
 ## Technical Plan
 
 ### 1. Infrastructure Stabilization (`.kitchen.yml`)
-- **Transport Tuning**: Switch from `:negotiate` to `:basic` for WinRM transport if compatibility allows, or ensure `:negotiate` is robustly configured.
+- **Transport Tuning**: [x] Retain `:negotiate` for WinRM transport on AWS (`:basic` was attempted but failed; see `docs/issues/2026-02-14-aws-integration-hurdles.md#1`).
 - **Resource Optimization**: Evaluate `instance_type` (currently `t3.micro`/`t3.medium`). Standardize on a size that balances cost and Windows boot/provision speed.
-- **Security Group Management**: Parameterize `security_group_ids` and `subnet_id` via environment variables (similar to Azure resource groups) to support rotating sandboxes.
+- **Security Group Management**: Parameterize `security_group_ids` and `subnet_id` via environment variables (similar to Azure resource groups) to support rotating sandboxes. See `docs/issues/2026-02-14-aws-infrastructure-drift.md` for the Hybrid Zero-Touch Sync strategy.
 
 ### 2. CI/CD Integration (`.github/workflows/ci.yml`)
 - **Runner Assignment**: Update the `aws_integration` job to run on the `[self-hosted, macOS, ARM64]` runner.
@@ -43,8 +43,12 @@ AWS tests currently rely on brittle Kitchen configurations and lack the same lev
 - **Dynamic Metadata**: Resolve AWS Account ID and Region dynamically from the environment.
 
 ### 4. Documentation
-- Document AWS-specific regressions and resolutions in `docs/issues/`.
-- Update `memory-bank/` to reflect AWS stabilization status.
+- [x] Document AWS-specific regressions and resolutions in `docs/issues/` (see `2026-02-14-aws-integration-hurdles.md`).
+- [ ] Update `memory-bank/` to reflect AWS stabilization status.
+
+### 5. Related Plans
+- `docs/plans/2026-02-14-controlled-ci-execution.md` - CI trigger optimization (path filtering, draft PRs)
+- `docs/issues/2026-02-14-aws-infrastructure-drift.md` - Dynamic resource ID discovery strategy
 
 ## Success Criteria
 - [ ] AWS integration tests pass on the self-hosted macOS runner.

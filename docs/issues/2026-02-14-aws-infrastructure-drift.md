@@ -37,8 +37,14 @@ To mitigate this CI fragility and reduce manual intervention for resource ID upd
 -   **Balances Security & Automation**: Explicit credential control combined with automated resource binding.
 -   **Aligns with Patterns**: Enhances "Test Orchestration Pattern" and "Zero-Touch Secret Sync" from `systemPatterns.md`.
 
-## Next Steps:
--   Implement `check-aws-credentials` make target.
--   Implement `discover-aws-resources` make target using AWS CLI.
--   Modify `.kitchen.yml` to consume dynamic resource IDs.
--   Integrate into `ci.yml` for consistent CI behavior.
+## Related Documents
+-   `docs/plans/AWS-SANDBOX-STABILIZATION.md` - Parent stabilization plan
+-   `docs/issues/2026-02-14-aws-integration-hurdles.md` - Related integration issues resolved
+-   `docs/plans/2026-02-14-controlled-ci-execution.md` - CI optimization complementing this work
+
+## Next Steps
+-   [ ] Implement `check-aws-credentials` make target.
+-   [ ] Implement `discover-aws-resources` make target using AWS CLI.
+-   [ ] Modify `.kitchen.yml` to consume dynamic resource IDs via environment variables.
+-   [ ] Integrate into `ci.yml` for consistent CI behavior.
+-   [ ] Define tagging conventions for sandbox resources (e.g., `Project: Tomcat-Provisioning`).
