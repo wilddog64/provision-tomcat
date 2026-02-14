@@ -38,12 +38,14 @@ TOMCAT_NEW_VERSION ?= 9.0.113
 .PHONY: lint
 lint: deps
 	@echo "Running ansible-lint..."
-	ansible-lint .
+	ansible-lint --offline .
 
 .PHONY: syntax
 syntax: deps
 	@echo "Checking playbook syntax..."
-	ansible-playbook --syntax-check tests/playbook.yml -i tests/inventory
+	@mkdir -p roles
+	@ln -sfn .. roles/provision-tomcat
+	ANSIBLE_ROLES_PATH=./roles:../ ansible-playbook --syntax-check tests/playbook.yml -i tests/inventory
 
 .PHONY: check
 check: lint syntax
@@ -143,7 +145,7 @@ deps:
 	@echo "Installing Ruby dependencies..."
 	@rbenv exec bundle install || bundle install
 	@echo "Installing Ansible collections..."
-	ansible-galaxy collection install ansible.windows chocolatey.chocolatey -p ./collections
+	ansible-galaxy collection install -r requirements.yml -p ./collections
 
 # ============================================================================ 
 # Help
