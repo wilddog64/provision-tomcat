@@ -373,6 +373,7 @@ jobs:
     name: AWS Integration Tests
     runs-on: [self-hosted, macOS, ARM64]
     needs: validation
+    if: github.event_name == 'pull_request' && github.head_ref == 'aws-dev'
     outputs:
       AWS_AVAILABLE: ${{ env.AWS_AVAILABLE }}
     steps:
