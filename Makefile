@@ -109,11 +109,35 @@ ifeq ($(AWS_REGION),)
   AWS_REGION := us-east-1
 endif
 
+<<<<<<< HEAD
 >>>>>>> 76e4837 (fix(aws): stabilize AWS integration testing pipeline and achieve parity with Azure)
 # AWS Targets
+=======
+# ============================================================================ 
+# Secret Management
+# ============================================================================ 
+>>>>>>> 68e32dd (feat(ci): implement dynamic secret sync and conditional vagrant fallback)
 .PHONY: sync-aws
 sync-aws:
-	@"$(shell pwd)/../bin/sync-aws-secrets"
+	@if [ -x "../bin/sync-aws-secrets" ]; then \
+		echo "Syncing AWS secrets from local session..."; \
+		"../bin/sync-aws-secrets"; \
+	else \
+		echo "Error: ../bin/sync-aws-secrets not found or not executable."; \
+		exit 1; \
+	fi
+
+.PHONY: sync-azure
+sync-azure:
+	@echo "Syncing Azure secrets to GitHub..."
+	@gh secret set AZURE_CLIENT_ID --body "$$AZURE_CLIENT_ID"
+	@gh secret set AZURE_CLIENT_SECRET --body "$$AZURE_CLIENT_SECRET"
+	@gh secret set AZURE_TENANT_ID --body "$$AZURE_TENANT_ID"
+	@gh secret set AZURE_SUBSCRIPTION_ID --body "$$AZURE_SUBSCRIPTION_ID"
+
+.PHONY: sync-secrets
+sync-secrets: sync-aws sync-azure
+	@echo "All secrets synchronized to GitHub."
 
 .PHONY: test-aws-provision-tomcat
 test-aws-provision-tomcat: update-roles
