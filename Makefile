@@ -94,46 +94,68 @@ syntax: deps
 check: lint syntax
 	@echo "All validation checks passed."
 
+<<<<<<< HEAD
 # ============================================================================
 <<<<<<< HEAD
 =======
+=======
+# ============================================================================ 
+# AWS Configuration (Universal Overrides)
+# ============================================================================ 
+# Dynamically resolve account and region if not provided
+AWS_ACCOUNT_ID ?= $(shell aws sts get-caller-identity --query Account --output text 2>/dev/null)
+AWS_REGION ?= $(shell aws configure get region 2>/dev/null)
+ifeq ($(AWS_REGION),)
+  AWS_REGION := us-east-1
+endif
+
+>>>>>>> 76e4837 (fix(aws): stabilize AWS integration testing pipeline and achieve parity with Azure)
 # AWS Targets
-# ============================================================================
 .PHONY: sync-aws
 sync-aws:
 	@"$(shell pwd)/../bin/sync-aws-secrets"
 
-.PHONY: test-candidate-aws
-test-candidate-aws: update-roles
-	@if ps aux | grep -E "[k]itchen.*upgrade-candidate-aws" > /dev/null; then \
-		echo "Error: Another candidate test process is already running!"; \
-		exit 1; \
-	fi
-	@echo "=== Testing Java + Tomcat upgrade (candidate mode) on AWS ==="
-	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) destroy upgrade-candidate-aws-aws-minimal-win
-	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) create upgrade-candidate-aws-aws-minimal-win
-	@echo "Fetching dynamic hostname..."
-	@hostname=$$(yq .hostname .kitchen/upgrade-candidate-aws-aws-minimal-win.yml); \
-	echo "Hostname: $$hostname"; \
-	KITCHEN_YAML=$(KITCHEN_YAML) ANSIBLE_HOST_OVERRIDE=$$hostname $(KITCHEN_CMD) converge upgrade-candidate-aws-aws-minimal-win
-	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) verify upgrade-candidate-aws-aws-minimal-win
-	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) destroy upgrade-candidate-aws-aws-minimal-win
+.PHONY: test-aws-provision-tomcat
+test-aws-provision-tomcat: update-roles
+	@set -e; \
+	echo "=== Detecting AWS Environment ==="; \
+	ACC=$(AWS_ACCOUNT_ID); \
+	REG=$(AWS_REGION); \
+	echo "Using Account: $$ACC"; \
+	echo "Using Region: $$REG"; \
+	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) destroy aws-minimal-win; \
+	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) create aws-minimal-win; \
+	IP=$$(yq .hostname .kitchen/default-aws-minimal-win.yml); \
+	echo "=== Waiting for WinRM on $$IP:5985... ==="; \
+	for i in {1..60}; do if nc -z -w 5 $$IP 5985; then break; fi; echo "Waiting... ($$i/60)"; sleep 10; if [ $$i -eq 60 ]; then echo "Timeout waiting for WinRM"; exit 1; fi; done; \
+	sleep 10; \
+	echo "=== Verifying Ansible Connectivity (win_ping) ==="; \
+	ANSIBLE_CONFIG=ansible.cfg ansible -i .kitchen/ansible_inventory/ansible_inventory.ini -m win_ping all; \
+	echo "=== Running Integration Test ==="; \
+	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) converge default-aws-minimal-win; \
+	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) verify default-aws-minimal-win; \
+	if [ -z "$$KEEP_AWS_VM" ]; then echo "=== Cleaning up... ==="; KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) destroy aws-minimal-win; else echo "=== KEEP_AWS_VM is set. Skipping cleanup. ==="; fi
 
-.PHONY: test-candidate-aws-disk
-test-candidate-aws-disk: update-roles
-	@if ps aux | grep -E "[k]itchen.*upgrade-candidate-aws-disk" > /dev/null; then \
-		echo "Error: Another candidate test process is already running!"; \
-		exit 1; \
-	fi
-	@echo "=== Testing Java + Tomcat upgrade (candidate mode) on AWS (D: drive) ==="
-	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) destroy upgrade-candidate-aws-disk-aws-minimal-win-disk
-	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) create upgrade-candidate-aws-disk-aws-minimal-win-disk
-	@echo "Fetching dynamic hostname..."
-	@hostname=$$(yq .hostname .kitchen/upgrade-candidate-aws-disk-aws-minimal-win-disk.yml); \
-	echo "Hostname: $$hostname"; \
-	KITCHEN_YAML=$(KITCHEN_YAML) ANSIBLE_HOST_OVERRIDE=$$hostname $(KITCHEN_CMD) converge upgrade-candidate-aws-disk-aws-minimal-win-disk
-	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) verify upgrade-candidate-aws-disk-aws-minimal-win-disk
-	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) destroy upgrade-candidate-aws-disk-aws-minimal-win-disk
+.PHONY: test-aws-upgrade-candidate
+test-aws-upgrade-candidate: update-roles
+	@set -e; \
+	echo "=== Detecting AWS Environment ==="; \
+	ACC=$(AWS_ACCOUNT_ID); \
+	REG=$(AWS_REGION); \
+	echo "Using Account: $$ACC"; \
+	echo "Using Region: $$REG"; \
+	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) destroy upgrade-candidate-aws-aws-minimal-win; \
+	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) create upgrade-candidate-aws-aws-minimal-win; \
+	IP=$$(yq .hostname .kitchen/upgrade-candidate-aws-aws-minimal-win.yml); \
+	echo "=== Waiting for WinRM on $$IP:5985... ==="; \
+	for i in {1..60}; do if nc -z -w 5 $$IP 5985; then break; fi; echo "Waiting... ($$i/60)"; sleep 10; if [ $$i -eq 60 ]; then echo "Timeout waiting for WinRM"; exit 1; fi; done; \
+	sleep 10; \
+	echo "=== Verifying Ansible Connectivity (win_ping) ==="; \
+	ANSIBLE_CONFIG=ansible.cfg ansible -i .kitchen/ansible_inventory/ansible_inventory.ini -m win_ping all; \
+	echo "=== Running Candidate Upgrade Test ==="; \
+	KITCHEN_YAML=$(KITCHEN_YAML) ANSIBLE_HOST_OVERRIDE=$$IP $(KITCHEN_CMD) converge upgrade-candidate-aws-aws-minimal-win; \
+	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) verify upgrade-candidate-aws-aws-minimal-win; \
+	if [ -z "$$KEEP_AWS_VM" ]; then echo "=== Cleaning up... ==="; KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) destroy upgrade-candidate-aws-aws-minimal-win; else echo "=== KEEP_AWS_VM is set. Skipping cleanup. ==="; fi
 
 # ============================================================================
 >>>>>>> 5dba6f7 (feat(aws): add AWS EC2 platform to Test Kitchen configuration)

@@ -278,8 +278,8 @@ platforms:
       availability_zone: us-east-1c
       instance_type: t3.micro
       associate_public_ip: true
-      subnet_id: subnet-0adcf46df0af386c4
-      security_group_ids: ["sg-00899f6779540db59"]
+      subnet_id: subnet-0373a34c515afa7d4
+      security_group_ids: ["sg-0aa6b08340bfa1670"]
       image_id: ami-06f5f29d1fe41ea03
 >>>>>>> e21dd4e (fix(aws): use yq for dynamic hostname injection in candidate test)
     transport:
@@ -349,6 +349,7 @@ platforms:
       name: winrm
       elevated: true
       username: Administrator
+<<<<<<< HEAD
       winrm_transport: :negotiate
 <<<<<<< HEAD
       port: 5985
@@ -358,12 +359,19 @@ platforms:
       operation_timeout: 600
 =======
 >>>>>>> 5dba6f7 (feat(aws): add AWS EC2 platform to Test Kitchen configuration)
+=======
+      winrm_transport: :basic
+      connection_retries: 15
+      connection_retry_sleep: 10
+      operation_timeout: 600
+>>>>>>> 76e4837 (fix(aws): stabilize AWS integration testing pipeline and achieve parity with Azure)
     provisioner:
       name: ansible_push
       ansible_install_mode: :skip
       pass_transport_password: true
       generate_inv: true
       use_instance_name: false
+<<<<<<< HEAD
 <<<<<<< HEAD
       ansible_playbook_bin: <%= Dir.glob("#{Dir.pwd}/venv/bin/ansible-playbook").first || Dir.glob("#{File.dirname(File.dirname(__FILE__))}/.direnv/python-*/bin/ansible-playbook").first || Dir.glob("#{Dir.pwd}/.direnv/python-*/bin/ansible-playbook").first || "ansible-playbook" %>
 =======
@@ -440,6 +448,8 @@ platforms:
       pass_transport_password: true
       generate_inv: true
       use_instance_name: false
+=======
+>>>>>>> 76e4837 (fix(aws): stabilize AWS integration testing pipeline and achieve parity with Azure)
       ansible_playbook_bin: <%= Dir.glob("#{Dir.pwd}/venv/bin/ansible-playbook").first || Dir.glob("#{File.dirname(File.dirname(__FILE__))}/.direnv/python-*/bin/ansible-playbook").first || Dir.glob("#{Dir.pwd}/.direnv/python-*/bin/ansible-playbook").first || "ansible-playbook" %>
       require_ansible_repo: true
       playbook: tests/playbook.yml
@@ -478,8 +488,8 @@ platforms:
       availability_zone: us-east-1c
       instance_type: t3.medium
       associate_public_ip: true
-      subnet_id: subnet-0adcf46df0af386c4
-      security_group_ids: ["sg-00899f6779540db59"]
+      subnet_id: subnet-0373a34c515afa7d4
+      security_group_ids: ["sg-0aa6b08340bfa1670"]
       image_id: ami-06f5f29d1fe41ea03
       block_device_mappings:
         - device_name: /dev/sda1
@@ -496,14 +506,17 @@ platforms:
       name: winrm
       elevated: true
       username: Administrator
-      winrm_transport: :negotiate
+      winrm_transport: :basic
+      connection_retries: 15
+      connection_retry_sleep: 10
+      operation_timeout: 600
     provisioner:
       name: ansible_push
       ansible_install_mode: :skip
       pass_transport_password: true
       generate_inv: true
       use_instance_name: false
-      ansible_playbook_bin: <%= Dir.glob("#{File.dirname(File.dirname(__FILE__))}/.direnv/python-*/bin/ansible-playbook").first || Dir.glob("#{Dir.pwd}/.direnv/python-*/bin/ansible-playbook").first %>
+      ansible_playbook_bin: <%= Dir.glob("#{Dir.pwd}/venv/bin/ansible-playbook").first || Dir.glob("#{File.dirname(File.dirname(__FILE__))}/.direnv/python-*/bin/ansible-playbook").first || Dir.glob("#{Dir.pwd}/.direnv/python-*/bin/ansible-playbook").first || "ansible-playbook" %>
       require_ansible_repo: true
       playbook: tests/playbook.yml
       roles_path: ..
