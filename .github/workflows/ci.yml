@@ -103,25 +103,28 @@ jobs:
       - name: Checkout provision-tomcat
         uses: actions/checkout@v4
 
-      - name: Configure AWS Credentials
+      - name: Verify AWS Availability
         run: |
-          # Use secrets for portable CI
           if [ -n "${{ secrets.AWS_ACCESS_KEY_ID }}" ]; then
-            aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
-            aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-            aws configure set aws_session_token "${{ secrets.AWS_SESSION_TOKEN }}"
-            aws configure set region us-east-1
-          fi
-          
-          if aws sts get-caller-identity > /dev/null 2>&1; then
-            echo "AWS_AVAILABLE=true" >> $GITHUB_ENV
-            echo "AWS_AVAILABLE=true" >> $GITHUB_OUTPUT
-            ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-            echo "AWS session detected. Account: $ACCOUNT_ID"
+            export AWS_ACCESS_KEY_ID="${{ secrets.AWS_ACCESS_KEY_ID }}"
+            export AWS_SECRET_ACCESS_KEY="${{ secrets.AWS_SECRET_ACCESS_KEY }}"
+            export AWS_SESSION_TOKEN="${{ secrets.AWS_SESSION_TOKEN }}"
+            export AWS_DEFAULT_REGION=us-east-1
+            
+            if aws sts get-caller-identity > /dev/null 2>&1; then
+              echo "AWS_AVAILABLE=true" >> $GITHUB_ENV
+              echo "AWS_AVAILABLE=true" >> $GITHUB_OUTPUT
+              ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+              echo "AWS session detected. Account: $ACCOUNT_ID"
+            else
+              echo "AWS_AVAILABLE=false" >> $GITHUB_ENV
+              echo "AWS_AVAILABLE=false" >> $GITHUB_OUTPUT
+              echo "No AWS session found or credentials invalid."
+            fi
           else
             echo "AWS_AVAILABLE=false" >> $GITHUB_ENV
             echo "AWS_AVAILABLE=false" >> $GITHUB_OUTPUT
-            echo "No AWS session found."
+            echo "AWS secrets missing."
           fi
 
       - name: Checkout Roles
@@ -173,18 +176,25 @@ jobs:
         if: env.AWS_AVAILABLE == 'true'
         env:
           OBJC_DISABLE_INITIALIZE_FORK_SAFETY: "YES"
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
+          AWS_REGION: us-east-1
+          AWS_DEFAULT_REGION: us-east-1
         run: |
           source venv/bin/activate
-          # Use a direct kitchen converge to ensure we control the lifecycle
-          # but we wrap it in a try/finally pattern via Makefile or explicit steps
           make test-aws-provision-tomcat
 
       - name: Mandatory Cleanup
         if: always() && env.AWS_AVAILABLE == 'true'
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
+          AWS_REGION: us-east-1
+          AWS_DEFAULT_REGION: us-east-1
         run: |
           source venv/bin/activate || true
-          # Force destroy any instances that might have been left behind
-          # The EC2 driver sometimes leaves instances if create fails early
           bundle exec kitchen destroy default-aws-minimal-win-disk || true
           bundle exec kitchen destroy upgrade-candidate-aws-disk-aws-minimal-win-disk || true
 
