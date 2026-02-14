@@ -94,7 +94,7 @@ jobs:
       - name: Symlink self as role
         run: |
           mkdir -p roles
-          ln -sfn .. roles/provision-tomcat
+          ln -sfn "$PWD" roles/provision-tomcat
 
       - name: Verify Python Environment
         run: |
@@ -594,7 +594,7 @@ jobs:
         if: steps.aws_check.outputs.AWS_AVAILABLE == 'true'
         run: |
           mkdir -p roles
-          ln -sfn .. roles/provision-tomcat
+          ln -sfn "$PWD" roles/provision-tomcat
 
       - name: Checkout provision-java
         if: steps.aws_check.outputs.AWS_AVAILABLE == 'true'
@@ -678,7 +678,7 @@ jobs:
         if: env.AZURE_AVAILABLE == 'true'
         run: |
           mkdir -p roles
-          ln -sfn .. roles/provision-tomcat
+          ln -sfn "$PWD" roles/provision-tomcat
 
       - name: Checkout provision-java
         if: env.AZURE_AVAILABLE == 'true'
