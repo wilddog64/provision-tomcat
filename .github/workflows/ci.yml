@@ -547,13 +547,15 @@ jobs:
       - name: Detect AWS Availability
         id: aws_check
         run: |
+          # Ensure we look in the real home directory for credentials
+          export HOME=/Users/cliang
           if aws sts get-caller-identity > /dev/null 2>&1; then
             echo "AWS_AVAILABLE=true" >> $GITHUB_ENV
             ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
             echo "AWS session detected. Account: $ACCOUNT_ID"
           else
             echo "AWS_AVAILABLE=false" >> $GITHUB_ENV
-            echo "No AWS session or secrets found."
+            echo "No AWS session found. (HOME: $HOME)"
           fi
 
       - name: Checkout provision-java
@@ -618,6 +620,7 @@ jobs:
         if: env.AWS_AVAILABLE == 'true'
         env:
           OBJC_DISABLE_INITIALIZE_FORK_SAFETY: "YES"
+          HOME: /Users/cliang
         run: |
           source venv/bin/activate
           ansible --version
