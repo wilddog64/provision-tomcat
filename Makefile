@@ -92,8 +92,8 @@ test-aws-provision-tomcat: update-roles
 	REG=$(AWS_REGION); \
 	echo "Using Account: $$ACC"; \
 	echo "Using Region: $$REG"; \
-	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) destroy aws-minimal-win; \
-	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) create aws-minimal-win; \
+	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) destroy default-aws-minimal-win; \
+	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) create default-aws-minimal-win; \
 	IP=$$(yq .hostname .kitchen/default-aws-minimal-win.yml); \
 	echo "=== Waiting for WinRM on $$IP:5985... ==="; \
 	for i in {1..60}; do if nc -z -w 5 $$IP 5985; then break; fi; echo "Waiting... ($$i/60)"; sleep 10; if [ $$i -eq 60 ]; then echo "Timeout waiting for WinRM"; exit 1; fi; done; \
@@ -103,7 +103,7 @@ test-aws-provision-tomcat: update-roles
 	echo "=== Running Integration Test ==="; \
 	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) converge default-aws-minimal-win; \
 	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) verify default-aws-minimal-win; \
-	if [ -z "$$KEEP_AWS_VM" ]; then echo "=== Cleaning up... ==="; KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) destroy aws-minimal-win; else echo "=== KEEP_AWS_VM is set. Skipping cleanup. ==="; fi
+	if [ -z "$$KEEP_AWS_VM" ]; then echo "=== Cleaning up... ==="; KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) destroy default-aws-minimal-win; else echo "=== KEEP_AWS_VM is set. Skipping cleanup. ==="; fi
 
 .PHONY: test-aws-upgrade-candidate
 test-aws-upgrade-candidate: update-roles

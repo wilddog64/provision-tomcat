@@ -186,7 +186,7 @@ platforms:
       name: winrm
       elevated: true
       username: Administrator
-      winrm_transport: :basic
+      winrm_transport: :negotiate
       connection_retries: 15
       connection_retry_sleep: 10
       operation_timeout: 600
@@ -246,7 +246,7 @@ platforms:
       name: winrm
       elevated: true
       username: Administrator
-      winrm_transport: :basic
+      winrm_transport: :negotiate
       connection_retries: 15
       connection_retry_sleep: 10
       operation_timeout: 600
