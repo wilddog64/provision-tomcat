@@ -3,8 +3,36 @@ name: CI
 on:
   push:
     branches: [main, azure-dev, aws-dev, vagrant-dev]
+    paths:
+      - '**.yml'
+      - '**.yaml'
+      - '**.sh'
+      - '**.py'
+      - '**.rb'
+      - 'Makefile'
+      - 'tasks/**'
+      - 'defaults/**'
+      - 'vars/**'
+      - 'roles/**'
+      - 'tests/**'
+      - '!docs/**'         # Exclude changes in docs folder
+      - '!memory-bank/**'  # Exclude changes in memory-bank folder
   pull_request:
     branches: [main, azure-dev, aws-dev, vagrant-dev]
+    paths:
+      - '**.yml'
+      - '**.yaml'
+      - '**.sh'
+      - '**.py'
+      - '**.rb'
+      - 'Makefile'
+      - 'tasks/**'
+      - 'defaults/**'
+      - 'vars/**'
+      - 'roles/**'
+      - 'tests/**'
+      - '!docs/**'
+      - '!memory-bank/**'
   workflow_dispatch:
     inputs:
       environment:
