@@ -90,26 +90,21 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Configure AWS Credentials
-        id: aws_creds
-        continue-on-error: true
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
-
-      - name: Detect AWS Availability
-        id: aws_check
         run: |
-          # Ensure we look in the real home directory for credentials
-          export HOME=/Users/cliang
+          # Use secrets for portable CI, or fallback to runner's native session if available
+          if [ -n "${{ secrets.AWS_ACCESS_KEY_ID }}" ]; then
+            aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
+            aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+            aws configure set region us-east-1
+          fi
+          
           if aws sts get-caller-identity > /dev/null 2>&1; then
             echo "AWS_AVAILABLE=true" >> $GITHUB_ENV
             ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
             echo "AWS session detected. Account: $ACCOUNT_ID"
           else
             echo "AWS_AVAILABLE=false" >> $GITHUB_ENV
-            echo "No AWS session found. (HOME: $HOME)"
+            echo "No AWS session found. Please ensure AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY secrets are set."
           fi
 
       - name: Checkout provision-java
