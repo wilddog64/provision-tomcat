@@ -80,7 +80,11 @@ AZURE_ADMIN_PASSWORD ?= ChangeM3!SecurePassword
 lint: deps
 	@if [ -z "$(ANSIBLE_LINT_BIN)" ]; then echo "ERROR: ansible-lint not found in PATH"; exit 1; fi
 	@echo "Running ansible-lint..."
+<<<<<<< HEAD
 	PATH="$(dir $(ANSIBLE_LINT_BIN)):$$PATH" $(ANSIBLE_LINT_BIN) --offline .
+=======
+	ansible-lint --offline .
+>>>>>>> 1b1cd19 (fix(ci): resolve workflow failures and synchronize stabilization patterns)
 
 .PHONY: syntax
 syntax: deps
@@ -88,7 +92,11 @@ syntax: deps
 	@echo "Checking playbook syntax..."
 	@mkdir -p roles
 	@ln -sfn .. roles/provision-tomcat
+<<<<<<< HEAD
 	ANSIBLE_ROLES_PATH="$(ANSIBLE_ROLES_PATH)" $(ANSIBLE_PLAYBOOK_BIN) --syntax-check tests/playbook.yml -i tests/inventory
+=======
+	ANSIBLE_ROLES_PATH=./roles:../ ansible-playbook --syntax-check tests/playbook.yml -i tests/inventory
+>>>>>>> 1b1cd19 (fix(ci): resolve workflow failures and synchronize stabilization patterns)
 
 .PHONY: check
 check: lint syntax
@@ -195,7 +203,11 @@ deps:
 	@echo "Installing Ruby dependencies..."
 	@rbenv exec bundle install || bundle install
 	@echo "Installing Ansible collections..."
+<<<<<<< HEAD
 	$(ANSIBLE_GALAXY_BIN) collection install ansible.windows community.windows chocolatey.chocolatey -p ./collections
+=======
+	ansible-galaxy collection install -r requirements.yml -p ./collections
+>>>>>>> 1b1cd19 (fix(ci): resolve workflow failures and synchronize stabilization patterns)
 
 # ============================================================================ 
 # Help

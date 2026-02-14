@@ -33,7 +33,7 @@ Excluding them keeps lint focused on real Ansible content.
 
 ### What changed
 
-- The previously partially active `win11-baseline` block is now fully commented out.
+- The previously partially active `win11-baseline` block is now fully commented out in `.kitchen.yml`.
 
 ### Why
 
@@ -48,44 +48,3 @@ This preserves the historical config for reference while clearly disabling that 
 ### Why
 
 No behavioral change. This is standard formatting hygiene and avoids EOF newline warnings in some tooling.
-
-## 5) Vagrant Box Caching and VirtualBox Stability in CI
-
-
-
-### What changed
-
-
-
-- Modified `bin/vagrant-wrapper` to preserve the `HOME` environment variable.
-
-- Explicitly set `VAGRANT_HOME: /Users/cliang/.vagrant.d` in `.github/workflows/ci.yml`.
-
-- Enhanced `bin/vbox-cleanup-disks` to aggressively power off and unregister any stale VMs starting with `kitchen-` or `windows-11-`.
-
-
-
-### Why
-
-
-
-1.  **Vagrant Box Re-downloads**: Every CI run was downloading the Windows 11 box from the internet because `vagrant-wrapper` used `env -i`, which stripped the `HOME` variable. This prevented Vagrant from finding the persistent box cache at `~/.vagrant.d`.
-
-## 6) Vagrant Fallback Disabled in CI
-
-### What changed
-
-- Added `&& false` to the `if` conditions for "Pre-download Vagrant Box" and "Fallback to Vagrant Test" steps in `.github/workflows/ci.yml`.
-
-### Why
-
-Extensive debugging on the `m2-air` runner confirmed that **Windows 11 ARM64 virtualization via VirtualBox 7 is highly unstable**. 
-
-Even with:
-- 8GB RAM and 4 CPUs allocated to the guest.
-- WinRM transport reverted to `basic` for compatibility.
-- Increased connection timeouts and retries.
-
-The guest PowerShell processes consistently crash with `STATUS_ACCESS_VIOLATION` (exit code `3221225477`), resulting in "Module result deserialization failed" errors in Ansible.
-
-To avoid continuous misleading CI failures, the local Vagrant fallback has been disabled. Integration tests now strictly require Azure environment availability to provide reliable results.
