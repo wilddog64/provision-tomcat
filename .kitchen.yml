@@ -275,9 +275,10 @@ platforms:
 =======
       name: ec2
       region: us-east-1
-      availability_zone: us-east-1e
+      availability_zone: <%= ENV.fetch('AWS_AZ', 'us-east-1e') %>
       instance_type: t2.micro
       associate_public_ip: true
+<<<<<<< HEAD
       subnet_id: subnet-0bf736b950e25a150
       security_group_ids: ["sg-0153680ad73f68512"]
       image_id: ami-06f5f29d1fe41ea03
@@ -436,6 +437,11 @@ platforms:
             volume_size: 20
             volume_type: gp3
             delete_on_termination: true
+=======
+      subnet_id: <%= ENV.fetch('AWS_SUBNET_ID', 'subnet-0bf736b950e25a150') %>
+      security_group_ids: <%= ENV.fetch('AWS_SECURITY_GROUP_IDS', '["sg-0153680ad73f68512"]') %>
+      image_id: <%= ENV.fetch('AWS_AMI_ID', 'ami-06f5f29d1fe41ea03') %>
+>>>>>>> 0e21516 (feat(aws): implement Hybrid Zero-Touch Sync dynamic resource discovery)
     transport:
       name: winrm
       elevated: true
@@ -497,12 +503,12 @@ platforms:
     driver:
       name: ec2
       region: us-east-1
-      availability_zone: us-east-1e
+      availability_zone: <%= ENV.fetch('AWS_AZ', 'us-east-1e') %>
       instance_type: t2.medium
       associate_public_ip: true
-      subnet_id: subnet-0bf736b950e25a150
-      security_group_ids: ["sg-0153680ad73f68512"]
-      image_id: ami-06f5f29d1fe41ea03
+      subnet_id: <%= ENV.fetch('AWS_SUBNET_ID', 'subnet-0bf736b950e25a150') %>
+      security_group_ids: <%= ENV.fetch('AWS_SECURITY_GROUP_IDS', '["sg-0153680ad73f68512"]') %>
+      image_id: <%= ENV.fetch('AWS_AMI_ID', 'ami-06f5f29d1fe41ea03') %>
       block_device_mappings:
         - device_name: /dev/sda1
           ebs:

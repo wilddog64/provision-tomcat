@@ -613,14 +613,24 @@ jobs:
             echo "AWS session invalid."
           fi
 
+      - name: Discover Dynamic AWS Resources
+        if: steps.aws_check.outputs.AWS_AVAILABLE == 'true'
+        id: discover_resources
+        run: |
+          # Call the make target to discover resources and export them as environment variables
+          eval "$(make discover-aws-resources --silent)"
+          echo "AWS_SUBNET_ID=$AWS_SUBNET_ID" >> $GITHUB_ENV
+          echo "AWS_SECURITY_GROUP_IDS=$AWS_SECURITY_GROUP_IDS" >> $GITHUB_ENV
+          echo "AWS_AMI_ID=$AWS_AMI_ID" >> $GITHUB_ENV
+          echo "AWS_AZ=$AWS_AZ" >> $GITHUB_ENV
+
       - name: Authorize Security Group Ingress
         if: steps.aws_check.outputs.AWS_AVAILABLE == 'true'
         run: |
-          # Ensure WinRM and Tomcat ports are open in the default SG
-          # sg-0153680ad73f68512 is the 'default' group found earlier
-          aws ec2 authorize-security-group-ingress --group-id sg-0153680ad73f68512 --protocol tcp --port 5985 --cidr 0.0.0.0/0 || true
-          aws ec2 authorize-security-group-ingress --group-id sg-0153680ad73f68512 --protocol tcp --port 8080 --cidr 0.0.0.0/0 || true
-          aws ec2 authorize-security-group-ingress --group-id sg-0153680ad73f68512 --protocol tcp --port 9080 --cidr 0.0.0.0/0 || true
+          # Ensure WinRM and Tomcat ports are open in the dynamically discovered default SG
+          aws ec2 authorize-security-group-ingress --group-id $AWS_SECURITY_GROUP_IDS --protocol tcp --port 5985 --cidr 0.0.0.0/0 || true
+          aws ec2 authorize-security-group-ingress --group-id $AWS_SECURITY_GROUP_IDS --protocol tcp --port 8080 --cidr 0.0.0.0/0 || true
+          aws ec2 authorize-security-group-ingress --group-id $AWS_SECURITY_GROUP_IDS --protocol tcp --port 9080 --cidr 0.0.0.0/0 || true
 
       - name: Checkout Roles
         if: steps.aws_check.outputs.AWS_AVAILABLE == 'true'
