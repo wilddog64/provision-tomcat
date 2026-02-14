@@ -33,3 +33,6 @@ Since this project alternates between using Claude Code, Cline, and Gemini:
   2. Map each comment to a file change or a rebuttal statement.
   3. You MUST provide a summary table: | Codex Suggestion | My Decision | Reasoning |.
   4. If a commit is needed, do it. If not, post a technical comment explaining why.
+
+## 8. Operational Guidelines for Agents
+- **gh Run Monitoring**: For monitoring `gh` runs, prioritize programmatic polling (e.g., `gh run view --json` in a loop with `sleep`) over interactive watching (`gh run watch`). This avoids PTY (Pseudo-Terminal) related issues and ensures robust monitoring in non-interactive environments.

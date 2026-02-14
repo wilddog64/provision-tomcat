@@ -10,10 +10,42 @@ on:
 >>>>>>> 76e4837 (fix(aws): stabilize AWS integration testing pipeline and achieve parity with Azure)
   push:
     branches: [main, azure-dev, aws-dev, vagrant-dev]
+    paths:
+      - '**.yml'
+      - '**.yaml'
+      - '**.sh'
+      - '**.py'
+      - '**.rb'
+      - 'Makefile'
+      - 'tasks/**'
+      - 'defaults/**'
+      - 'vars/**'
+      - 'roles/**'
+      - 'tests/**'
+      - '!docs/**'         # Exclude changes in docs folder
+      - '!memory-bank/**'  # Exclude changes in memory-bank folder
   pull_request:
+<<<<<<< HEAD
 <<<<<<< HEAD
     branches: [main]
 <<<<<<< HEAD
+=======
+    branches: [main, azure-dev, aws-dev, vagrant-dev]
+    paths:
+      - '**.yml'
+      - '**.yaml'
+      - '**.sh'
+      - '**.py'
+      - '**.rb'
+      - 'Makefile'
+      - 'tasks/**'
+      - 'defaults/**'
+      - 'vars/**'
+      - 'roles/**'
+      - 'tests/**'
+      - '!docs/**'
+      - '!memory-bank/**'
+>>>>>>> 97541c1 (feat(ci): implement path filtering and add agent gh monitoring guidelines)
   workflow_dispatch:
     inputs:
       environment:
