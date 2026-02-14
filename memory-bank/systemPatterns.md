@@ -88,6 +88,11 @@ Bypasses filesystem dependencies on self-hosted runners:
 - Uses `actions/checkout` with `ssh-key` (via `DEPLOY_KEY` secrets) for all private roles.
 - Eliminates the need for runner-specific symlinks or persistent filesystem state.
 
+### Controlled CI Execution
+To manage CI runs during discussion, documentation, or minor non-code changes:
+- **Path Filtering**: Workflows will be configured with `paths:` filters to only trigger for changes in relevant code/config files, excluding documentation (`docs/`) or memory bank (`memory-bank/`) directories.
+- **Draft Pull Requests**: Utilize Draft PRs to signal that a PR is not yet ready for full integration testing, allowing for lighter or conditional CI checks.
+
 ## 10) Architecture Guardrail Notes from `.clinerules`
 - `.clinerules` requests prioritizing k3s/ArgoCD deployment logic references.
 - Current repository scan did not find implemented k3s/ArgoCD manifests or automation paths.
