@@ -16,7 +16,7 @@ Optimize CI workflow triggers to run only when functionally relevant code change
 
 We will implement a two-pronged approach:
 
-### 1. Path Filtering in `ci.yml`
+### 1. Path Filtering in `ci.yml` [IMPLEMENTED]
 
 Modify the `on: push` and `on: pull_request` triggers in `.github/workflows/ci.yml` to include `paths:` filters.
 
@@ -62,7 +62,7 @@ on:
 ```
 **Benefit**: Prevents CI runs for commits that only touch documentation or internal process files, directly addressing unnecessary resource consumption and noise.
 
-### 2. Utilizing Draft Pull Requests
+### 2. Utilizing Draft Pull Requests [PENDING]
 
 Encourage the use of GitHub's Draft Pull Request feature for early-stage development and discussion.
 
