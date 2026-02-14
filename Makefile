@@ -159,18 +159,18 @@ check-aws-credentials:
 
 .PHONY: discover-aws-resources
 discover-aws-resources: check-aws-credentials
-	@echo "=== Discovering Dynamic AWS Resources ==="
-	@# For now, this is a placeholder. It will be expanded to query AWS API for subnet, SG, AMI based on tags.
-	@# For example:
-	@# NEW_SUBNET_ID=$(aws ec2 describe-subnets --filters "Name=tag:Project,Values=Tomcat-Provisioning" "Name=tag:Type,Values=Test" --query "Subnets[0].SubnetId" --output text)
-	@# NEW_SECURITY_GROUP_ID=$(aws ec2 describe-security-groups --filters "Name=tag:Project,Values=Tomcat-Provisioning" "Name=tag:Type,Values=Test" --query "SecurityGroups[0].GroupId" --output text)
-	@# NEW_AMI_ID=$(aws ec2 describe-images --filters "Name=tag:Project,Values=Tomcat-Provisioning" "Name=tag:Type,Values=Test" --query "Images[0].ImageId" --output text)
-	@#
 	@# These discovered values will then be exported or used to generate an override file for Kitchen.
-	@echo "WARNING: Dynamic resource discovery is a placeholder. Please update .kitchen.yml manually with correct IDs."
-	@echo "PLACEHOLDER_SUBNET_ID=subnet-0bf736b950e25a150" # Replace with actual discovery logic
-	@echo "PLACEHOLDER_SECURITY_GROUP_ID=sg-0153680ad73f68512" # Replace with actual discovery logic
-	@echo "PLACEHOLDER_AMI_ID=ami-06f5f29d1fe41ea03" # Replace with actual discovery logic
+	@# Placeholder values, replace with actual discovery logic
+	# NEW_SUBNET_ID=$(aws ec2 describe-subnets --filters "Name=tag:Project,Values=Tomcat-Provisioning" "Name=tag:Type,Values=Test" --query "Subnets[0].SubnetId" --output text)
+	# NEW_SECURITY_GROUP_IDS=$(aws ec2 describe-security-groups --filters "Name=tag:Project,Values=Tomcat-Provisioning" "Name=tag:Type,Values=Test" --query "SecurityGroups[0].GroupId" --output text)
+	# NEW_AMI_ID=$(aws ec2 describe-images --filters "Name=tag:Project,Values=Tomcat-Provisioning" "Name=tag:Type,Values=Test" --query "Images[0].ImageId" --output text)
+	# NEW_AZ=$(aws ec2 describe-subnets --subnet-ids $$NEW_SUBNET_ID --query "Subnets[0].AvailabilityZone" --output text)
+	
+	@echo "AWS_SUBNET_ID=$(aws ec2 describe-subnets --filters "Name=tag:Project,Values=Tomcat-Provisioning" "Name=tag:Type,Values=Test" --query "Subnets[0].SubnetId" --output text)"
+	@echo "AWS_SECURITY_GROUP_IDS=[\"$(aws ec2 describe-security-groups --filters "Name=tag:Project,Values=Tomcat-Provisioning" "Name=tag:Type,Values=Test" --query "SecurityGroups[0].GroupId" --output text)\"]"
+	@echo "AWS_AMI_ID=$(aws ec2 describe-images --filters "Name=tag:Project,Values=Tomcat-Provisioning" "Name=tag:Type,Values=Test" --query "Images[0].ImageId" --output text)"
+	@echo "AWS_AZ=$(aws ec2 describe-subnets --filters "Name=tag:Project,Values=Tomcat-Provisioning" "Name=tag:Type,Values=Test" --query "Subnets[0].AvailabilityZone" --output text)"
+	@echo "AWS_REGION=us-east-1" # Hardcoding region for now, can be dynamic later.
 
 .PHONY: test-aws-provision-tomcat
 test-aws-provision-tomcat: update-roles check-aws-credentials discover-aws-resources
