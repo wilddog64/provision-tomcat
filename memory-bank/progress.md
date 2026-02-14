@@ -18,10 +18,12 @@
     - [x] Modernized `ansible.cfg` callback and connection settings.
 - [x] Implemented AWS D: drive support (disk initialization + redirected test targets).
 - [x] Synchronized AWS sandbox credentials to GitHub (refreshed session).
+- [x] Renamed CI validation job to `lint` for branch protection compliance.
+- [x] Defended architectural choices in PR #6 review with Codex.
 
 ## In Progress
 - [ ] Merge `aws-dev` into `main`.
-- [ ] Re-enable automatic CI triggers for AWS integration tests.
+- [ ] Finalize administrative merge of PR #6.
 
 ## Future / Pending
 - [ ] Expand `systemPatterns.md` if k3s/ArgoCD scope is added.
