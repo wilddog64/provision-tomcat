@@ -159,17 +159,29 @@ check-aws-credentials:
 
 .PHONY: discover-aws-resources
 discover-aws-resources: check-aws-credentials
-	@NEW_SUBNET_ID=$$(aws ec2 describe-subnets --filters "Name=tag:Project,Values=Tomcat-Provisioning" "Name=tag:Type,Values=Test" --query "Subnets[0].SubnetId" --output text 2>/dev/null || echo "subnet-0bf736b950e25a150")
-	@NEW_SECURITY_GROUP_IDS=$$(aws ec2 describe-security-groups --filters "Name=tag:Project,Values=Tomcat-Provisioning" "Name=tag:Type,Values=Test" --query "SecurityGroups[0].GroupId" --output text 2>/dev/null || echo "sg-0153680ad73f68512")
-	@NEW_AMI_ID=$$(aws ec2 describe-images --filters "Name=name,Values=Windows_Server-2019-English-Full-Base*" --query "Images[0].ImageId" --output text 2>/dev/null || echo "ami-0abcdef1234567890") # Generic 2019 AMI fallback
-	@NEW_AZ=$$(aws ec2 describe-subnets --subnet-ids $$NEW_SUBNET_ID --query "Subnets[0].AvailabilityZone" --output text 2>/dev/null || echo "us-east-1e")
-	@NEW_REGION=$$(aws configure get region 2>/dev/null || echo "us-east-1")
-	
-	@echo "AWS_SUBNET_ID=$$NEW_SUBNET_ID"
-	@echo "AWS_SECURITY_GROUP_IDS=[\"$$NEW_SECURITY_GROUP_IDS\"]"
-	@echo "AWS_AMI_ID=$$NEW_AMI_ID"
-	@echo "AWS_AZ=$$NEW_AZ"
-	@echo "AWS_REGION=$$NEW_REGION"
+	@NEW_SUBNET_ID=$$(aws ec2 describe-subnets --region $(AWS_REGION) --filters "Name=tag:Project,Values=Tomcat-Provisioning" "Name=tag:Type,Values=Test" --query "Subnets[0].SubnetId" --output text 2>/dev/null); \
+	if [ "$$NEW_SUBNET_ID" = "None" ] || [ -z "$$NEW_SUBNET_ID" ]; then \
+		NEW_SUBNET_ID=$$(aws ec2 describe-subnets --region $(AWS_REGION) --filters "Name=availability-zone,Values=$(AWS_REGION)e" --query "Subnets[0].SubnetId" --output text 2>/dev/null); \
+	fi; \
+	if [ "$$NEW_SUBNET_ID" = "None" ] || [ -z "$$NEW_SUBNET_ID" ]; then \
+		NEW_SUBNET_ID=$$(aws ec2 describe-subnets --region $(AWS_REGION) --query "Subnets[0].SubnetId" --output text 2>/dev/null || echo "subnet-023f40afbc9e46c37"); \
+	fi; \
+	NEW_SECURITY_GROUP_IDS=$$(aws ec2 describe-security-groups --region $(AWS_REGION) --filters "Name=tag:Project,Values=Tomcat-Provisioning" "Name=tag:Type,Values=Test" --query "SecurityGroups[0].GroupId" --output text 2>/dev/null); \
+	if [ "$$NEW_SECURITY_GROUP_IDS" = "None" ] || [ -z "$$NEW_SECURITY_GROUP_IDS" ]; then \
+		NEW_SECURITY_GROUP_IDS=$$(aws ec2 describe-security-groups --region $(AWS_REGION) --filters "Name=group-name,Values=default" --query "SecurityGroups[0].GroupId" --output text 2>/dev/null || echo "sg-0210845b571c6a0e1"); \
+	fi; \
+	NEW_AMI_ID=$$(aws ec2 describe-images --region $(AWS_REGION) --owners amazon --filters "Name=name,Values=Windows_Server-2019-English-Full-Base*" --query 'sort_by(Images, &CreationDate)[-1].ImageId' --output text 2>/dev/null); \
+	if [ "$$NEW_AMI_ID" = "None" ] || [ -z "$$NEW_AMI_ID" ]; then \
+		NEW_AMI_ID="ami-047f5596e26649c59"; \
+	fi; \
+	NEW_AZ=$$(aws ec2 describe-subnets --region $(AWS_REGION) --subnet-ids $$NEW_SUBNET_ID --query "Subnets[0].AvailabilityZone" --output text 2>/dev/null || echo "$(AWS_REGION)e"); \
+	NEW_REGION=$$(aws configure --region $(AWS_REGION) get region 2>/dev/null || echo "$(AWS_REGION)"); \
+	echo "AWS_SUBNET_ID=$$NEW_SUBNET_ID"; \
+	echo "AWS_SECURITY_GROUP_ID=$$NEW_SECURITY_GROUP_IDS"; \
+	echo "AWS_SECURITY_GROUP_IDS=[\"$$NEW_SECURITY_GROUP_IDS\"]"; \
+	echo "AWS_AMI_ID=$$NEW_AMI_ID"; \
+	echo "AWS_AZ=$$NEW_AZ"; \
+	echo "AWS_REGION=$$NEW_REGION"
 
 .PHONY: test-aws-provision-tomcat
 test-aws-provision-tomcat: update-roles check-aws-credentials discover-aws-resources

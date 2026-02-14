@@ -417,9 +417,8 @@ jobs:
     runs-on: [self-hosted, macOS, ARM64]
     needs: lint
     if: |
-      github.ref == 'refs/heads/aws-dev' ||
-      github.ref == 'refs/heads/main' ||
-      github.base_ref == 'main' ||
+      (github.event_name == 'push' && (github.ref == 'refs/heads/aws-dev' || github.ref == 'refs/heads/main')) ||
+      (github.event_name == 'pull_request' && github.event.pull_request.draft == false && (github.base_ref == 'main' || github.head_ref == 'aws-dev')) ||
       (github.event_name == 'workflow_dispatch' && inputs.environment == 'aws')
     outputs:
       AWS_AVAILABLE: ${{ steps.aws_check.outputs.AWS_AVAILABLE }}
@@ -620,6 +619,7 @@ jobs:
           # Call the make target to discover resources and export them as environment variables
           eval "$(make discover-aws-resources --silent)"
           echo "AWS_SUBNET_ID=$AWS_SUBNET_ID" >> $GITHUB_ENV
+          echo "AWS_SECURITY_GROUP_ID=$AWS_SECURITY_GROUP_ID" >> $GITHUB_ENV
           echo "AWS_SECURITY_GROUP_IDS=$AWS_SECURITY_GROUP_IDS" >> $GITHUB_ENV
           echo "AWS_AMI_ID=$AWS_AMI_ID" >> $GITHUB_ENV
           echo "AWS_AZ=$AWS_AZ" >> $GITHUB_ENV
@@ -628,9 +628,9 @@ jobs:
         if: steps.aws_check.outputs.AWS_AVAILABLE == 'true'
         run: |
           # Ensure WinRM and Tomcat ports are open in the dynamically discovered default SG
-          aws ec2 authorize-security-group-ingress --group-id $AWS_SECURITY_GROUP_IDS --protocol tcp --port 5985 --cidr 0.0.0.0/0 || true
-          aws ec2 authorize-security-group-ingress --group-id $AWS_SECURITY_GROUP_IDS --protocol tcp --port 8080 --cidr 0.0.0.0/0 || true
-          aws ec2 authorize-security-group-ingress --group-id $AWS_SECURITY_GROUP_IDS --protocol tcp --port 9080 --cidr 0.0.0.0/0 || true
+          aws ec2 authorize-security-group-ingress --group-id $AWS_SECURITY_GROUP_ID --protocol tcp --port 5985 --cidr 0.0.0.0/0 || true
+          aws ec2 authorize-security-group-ingress --group-id $AWS_SECURITY_GROUP_ID --protocol tcp --port 8080 --cidr 0.0.0.0/0 || true
+          aws ec2 authorize-security-group-ingress --group-id $AWS_SECURITY_GROUP_ID --protocol tcp --port 9080 --cidr 0.0.0.0/0 || true
 
       - name: Checkout Roles
         if: steps.aws_check.outputs.AWS_AVAILABLE == 'true'
@@ -684,7 +684,7 @@ jobs:
         run: |
           source venv/bin/activate
           echo "=== Diagnostic: Verifying AMI Visibility ==="
-          aws ec2 describe-images --image-ids ami-06f5f29d1fe41ea03 --region us-east-1 --query "Images[0].ImageId" || echo "AMI NOT FOUND OR ACCESS DENIED"
+          aws ec2 describe-images --image-ids $AWS_AMI_ID --region us-east-1 --query "Images[0].ImageId" || echo "AMI NOT FOUND OR ACCESS DENIED"
           ansible --version
           make test-aws-provision-tomcat
 
@@ -700,7 +700,7 @@ jobs:
     runs-on: [self-hosted, macOS, ARM64]
     needs: lint
     if: >-
-      (github.event_name == 'pull_request' && github.head_ref == 'azure-dev') ||
+      (github.event_name == 'pull_request' && github.event.pull_request.draft == false && github.head_ref == 'azure-dev') ||
       (github.event_name == 'push' && github.ref_name == 'azure-dev') ||
       (github.event_name == 'workflow_dispatch' && (github.ref_name == 'azure-dev' || inputs.environment == 'azure'))
     steps:
@@ -758,7 +758,7 @@ jobs:
       always() &&
       needs.lint.result == 'success' &&
       (
-        (github.event_name == 'pull_request' && github.head_ref == 'vagrant-dev') ||
+        (github.event_name == 'pull_request' && github.event.pull_request.draft == false && github.head_ref == 'vagrant-dev') ||
         (github.event_name == 'push' && github.ref_name == 'vagrant-dev') ||
         (github.event_name == 'workflow_dispatch' && (github.ref_name == 'vagrant-dev' || inputs.environment == 'vagrant')) ||
         (github.ref == 'refs/heads/main' && (needs.aws_integration.result == 'skipped' || needs.aws_integration.outputs.AWS_AVAILABLE == 'false'))
