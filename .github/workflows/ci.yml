@@ -27,7 +27,7 @@ env:
 
 jobs:
   lint:
-    name: Run Linting and Validation
+    name: lint
     runs-on: [self-hosted, macOS, ARM64]
     steps:
       - name: Debug Runner Environment
