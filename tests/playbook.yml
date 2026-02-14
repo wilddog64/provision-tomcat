@@ -27,7 +27,7 @@
       ansible.builtin.setup:
       become: no
 
-    - name: Initialize and format D: drive (AWS/Vagrant)
+    - name: "Initialize and format D: drive (AWS/Vagrant)"
       ansible.windows.win_shell: |
         $disk = Get-Disk | Where-Object PartitionStyle -eq 'RAW'
         if ($disk) {
