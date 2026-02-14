@@ -51,6 +51,10 @@ Stabilize the AWS integration testing pipeline, achieving parity with the succes
 
 
 
+10. **Refreshed AWS Sandbox:**
+    - Refreshed AWS credentials via `make sync-aws` for new sandbox account `672929527998`.
+    - Verified AMI `ami-06f5f29d1fe41ea03` availability in `us-east-1`.
+
 ## Why These Decisions Were Made
 
 - **Why initialize all memory files now:** `.clinerules` mandates memory-bank as primary cross-agent state and requires initialization when missing.
