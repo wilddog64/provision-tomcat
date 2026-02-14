@@ -88,11 +88,11 @@ sync-secrets: sync-aws sync-azure
 
 .PHONY: check-aws-credentials
 check-aws-credentials:
-	@echo "=== Checking AWS Credentials ==="
+	@echo "=== Checking AWS Credentials ===" >&2
 	@if aws sts get-caller-identity > /dev/null 2>&1; then \
-		echo "AWS Credentials are valid."; \
+		echo "AWS Credentials are valid." >&2; \
 	else \
-		echo "ERROR: AWS Credentials invalid or expired. Please run 'make sync-aws' manually."; \
+		echo "ERROR: AWS Credentials invalid or expired. Please run 'make sync-aws' manually." >&2; \
 		exit 1; \
 	fi
 
