@@ -75,11 +75,7 @@ Stabilize the AWS integration testing pipeline, achieving parity with the succes
 
 
 
-    - **Fixed Credential Logic:** Prevented setting empty `aws_session_token` which could cause SDK auth failures.
-
-
-
-    - **Tightened Concurrency:** Optimized concurrency groups to prevent parallel runs on the same branch/PR, reducing AWS resource churn.
+        - **Fixed Credential Logic:** Prevented setting empty `aws_session_token` which could cause SDK auth failures.
 
 
 
@@ -87,7 +83,47 @@ Stabilize the AWS integration testing pipeline, achieving parity with the succes
 
 
 
-## Why These Decisions Were Made
+        - **Tightened Concurrency:** Optimized concurrency groups to prevent parallel runs on the same branch/PR, reducing AWS resource churn.
+
+
+
+
+
+
+
+        - **Safety Freeze:** Disabled automatic AWS CI triggers (`push`/`pull_request`) to prevent accidental instance spawning and account bans. AWS tests are now `workflow_dispatch` only.
+
+
+
+
+
+
+
+        - **Region Restrictions:** Identified strict SCPs on the AGC sandbox allowing only specific regions (likely `us-east-1` and `us-west-2`), causing "UnauthorizedOperation" errors when scanning globally.
+
+
+
+
+
+
+
+    
+
+
+
+
+
+
+
+    ## Why These Decisions Were Made
+
+
+
+
+
+
+
+    
 
 
 
