@@ -28,8 +28,8 @@
 ## In Progress
 - [ ] Merge `aws-dev` into `main`.
 - [ ] Finalize administrative merge of PR #6.
-- [ ] Implement Hybrid Zero-Touch Sync for AWS resource ID discovery (see `docs/issues/2026-02-14-aws-infrastructure-drift.md`).
-- [ ] Implement Draft PR conditional CI execution (see `docs/plans/2026-02-14-controlled-ci-execution.md`).
+- [x] Implement Hybrid Zero-Touch Sync for AWS resource ID discovery (see `docs/issues/2026-02-14-aws-infrastructure-drift.md`).
+- [x] Implement Draft PR conditional CI execution (see `docs/plans/2026-02-14-controlled-ci-execution.md`).
 
 ## Future / Pending
 - [ ] Expand `systemPatterns.md` if k3s/ArgoCD scope is added.
