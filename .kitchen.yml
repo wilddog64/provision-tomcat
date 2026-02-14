@@ -480,6 +480,7 @@ platforms:
         ansible_port: 5985
         ansible_host: "<%= ENV['ANSIBLE_HOST_OVERRIDE'] %>"
 <<<<<<< HEAD
+<<<<<<< HEAD
         security_service_account: ""
         security_jenkins_accounts: []
         install_drive: "D:"
@@ -487,6 +488,10 @@ platforms:
 >>>>>>> 5dba6f7 (feat(aws): add AWS EC2 platform to Test Kitchen configuration)
 =======
 >>>>>>> 2d120ce (fix(aws): use dynamic hostname override for ansible connection)
+=======
+        security_service_account: ""
+        security_jenkins_accounts: []
+>>>>>>> a9497e7 (fix(aws): disable jenkins security tasks to prevent account resolution errors)
 
   - name: aws-minimal-win-disk
     driver:
@@ -548,6 +553,8 @@ platforms:
         ansible_become_user: Administrator
         ansible_port: 5985
         ansible_host: "<%= ENV['ANSIBLE_HOST_OVERRIDE'] %>"
+        security_service_account: ""
+        security_jenkins_accounts: []
         install_drive: "D:"
 
 suites:
