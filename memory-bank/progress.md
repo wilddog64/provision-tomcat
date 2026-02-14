@@ -15,3 +15,4 @@
     - [x] Implemented offline linting.
     - [x] Added role resolution symlinking to `syntax` target.
     - [x] Modernized `ansible.cfg` callback and connection settings.
+- [x] Implemented AWS D: drive support (disk initialization + redirected test targets).

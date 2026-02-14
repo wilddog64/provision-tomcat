@@ -41,6 +41,14 @@ Stabilize the AWS integration testing pipeline, achieving parity with the succes
 
 8. **Refined CI Triggers:** Tightened `if` conditions for integration jobs (`aws_integration`, `azure_integration`, `vagrant_integration`) to be mutually exclusive and branch-specific. Added manual `environment` selection to `workflow_dispatch`. Fixed logic for `vagrant_integration` to correctly handle branch-based execution vs. fallback on `main`.
 
+9. **Implemented D: Drive Support for AWS:**
+
+    - Updated `tests/playbook.yml` with a `pre_task` to initialize and format raw disks (EBS volumes) as D: drive.
+
+    - Updated `Makefile` targets (`test-aws-provision-tomcat`, `test-aws-upgrade-candidate`) to use the `aws-minimal-win-disk` platform by default.
+
+    - Ensured `install_drive: "D:"` is correctly passed via Kitchen `extra_vars`.
+
 
 
 ## Why These Decisions Were Made
@@ -58,6 +66,10 @@ Stabilize the AWS integration testing pipeline, achieving parity with the succes
 - **Why tightened CI triggers:** Prevents integration jobs from running (or appearing to run) on irrelevant branches (e.g., Azure running on an AWS PR), reducing noise and confusion.
 
 - **Why manual selection:** Allows operators to force a specific integration environment regardless of branch name when troubleshooting.
+
+- **Why D: Drive pre-tasks:** AWS EBS volumes are attached but not initialized or formatted. Automating this in Ansible ensures the roles can install software to D: without manual intervention.
+
+
 
 
 
