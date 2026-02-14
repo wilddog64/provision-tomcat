@@ -23,24 +23,34 @@ jobs:
         run: |
           whoami
           pwd
-          ls -la /Users/
-          ls -la /Users/cliang/ || echo "Cannot access /Users/cliang"
 
       - name: Checkout provision-tomcat
         uses: actions/checkout@v4
 
-      - name: Disable Credential Helper
-        run: git config --global credential.helper ""
+      - name: Checkout provision-java
+        uses: actions/checkout@v4
+        with:
+          repository: wilddog64/provision-java
+          path: roles/provision-java
+          token: ${{ secrets.GH_PAT || github.token }}
 
-      - name: Checkout All Roles
+      - name: Checkout windows-base
+        uses: actions/checkout@v4
+        with:
+          repository: wilddog64/windows-base
+          path: roles/windows-base
+          ssh-key: ${{ secrets.WINDOWS_BASE_DEPLOY_KEY }}
+
+      - name: Checkout provision-windows-security
+        uses: actions/checkout@v4
+        with:
+          repository: wilddog64/provision-windows-security
+          path: roles/provision-windows-security
+          ssh-key: ${{ secrets.PROVISION_WINDOWS_SECURITY_DEPLOY_KEY }}
+
+      - name: Symlink self as role
         run: |
-          rm -rf roles
           mkdir -p roles
-          # Symlink from known local dev paths
-          ln -sfn /Users/cliang/src/gitrepo/personal/ansible/provision-java roles/provision-java
-          ln -sfn /Users/cliang/src/gitrepo/personal/ansible/windows-base roles/windows-base
-          ln -sfn /Users/cliang/src/gitrepo/personal/ansible/provision-windows-security roles/provision-windows-security
-          # Symlink self as role
           ln -sfn .. roles/provision-tomcat
 
       - name: Verify Python Environment
@@ -76,41 +86,54 @@ jobs:
       (github.event_name == 'workflow_dispatch' && github.ref_name == 'aws-dev') ||
       (github.event_name == 'pull_request' && github.head_ref == 'aws-dev')
     steps:
-      - name: Checkout
+      - name: Checkout provision-tomcat
         uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        id: aws_creds
+        continue-on-error: true
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
 
       - name: Detect AWS Availability
         id: aws_check
         run: |
-          # Ensure we look in the real home directory for credentials
-          export HOME=/Users/cliang
           if aws sts get-caller-identity > /dev/null 2>&1; then
             echo "AWS_AVAILABLE=true" >> $GITHUB_ENV
-            
-            # Resolve metadata
             ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-            REGION=$(aws configure get region)
-            [ -z "$REGION" ] && REGION="us-east-1"
-            
-            echo "AWS_ACCOUNT_ID=$ACCOUNT_ID" >> $GITHUB_ENV
-            echo "AWS_REGION=$REGION" >> $GITHUB_ENV
-            
-            echo "AWS session detected. Account: $ACCOUNT_ID, Region: $REGION"
+            echo "AWS session detected. Account: $ACCOUNT_ID"
           else
             echo "AWS_AVAILABLE=false" >> $GITHUB_ENV
-            echo "No AWS session found. Current HOME: $HOME"
-            aws sts get-caller-identity || true
+            echo "No AWS session or secrets found."
           fi
 
-      - name: Checkout All Roles
+      - name: Checkout provision-java
+        uses: actions/checkout@v4
+        with:
+          repository: wilddog64/provision-java
+          path: roles/provision-java
+          token: ${{ secrets.GH_PAT || github.token }}
+
+      - name: Checkout windows-base
+        uses: actions/checkout@v4
+        with:
+          repository: wilddog64/windows-base
+          path: roles/windows-base
+          ssh-key: ${{ secrets.WINDOWS_BASE_DEPLOY_KEY }}
+
+      - name: Checkout provision-windows-security
+        uses: actions/checkout@v4
+        with:
+          repository: wilddog64/provision-windows-security
+          path: roles/provision-windows-security
+          ssh-key: ${{ secrets.PROVISION_WINDOWS_SECURITY_DEPLOY_KEY }}
+
+      - name: Symlink self as role
         run: |
-          rm -rf roles
           mkdir -p roles
-          # Symlink from known local dev paths
-          ln -sfn /Users/cliang/src/gitrepo/personal/ansible/provision-java roles/provision-java
-          ln -sfn /Users/cliang/src/gitrepo/personal/ansible/windows-base roles/windows-base
-          ln -sfn /Users/cliang/src/gitrepo/personal/ansible/provision-windows-security roles/provision-windows-security
-          # Symlink self as role
           ln -sfn .. roles/provision-tomcat
 
       - name: Install Ansible collections
@@ -149,7 +172,6 @@ jobs:
         if: env.AWS_AVAILABLE == 'true'
         env:
           OBJC_DISABLE_INITIALIZE_FORK_SAFETY: "YES"
-          HOME: /Users/cliang
         run: |
           source venv/bin/activate
           ansible --version
@@ -163,7 +185,7 @@ jobs:
       (github.event_name == 'workflow_dispatch' && github.ref_name == 'azure-dev') ||
       (github.event_name == 'pull_request' && github.head_ref == 'azure-dev')
     steps:
-      - name: Checkout
+      - name: Checkout provision-tomcat
         uses: actions/checkout@v4
 
       - name: Detect Azure Availability
@@ -174,6 +196,32 @@ jobs:
           else
             echo "AZURE_AVAILABLE=false" >> $GITHUB_ENV
           fi
+
+      - name: Checkout provision-java
+        uses: actions/checkout@v4
+        with:
+          repository: wilddog64/provision-java
+          path: roles/provision-java
+          token: ${{ secrets.GH_PAT || github.token }}
+
+      - name: Checkout windows-base
+        uses: actions/checkout@v4
+        with:
+          repository: wilddog64/windows-base
+          path: roles/windows-base
+          ssh-key: ${{ secrets.WINDOWS_BASE_DEPLOY_KEY }}
+
+      - name: Checkout provision-windows-security
+        uses: actions/checkout@v4
+        with:
+          repository: wilddog64/provision-windows-security
+          path: roles/provision-windows-security
+          ssh-key: ${{ secrets.PROVISION_WINDOWS_SECURITY_DEPLOY_KEY }}
+
+      - name: Symlink self as role
+        run: |
+          mkdir -p roles
+          ln -sfn .. roles/provision-tomcat
 
       - name: Run Azure Test
         if: env.AZURE_AVAILABLE == 'true'
