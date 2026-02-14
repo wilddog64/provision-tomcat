@@ -4,9 +4,11 @@
 Stabilize the AWS integration testing pipeline, achieving parity with the successfully completed Azure stabilization.
 
 ## Current State Snapshot
-- Azure CI pipeline is fully stabilized and passing on the `azure-dev` branch.
-- Switched to the `aws-dev` branch to begin AWS stabilization.
-- Created `docs/plans/AWS-SANDBOX-STABILIZATION.md` outlining the technical strategy.
+- AWS Integration pipeline is fully stabilized and automated on the `aws-dev` branch.
+- Created PR #6 to merge AWS stabilization into `main`.
+- Implemented "Zero-Touch Sync" via `.envrc` for rotating sandbox credentials.
+- Established "Conditional Fallback" pattern: Vagrant runs only if AWS is inaccessible.
+- Achieved CI portability using `DEPLOY_KEY` secrets for all private roles.
 
 ## What Was Done
 1. Scanned core repo docs and code paths (`README.md`, defaults, tasks, Kitchen config, Makefile, upgrade and plugin docs).

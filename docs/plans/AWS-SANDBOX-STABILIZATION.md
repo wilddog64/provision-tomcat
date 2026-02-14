@@ -23,18 +23,19 @@ AWS tests currently rely on brittle Kitchen configurations and lack the same lev
 ### 2. CI/CD Integration (`.github/workflows/ci.yml`)
 - **Runner Assignment**: Update the `aws_integration` job to run on the `[self-hosted, macOS, ARM64]` runner.
 - **Portability Fixes**:
-    - **Authentication**: Use `aws-actions/configure-aws-credentials` with `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, and `AWS_SESSION_TOKEN`.
-    - **Role Management**: Replace local symlinks with `actions/checkout` using `ssh-key` (via `DEPLOY_KEY` secrets).
+    - [x] **Authentication**: Use `aws-actions/configure-aws-credentials` with `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, and `AWS_SESSION_TOKEN`.
+    - [x] **Role Management**: Replaced local symlinks with `actions/checkout` using `ssh-key` (via `DEPLOY_KEY` secrets).
 - **Dynamic Secret Synchronization**: 
-    - Implement `make sync-secrets` to push local environment variables (from `.envrc`) to GitHub Secrets.
-    - Support rotating sandboxes by dynamically updating credentials via the `gh` CLI.
+    - [x] Implement `make sync-secrets` to push local environment variables (from `.envrc`) to GitHub Secrets.
+    - [x] Support rotating sandboxes by dynamically updating credentials via the `gh` CLI.
+    - [x] Automated `Zero-Touch Sync` via `.envrc` with live connectivity checks.
 - **Conditional Vagrant Fallback**:
-    - Restructure workflow to detect AWS availability.
-    - Trigger `vagrant_integration` only if the AWS sandbox is inaccessible.
-    - Implement the `python3 -m venv` strategy for the AWS job.
-    - Set `OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES`.
-    - Apply the `Checkout All Roles` symlink strategy.
-- **Trigger Refinement**: Ensure the job only runs on `aws-dev` or related PRs.
+    - [x] Restructure workflow to detect AWS availability.
+    - [x] Trigger `vagrant_integration` only if the AWS sandbox is inaccessible.
+- **Environment Stabilization**:
+    - [x] Implement the `python3 -m venv` strategy for all jobs.
+    - [x] Set `OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES`.
+- **Trigger Refinement**: [x] Ensure AWS integration only runs on Pull Requests from `aws-dev`.
 
 ### 3. Tooling Improvements (`Makefile`)
 - **New Targets**: Implement `test-aws-provision-tomcat` and `test-aws-upgrade-candidate` to match Azure's functional targets.

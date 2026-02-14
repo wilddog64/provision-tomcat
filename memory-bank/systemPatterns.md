@@ -63,7 +63,26 @@
 - `activeContext.md` must capture both **what changed** and **why decisions were made**.
 - `progress.md` must maintain pending TODOs to prevent session-handoff loss.
 
-## 9) Architecture Guardrail Notes from `.clinerules`
+## 9) Infrastructure & CI/CD Patterns
+
+### Zero-Touch Secret Sync
+To support rotating sandboxes without manual configuration:
+- Local `.envrc` hooks detect active AWS/Azure sessions.
+- `make sync-secrets` (via `gh` CLI) pushes current session credentials to GitHub Secrets.
+- Ensures CI environment is always in parity with the developer's local sandbox.
+
+### Conditional Integration Fallback
+Optimizes runner usage and provides testing redundancy:
+- CI attempts cloud-native integration first (AWS/Azure).
+- Cloud availability is detected at runtime (`aws sts get-caller-identity`).
+- If cloud resources are inaccessible, the pipeline falls back to `vagrant_integration` or local virtualization.
+
+### Portable Role Management
+Bypasses filesystem dependencies on self-hosted runners:
+- Uses `actions/checkout` with `ssh-key` (via `DEPLOY_KEY` secrets) for all private roles.
+- Eliminates the need for runner-specific symlinks or persistent filesystem state.
+
+## 10) Architecture Guardrail Notes from `.clinerules`
 - `.clinerules` requests prioritizing k3s/ArgoCD deployment logic references.
 - Current repository scan did not find implemented k3s/ArgoCD manifests or automation paths.
 - Pattern adopted for now: preserve this as a guardrail/constraint in memory docs and flag as a future alignment task if scope expands.
