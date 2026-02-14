@@ -82,32 +82,42 @@ jobs:
     name: AWS Integration Tests
     runs-on: [self-hosted, macOS, ARM64]
     needs: validation
-    if: |
-      (github.event_name == 'workflow_dispatch' && github.ref_name == 'aws-dev') ||
-      (github.event_name == 'pull_request' && github.head_ref == 'aws-dev')
+    outputs:
+      AWS_AVAILABLE: ${{ env.AWS_AVAILABLE }}
     steps:
       - name: Checkout provision-tomcat
         uses: actions/checkout@v4
 
       - name: Configure AWS Credentials
         run: |
-          # Use secrets for portable CI, or fallback to runner's native session if available
+          # Use secrets for portable CI
           if [ -n "${{ secrets.AWS_ACCESS_KEY_ID }}" ]; then
             aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
             aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+            [ -n "${{ secrets.AWS_SESSION_TOKEN }}" ] && aws configure set aws_session_token ${{ secrets.AWS_SESSION_TOKEN }}
             aws configure set region us-east-1
           fi
           
           if aws sts get-caller-identity > /dev/null 2>&1; then
             echo "AWS_AVAILABLE=true" >> $GITHUB_ENV
+            echo "AWS_AVAILABLE=true" >> $GITHUB_OUTPUT
             ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
             echo "AWS session detected. Account: $ACCOUNT_ID"
           else
             echo "AWS_AVAILABLE=false" >> $GITHUB_ENV
-            echo "No AWS session found. Please ensure AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY secrets are set."
+            echo "AWS_AVAILABLE=false" >> $GITHUB_OUTPUT
+            echo "No AWS session found."
           fi
 
+      - name: Checkout Roles
+        if: env.AWS_AVAILABLE == 'true'
+        run: |
+          # Re-running checkout logic here because job is independent
+          mkdir -p roles
+          ln -sfn .. roles/provision-tomcat
+
       - name: Checkout provision-java
+        if: env.AWS_AVAILABLE == 'true'
         uses: actions/checkout@v4
         with:
           repository: wilddog64/provision-java
@@ -115,6 +125,7 @@ jobs:
           token: ${{ secrets.GH_PAT || github.token }}
 
       - name: Checkout windows-base
+        if: env.AWS_AVAILABLE == 'true'
         uses: actions/checkout@v4
         with:
           repository: wilddog64/windows-base
@@ -122,54 +133,32 @@ jobs:
           ssh-key: ${{ secrets.WINDOWS_BASE_DEPLOY_KEY }}
 
       - name: Checkout provision-windows-security
+        if: env.AWS_AVAILABLE == 'true'
         uses: actions/checkout@v4
         with:
           repository: wilddog64/provision-windows-security
           path: roles/provision-windows-security
           ssh-key: ${{ secrets.PROVISION_WINDOWS_SECURITY_DEPLOY_KEY }}
 
-      - name: Symlink self as role
-        run: |
-          mkdir -p roles
-          ln -sfn .. roles/provision-tomcat
-
       - name: Install Ansible collections
+        if: env.AWS_AVAILABLE == 'true'
         run: |
           python3 -m venv venv
           source venv/bin/activate
           python3 -m pip install --upgrade pip
-          # Use stable ansible-core version
           pip install "ansible-core>=2.15.0,<2.16.0" pywinrm
           make deps
 
       - name: Install Ruby Dependencies
+        if: env.AWS_AVAILABLE == 'true'
         run: |
           source venv/bin/activate
-          echo "Checking for rbenv..."
-          if [ -d "$HOME/.rbenv" ]; then
-            RBENV_ROOT="$HOME/.rbenv"
-          elif [ -d "/usr/local/var/rbenv" ]; then
-            RBENV_ROOT="/usr/local/var/rbenv"
-          elif [ -d "/opt/homebrew/var/rbenv" ]; then
-            RBENV_ROOT="/opt/homebrew/var/rbenv"
-          fi
-
-          if [ -n "$RBENV_ROOT" ]; then
-            echo "Found rbenv at $RBENV_ROOT"
-            export PATH="$RBENV_ROOT/shims:$RBENV_ROOT/bin:$PATH"
-            export RBENV_SHELL=bash
-            bundle -v || gem install bundler
-            bundle install
-          else
-            echo "rbenv not found, trying system ruby/bundle"
-            bundle install || gem install bundler && bundle install
-          fi
+          bundle install || gem install bundler && bundle install
 
       - name: Run AWS Test
         if: env.AWS_AVAILABLE == 'true'
         env:
           OBJC_DISABLE_INITIALIZE_FORK_SAFETY: "YES"
-          HOME: /Users/cliang
         run: |
           source venv/bin/activate
           ansible --version
@@ -195,7 +184,14 @@ jobs:
             echo "AZURE_AVAILABLE=false" >> $GITHUB_ENV
           fi
 
+      - name: Checkout Roles
+        if: env.AZURE_AVAILABLE == 'true'
+        run: |
+          mkdir -p roles
+          ln -sfn .. roles/provision-tomcat
+
       - name: Checkout provision-java
+        if: env.AZURE_AVAILABLE == 'true'
         uses: actions/checkout@v4
         with:
           repository: wilddog64/provision-java
@@ -203,6 +199,7 @@ jobs:
           token: ${{ secrets.GH_PAT || github.token }}
 
       - name: Checkout windows-base
+        if: env.AZURE_AVAILABLE == 'true'
         uses: actions/checkout@v4
         with:
           repository: wilddog64/windows-base
@@ -210,16 +207,12 @@ jobs:
           ssh-key: ${{ secrets.WINDOWS_BASE_DEPLOY_KEY }}
 
       - name: Checkout provision-windows-security
+        if: env.AZURE_AVAILABLE == 'true'
         uses: actions/checkout@v4
         with:
           repository: wilddog64/provision-windows-security
           path: roles/provision-windows-security
           ssh-key: ${{ secrets.PROVISION_WINDOWS_SECURITY_DEPLOY_KEY }}
-
-      - name: Symlink self as role
-        run: |
-          mkdir -p roles
-          ln -sfn .. roles/provision-tomcat
 
       - name: Run Azure Test
         if: env.AZURE_AVAILABLE == 'true'
@@ -228,15 +221,16 @@ jobs:
   vagrant_integration:
     name: Vagrant Integration Tests
     runs-on: [self-hosted, macOS, ARM64]
-    needs: validation
+    needs: aws_integration
+    # ONLY run if AWS was NOT available AND it's a branch where we allow integration tests
     if: |
-      (github.event_name == 'workflow_dispatch' && github.ref_name == 'vagrant-dev') ||
-      (github.event_name == 'pull_request' && github.head_ref == 'vagrant-dev')
+      needs.aws_integration.outputs.AWS_AVAILABLE == 'false' &&
+      (github.event_name == 'workflow_dispatch' || contains(github.ref, 'vagrant-dev') || github.ref == 'refs/heads/main')
     steps:
-      - name: Checkout
+      - name: Checkout provision-tomcat
         uses: actions/checkout@v4
       - name: Run Vagrant Test
         run: |
-          # Disabled due to instability on Apple Silicon
-          echo "Vagrant tests are currently disabled on Apple Silicon runners."
+          echo "AWS Sandbox not available. Falling back to Vagrant tests..."
+          # Note: Currently disabled due to Apple Silicon instability, but logic is now conditional
           exit 0

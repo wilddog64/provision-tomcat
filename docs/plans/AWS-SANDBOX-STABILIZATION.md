@@ -22,8 +22,15 @@ AWS tests currently rely on brittle Kitchen configurations and lack the same lev
 
 ### 2. CI/CD Integration (`.github/workflows/ci.yml`)
 - **Runner Assignment**: Update the `aws_integration` job to run on the `[self-hosted, macOS, ARM64]` runner.
-- **Session Detection**: Implement `aws sts get-caller-identity` to detect active runner sessions, bypassing the need for rotating GitHub Secrets.
-- **Environment Parity**: 
+- **Portability Fixes**:
+    - **Authentication**: Use `aws-actions/configure-aws-credentials` with `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, and `AWS_SESSION_TOKEN`.
+    - **Role Management**: Replace local symlinks with `actions/checkout` using `ssh-key` (via `DEPLOY_KEY` secrets).
+- **Dynamic Secret Synchronization**: 
+    - Implement `make sync-secrets` to push local environment variables (from `.envrc`) to GitHub Secrets.
+    - Support rotating sandboxes by dynamically updating credentials via the `gh` CLI.
+- **Conditional Vagrant Fallback**:
+    - Restructure workflow to detect AWS availability.
+    - Trigger `vagrant_integration` only if the AWS sandbox is inaccessible.
     - Implement the `python3 -m venv` strategy for the AWS job.
     - Set `OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES`.
     - Apply the `Checkout All Roles` symlink strategy.
