@@ -7,3 +7,8 @@ roles:
     src: git@github.com:wilddog64/provision-windows-security.git
     scm: git
     version: main
+
+collections:
+  - name: ansible.windows
+  - name: chocolatey.chocolatey
+  - name: community.windows
