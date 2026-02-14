@@ -8,11 +8,13 @@
 - [x] Created `activeContext.md` with current state, decision rationale ("why"), and handoff notes.
 
 ## Pending TODOs
-- [ ] AWS Sandbox Stabilization:
-    - [ ] Refine `ec2` driver and WinRM transport in `.kitchen.yml`.
-    - [ ] Update `aws_integration` job in `ci.yml` to use self-hosted runner and venv.
-    - [ ] Implement `test-aws-provision-tomcat` and `test-aws-upgrade-candidate` in `Makefile`.
-    - [ ] Verify dynamic session detection (`aws sts get-caller-identity`) in CI.
+- [x] AWS Sandbox Stabilization:
+    - [x] Refine `ec2` driver and WinRM transport in `.kitchen.yml`.
+    - [x] Update `aws_integration` job in `ci.yml` to use self-hosted runner and venv.
+    - [x] Implement `test-aws-provision-tomcat` and `test-aws-upgrade-candidate` in `Makefile`.
+    - [x] Verify dynamic session detection (`aws sts get-caller-identity`) in CI.
+    - [x] Implement Dynamic Secret Sync via `make sync-secrets` and `.envrc`.
+    - [x] Implement Conditional Vagrant Fallback.
 - [ ] Expand `systemPatterns.md` with concrete k3s/ArgoCD implementation details if/when this repository adds those assets.
 - [ ] Add explicit shopping-cart integration/API contract notes if this role becomes coupled to e-commerce service rollout workflows.
 - [ ] Keep `activeContext.md` and this file synchronized after every future code/infrastructure/test update.
