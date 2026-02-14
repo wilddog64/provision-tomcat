@@ -26,8 +26,8 @@ env:
   ANSIBLE_ROLES_PATH: ${{ github.workspace }}/roles
 
 jobs:
-  validation:
-    name: Validation
+  lint:
+    name: Run Linting and Validation
     runs-on: [self-hosted, macOS, ARM64]
     steps:
       - name: Debug Runner Environment
@@ -92,7 +92,7 @@ jobs:
   aws_integration:
     name: AWS Integration Tests
     runs-on: [self-hosted, macOS, ARM64]
-    needs: validation
+    needs: lint
     if: |
       github.ref == 'refs/heads/aws-dev' ||
       github.ref == 'refs/heads/main' ||
@@ -210,7 +210,7 @@ jobs:
   azure_integration:
     name: Azure Integration Tests
     runs-on: [self-hosted, macOS, ARM64]
-    needs: validation
+    needs: lint
     if: >-
       (github.event_name == 'pull_request' && github.head_ref == 'azure-dev') ||
       (github.event_name == 'push' && github.ref_name == 'azure-dev') ||
@@ -265,10 +265,10 @@ jobs:
   vagrant_integration:
     name: Vagrant Integration Tests
     runs-on: [self-hosted, macOS, ARM64]
-    needs: [validation, aws_integration]
+    needs: [lint, aws_integration]
     if: |
       always() &&
-      needs.validation.result == 'success' &&
+      needs.lint.result == 'success' &&
       (
         (github.event_name == 'pull_request' && github.head_ref == 'vagrant-dev') ||
         (github.event_name == 'push' && github.ref_name == 'vagrant-dev') ||
