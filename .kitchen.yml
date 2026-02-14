@@ -220,6 +220,7 @@ platforms:
         ansible_become_method: runas
         ansible_become_user: Administrator
         ansible_port: 5985
+        ansible_host: "<%= ENV['ANSIBLE_HOST_OVERRIDE'] %>"
 
   - name: aws-minimal-win-disk
     driver:
@@ -280,6 +281,7 @@ platforms:
         ansible_become_method: runas
         ansible_become_user: Administrator
         ansible_port: 5985
+        ansible_host: "<%= ENV['ANSIBLE_HOST_OVERRIDE'] %>"
         install_drive: "D:"
 
 suites:
