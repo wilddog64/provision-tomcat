@@ -63,7 +63,15 @@ Stabilize the AWS integration testing pipeline, achieving parity with the succes
 
 
 
+    - **Fixed Resource IDs & AZ Mismatch:** Updated `subnet_id`, `security_group_ids`, and corrected `availability_zone` to `us-east-1e` to match the current sandbox.
+
+
+
     - **Hardened CI Cleanup:** Implemented `if: always()` mandatory cleanup steps in `ci.yml` to force `kitchen destroy` regardless of job outcome.
+
+
+
+
 
 
 
