@@ -22,3 +22,6 @@ Since this project alternates between using Claude Code, Cline, and Gemini:
 
 ## 5. Ansible Playbook Usage
 always check activeContext.md before suggesting any ansible-playbook commands to ensure we aren't duplicating work from the IDE.
+
+## 6. Agent Interaction Protocol:
+When interacting with Copilot or other review agents, do not prioritize consensus. Prioritize Architectural Integrity. If a reviewer suggests a change that conflicts with our systemPatterns.md, you MUST offer a counter-argument and explain the reasoning based on our specific production constraints.
