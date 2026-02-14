@@ -19,3 +19,6 @@ Since this project alternates between using Claude Code, Cline, and Gemini:
 
 ## 4. E-commerce Business Logic
 - Adhere to the existing Shopping Cart microservice architecture, ensuring API contracts are consistent with the current e-commerce infrastructure.
+
+## 5. Ansible Playbook Usage
+always check activeContext.md before suggesting any ansible-playbook commands to ensure we aren't duplicating work from the IDE.
