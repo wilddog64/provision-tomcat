@@ -546,38 +546,46 @@ jobs:
 >>>>>>> f3a4c98 (feat(ci): switch to pull_request triggers for aws workflow)
 =======
 
+      - name: Configure AWS Credentials
+        if: github.event_name == 'workflow_dispatch' && inputs.environment == 'aws'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: us-east-1
+
       - name: Verify AWS Availability
+        if: github.event_name == 'workflow_dispatch' && inputs.environment == 'aws'
+        id: aws_check
         run: |
-          if [ -n "${{ secrets.AWS_ACCESS_KEY_ID }}" ]; then
-            export AWS_ACCESS_KEY_ID="${{ secrets.AWS_ACCESS_KEY_ID }}"
-            export AWS_SECRET_ACCESS_KEY="${{ secrets.AWS_SECRET_ACCESS_KEY }}"
-            export AWS_SESSION_TOKEN="${{ secrets.AWS_SESSION_TOKEN }}"
-            export AWS_DEFAULT_REGION=us-east-1
-            
-            if aws sts get-caller-identity > /dev/null 2>&1; then
-              echo "AWS_AVAILABLE=true" >> $GITHUB_ENV
-              echo "AWS_AVAILABLE=true" >> $GITHUB_OUTPUT
-              ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-              echo "AWS session detected. Account: $ACCOUNT_ID"
-            else
-              echo "AWS_AVAILABLE=false" >> $GITHUB_ENV
-              echo "AWS_AVAILABLE=false" >> $GITHUB_OUTPUT
-              echo "No AWS session found or credentials invalid."
-            fi
+          if aws sts get-caller-identity > /dev/null 2>&1; then
+            echo "AWS_AVAILABLE=true" >> $GITHUB_ENV
+            echo "AWS_AVAILABLE=true" >> $GITHUB_OUTPUT
+            echo "AWS session verified."
           else
             echo "AWS_AVAILABLE=false" >> $GITHUB_ENV
             echo "AWS_AVAILABLE=false" >> $GITHUB_OUTPUT
-            echo "AWS secrets missing."
+            echo "AWS session invalid."
           fi
 
+      - name: Authorize Security Group Ingress
+        if: steps.aws_check.outputs.AWS_AVAILABLE == 'true'
+        run: |
+          # Ensure WinRM and Tomcat ports are open in the default SG
+          # sg-0153680ad73f68512 is the 'default' group found earlier
+          aws ec2 authorize-security-group-ingress --group-id sg-0153680ad73f68512 --protocol tcp --port 5985 --cidr 0.0.0.0/0 || true
+          aws ec2 authorize-security-group-ingress --group-id sg-0153680ad73f68512 --protocol tcp --port 8080 --cidr 0.0.0.0/0 || true
+          aws ec2 authorize-security-group-ingress --group-id sg-0153680ad73f68512 --protocol tcp --port 9080 --cidr 0.0.0.0/0 || true
+
       - name: Checkout Roles
-        if: env.AWS_AVAILABLE == 'true'
+        if: steps.aws_check.outputs.AWS_AVAILABLE == 'true'
         run: |
           mkdir -p roles
           ln -sfn .. roles/provision-tomcat
 
       - name: Checkout provision-java
-        if: env.AWS_AVAILABLE == 'true'
+        if: steps.aws_check.outputs.AWS_AVAILABLE == 'true'
         uses: actions/checkout@v4
         with:
           repository: wilddog64/provision-java
@@ -585,7 +593,7 @@ jobs:
           token: ${{ secrets.GH_PAT || github.token }}
 
       - name: Checkout windows-base
-        if: env.AWS_AVAILABLE == 'true'
+        if: steps.aws_check.outputs.AWS_AVAILABLE == 'true'
         uses: actions/checkout@v4
         with:
           repository: wilddog64/windows-base
@@ -593,7 +601,7 @@ jobs:
           ssh-key: ${{ secrets.WINDOWS_BASE_DEPLOY_KEY }}
 
       - name: Checkout provision-windows-security
-        if: env.AWS_AVAILABLE == 'true'
+        if: steps.aws_check.outputs.AWS_AVAILABLE == 'true'
         uses: actions/checkout@v4
         with:
           repository: wilddog64/provision-windows-security
@@ -601,7 +609,7 @@ jobs:
           ssh-key: ${{ secrets.PROVISION_WINDOWS_SECURITY_DEPLOY_KEY }}
 
       - name: Install dependencies
-        if: env.AWS_AVAILABLE == 'true'
+        if: steps.aws_check.outputs.AWS_AVAILABLE == 'true'
         run: |
           python3 -m venv venv
           source venv/bin/activate
@@ -610,20 +618,15 @@ jobs:
           make deps
 
       - name: Install Ruby Dependencies
-        if: env.AWS_AVAILABLE == 'true'
+        if: steps.aws_check.outputs.AWS_AVAILABLE == 'true'
         run: |
           source venv/bin/activate
           bundle install || gem install bundler && bundle install
 
       - name: Run AWS Test
-        if: env.AWS_AVAILABLE == 'true'
+        if: steps.aws_check.outputs.AWS_AVAILABLE == 'true'
         env:
           OBJC_DISABLE_INITIALIZE_FORK_SAFETY: "YES"
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
-          AWS_REGION: us-east-1
-          AWS_DEFAULT_REGION: us-east-1
         run: |
           source venv/bin/activate
           echo "=== Diagnostic: Verifying AMI Visibility ==="
@@ -632,13 +635,7 @@ jobs:
           make test-aws-provision-tomcat
 
       - name: Mandatory Cleanup
-        if: always() && env.AWS_AVAILABLE == 'true'
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
-          AWS_REGION: us-east-1
-          AWS_DEFAULT_REGION: us-east-1
+        if: always() && steps.aws_check.outputs.AWS_AVAILABLE == 'true'
         run: |
           source venv/bin/activate || true
           bundle exec kitchen destroy default-aws-minimal-win-disk || true
