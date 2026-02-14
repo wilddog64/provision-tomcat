@@ -1,16 +1,12 @@
 # Active Context
 
 ## Current Session Objective
-Initialize and populate a complete `memory-bank/` for this repository according to `.clinerules`.
+Stabilize the AWS integration testing pipeline, achieving parity with the successfully completed Azure stabilization.
 
 ## Current State Snapshot
-- `memory-bank/` did not exist (or was empty) at task start.
-- Core initialization files are now being established:
-  - `projectbrief.md`
-  - `systemPatterns.md`
-  - `techContext.md`
-  - `activeContext.md`
-  - `progress.md`
+- Azure CI pipeline is fully stabilized and passing on the `azure-dev` branch.
+- Switched to the `aws-dev` branch to begin AWS stabilization.
+- Created `docs/plans/AWS-SANDBOX-STABILIZATION.md` outlining the technical strategy.
 
 ## What Was Done
 1. Scanned core repo docs and code paths (`README.md`, defaults, tasks, Kitchen config, Makefile, upgrade and plugin docs).
