@@ -86,8 +86,33 @@ sync-azure:
 sync-secrets: sync-aws sync-azure
 	@echo "All secrets synchronized to GitHub."
 
+.PHONY: check-aws-credentials
+check-aws-credentials:
+	@echo "=== Checking AWS Credentials ==="
+	@if aws sts get-caller-identity > /dev/null 2>&1; then \
+		echo "AWS Credentials are valid."; \
+	else \
+		echo "ERROR: AWS Credentials invalid or expired. Please run 'make sync-aws' manually."; \
+		exit 1; \
+	fi
+
+.PHONY: discover-aws-resources
+discover-aws-resources: check-aws-credentials
+	@echo "=== Discovering Dynamic AWS Resources ==="
+	@# For now, this is a placeholder. It will be expanded to query AWS API for subnet, SG, AMI based on tags.
+	@# For example:
+	@# NEW_SUBNET_ID=$(aws ec2 describe-subnets --filters "Name=tag:Project,Values=Tomcat-Provisioning" "Name=tag:Type,Values=Test" --query "Subnets[0].SubnetId" --output text)
+	@# NEW_SECURITY_GROUP_ID=$(aws ec2 describe-security-groups --filters "Name=tag:Project,Values=Tomcat-Provisioning" "Name=tag:Type,Values=Test" --query "SecurityGroups[0].GroupId" --output text)
+	@# NEW_AMI_ID=$(aws ec2 describe-images --filters "Name=tag:Project,Values=Tomcat-Provisioning" "Name=tag:Type,Values=Test" --query "Images[0].ImageId" --output text)
+	@#
+	@# These discovered values will then be exported or used to generate an override file for Kitchen.
+	@echo "WARNING: Dynamic resource discovery is a placeholder. Please update .kitchen.yml manually with correct IDs."
+	@echo "PLACEHOLDER_SUBNET_ID=subnet-0bf736b950e25a150" # Replace with actual discovery logic
+	@echo "PLACEHOLDER_SECURITY_GROUP_ID=sg-0153680ad73f68512" # Replace with actual discovery logic
+	@echo "PLACEHOLDER_AMI_ID=ami-06f5f29d1fe41ea03" # Replace with actual discovery logic
+
 .PHONY: test-aws-provision-tomcat
-test-aws-provision-tomcat: update-roles
+test-aws-provision-tomcat: update-roles check-aws-credentials discover-aws-resources
 	@set -e; \
 	echo "=== Detecting AWS Environment ==="; \
 	ACC=$(AWS_ACCOUNT_ID); \
@@ -108,7 +133,7 @@ test-aws-provision-tomcat: update-roles
 	if [ -z "$$KEEP_AWS_VM" ]; then echo "=== Cleaning up... ==="; KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) destroy default-aws-minimal-win-disk; else echo "=== KEEP_AWS_VM is set. Skipping cleanup. ==="; fi
 
 .PHONY: test-aws-upgrade-candidate
-test-aws-upgrade-candidate: update-roles
+test-aws-upgrade-candidate: update-roles check-aws-credentials discover-aws-resources
 	@set -e; \
 	echo "=== Detecting AWS Environment ==="; \
 	ACC=$(AWS_ACCOUNT_ID); \
