@@ -21,7 +21,15 @@ Since this project alternates between using Claude Code, Cline, and Gemini:
 - Adhere to the existing Shopping Cart microservice architecture, ensuring API contracts are consistent with the current e-commerce infrastructure.
 
 ## 5. Ansible Playbook Usage
-always check activeContext.md before suggesting any ansible-playbook commands to ensure we aren't duplicating work from the IDE.
+- always check activeContext.md before suggesting any ansible-playbook commands to ensure we aren't duplicating work from the IDE.
 
 ## 6. Agent Interaction Protocol:
-When interacting with Copilot or other review agents, do not prioritize consensus. Prioritize Architectural Integrity. If a reviewer suggests a change that conflicts with our systemPatterns.md, you MUST offer a counter-argument and explain the reasoning based on our specific production constraints.
+- When interacting with Copilot or other review agents, do not prioritize consensus. Prioritize Architectural Integrity. If a reviewer suggests a change that conflicts with our systemPatterns.md, you MUST offer a counter-argument and explain the reasoning based on our specific production constraints.
+
+## 7. PR Review Protocol
+- Trigger: Before completing any task labeled "PR review".
+- Mandatory Action:
+  1. Run `gh pr view [PR_NUMBER] --comments`.
+  2. Map each comment to a file change or a rebuttal statement.
+  3. You MUST provide a summary table: | Codex Suggestion | My Decision | Reasoning |.
+  4. If a commit is needed, do it. If not, post a technical comment explaining why.
