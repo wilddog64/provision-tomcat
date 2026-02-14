@@ -24,14 +24,14 @@
 - [x] Created `docs/issues/2026-02-14-aws-integration-hurdles.md` documenting resolved AWS issues.
 - [x] Created `docs/issues/2026-02-14-aws-infrastructure-drift.md` detailing Hybrid Zero-Touch Sync strategy.
 - [x] Created `docs/plans/2026-02-14-controlled-ci-execution.md` for CI optimization.
-
-## In Progress
-- [ ] Merge `aws-dev` into `main`.
-- [ ] Finalize administrative merge of PR #6.
 - [x] Implement Hybrid Zero-Touch Sync for AWS resource ID discovery (see `docs/issues/2026-02-14-aws-infrastructure-drift.md`).
 - [x] Implement Draft PR conditional CI execution (see `docs/plans/2026-02-14-controlled-ci-execution.md`).
 - [x] Fix CI stdout pollution in `Makefile` to support `eval` in workflows.
 - [x] Fix hardcoded absolute path in `.kitchen.yml` for environment portability.
+
+## In Progress
+- [ ] Merge `aws-dev` into `main`.
+- [ ] Finalize administrative merge of PR #6.
 
 ## Future / Pending
 - [ ] Expand `systemPatterns.md` if k3s/ArgoCD scope is added.
