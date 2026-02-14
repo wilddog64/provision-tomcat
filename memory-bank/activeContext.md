@@ -7,6 +7,8 @@ Completed comprehensive PR review and fixed portability issue in .kitchen.yml co
 - **Fixed Critical Error**: Resolved `The subnet ID 'subnet-0bf736b950e25a150' does not exist` by improving the `discover-aws-resources` target in `Makefile`.
 - **Robust Discovery**: The discovery logic now handles missing tags by falling back to `us-east-1e` default subnets and `default` security groups, ensuring CI continuity even in fresh sandboxes.
 - **Improved CI Triggers**: Implemented Draft PR conditional execution to skip integration tests until a PR is ready for review, conserving resources.
+- **CI Stability Fix**: Resolved `eval` errors in CI by redirecting diagnostic output in `Makefile` to `stderr`, preventing stdout pollution.
+- **Portability Hardening**: Replaced hardcoded absolute paths in `.kitchen.yml` with relative ERB expressions to ensure environment-agnostic execution.
 
 ## Solution: Hybrid Zero-Touch Sync Strategy
 Adopted a "Hybrid Zero-Touch Sync" approach as a new architectural pattern to mitigate CI fragility in ephemeral AWS sandboxes:

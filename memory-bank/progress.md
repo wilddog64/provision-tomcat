@@ -30,6 +30,8 @@
 - [ ] Finalize administrative merge of PR #6.
 - [x] Implement Hybrid Zero-Touch Sync for AWS resource ID discovery (see `docs/issues/2026-02-14-aws-infrastructure-drift.md`).
 - [x] Implement Draft PR conditional CI execution (see `docs/plans/2026-02-14-controlled-ci-execution.md`).
+- [x] Fix CI stdout pollution in `Makefile` to support `eval` in workflows.
+- [x] Fix hardcoded absolute path in `.kitchen.yml` for environment portability.
 
 ## Future / Pending
 - [ ] Expand `systemPatterns.md` if k3s/ArgoCD scope is added.
