@@ -93,10 +93,7 @@ jobs:
     name: AWS Integration Tests
     runs-on: [self-hosted, macOS, ARM64]
     needs: validation
-    if: >-
-      (github.event_name == 'pull_request' && github.head_ref == 'aws-dev') ||
-      (github.event_name == 'push' && github.ref_name == 'aws-dev') ||
-      (github.event_name == 'workflow_dispatch' && (github.ref_name == 'aws-dev' || inputs.environment == 'aws'))
+    if: github.event_name == 'workflow_dispatch' && inputs.environment == 'aws'
     outputs:
       AWS_AVAILABLE: ${{ env.AWS_AVAILABLE }}
     steps:
