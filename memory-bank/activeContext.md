@@ -39,6 +39,8 @@ Stabilize the AWS integration testing pipeline, achieving parity with the succes
 
 7. **Reviewed Copilot Feedback:** Incorporated stabilization patterns from the `origin/copilot/sub-pr-2` branch, including modern `ansible.cfg` settings and robust tool resolution.
 
+8. **Refined CI Triggers:** Tightened `if` conditions for integration jobs (`aws_integration`, `azure_integration`, `vagrant_integration`) to be mutually exclusive and branch-specific. Added manual `environment` selection to `workflow_dispatch`. Fixed logic for `vagrant_integration` to correctly handle branch-based execution vs. fallback on `main`.
+
 
 
 ## Why These Decisions Were Made
@@ -52,6 +54,12 @@ Stabilize the AWS integration testing pipeline, achieving parity with the succes
 - **Why emphasize secret lookup patterns:** `.clinerules` forbids plaintext secrets and requires Vault-oriented compliance, which aligns with existing service-account documentation.
 
 - **Why offline linting:** Prevents `ansible-lint` from trying to fetch private dependencies over HTTPS, which fails in CI.
+
+- **Why tightened CI triggers:** Prevents integration jobs from running (or appearing to run) on irrelevant branches (e.g., Azure running on an AWS PR), reducing noise and confusion.
+
+- **Why manual selection:** Allows operators to force a specific integration environment regardless of branch name when troubleshooting.
+
+
 
 
 
