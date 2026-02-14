@@ -16,3 +16,4 @@
     - [x] Added role resolution symlinking to `syntax` target.
     - [x] Modernized `ansible.cfg` callback and connection settings.
 - [x] Implemented AWS D: drive support (disk initialization + redirected test targets).
+- [x] Synchronized AWS sandbox credentials to GitHub (refreshed session).
