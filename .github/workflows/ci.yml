@@ -19,7 +19,7 @@ on:
           - vagrant
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 env:
@@ -109,7 +109,11 @@ jobs:
           if [ -n "${{ secrets.AWS_ACCESS_KEY_ID }}" ]; then
             aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
             aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-            aws configure set aws_session_token "${{ secrets.AWS_SESSION_TOKEN }}"
+            if [ -n "${{ secrets.AWS_SESSION_TOKEN }}" ]; then
+              aws configure set aws_session_token ${{ secrets.AWS_SESSION_TOKEN }}
+            else
+              aws configure unset aws_session_token
+            fi
             aws configure set region us-east-1
           fi
           
@@ -127,7 +131,6 @@ jobs:
       - name: Checkout Roles
         if: env.AWS_AVAILABLE == 'true'
         run: |
-          # Re-running checkout logic here because job is independent
           mkdir -p roles
           ln -sfn .. roles/provision-tomcat
 
@@ -155,7 +158,7 @@ jobs:
           path: roles/provision-windows-security
           ssh-key: ${{ secrets.PROVISION_WINDOWS_SECURITY_DEPLOY_KEY }}
 
-      - name: Install Ansible collections
+      - name: Install dependencies
         if: env.AWS_AVAILABLE == 'true'
         run: |
           python3 -m venv venv
@@ -176,8 +179,18 @@ jobs:
           OBJC_DISABLE_INITIALIZE_FORK_SAFETY: "YES"
         run: |
           source venv/bin/activate
-          ansible --version
+          # Use a direct kitchen converge to ensure we control the lifecycle
+          # but we wrap it in a try/finally pattern via Makefile or explicit steps
           make test-aws-provision-tomcat
+
+      - name: Mandatory Cleanup
+        if: always() && env.AWS_AVAILABLE == 'true'
+        run: |
+          source venv/bin/activate || true
+          # Force destroy any instances that might have been left behind
+          # The EC2 driver sometimes leaves instances if create fails early
+          bundle exec kitchen destroy default-aws-minimal-win-disk || true
+          bundle exec kitchen destroy upgrade-candidate-aws-disk-aws-minimal-win-disk || true
 
   azure_integration:
     name: Azure Integration Tests

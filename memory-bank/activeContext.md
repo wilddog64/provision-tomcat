@@ -51,27 +51,75 @@ Stabilize the AWS integration testing pipeline, achieving parity with the succes
 
 
 
-10. **Refreshed AWS Sandbox:**
+10. **Refreshed AWS Sandbox & Safety Hardening:**
+
+
+
     - Refreshed AWS credentials via `make sync-aws` for new sandbox account `672929527998`.
+
+
+
     - Verified AMI `ami-06f5f29d1fe41ea03` availability in `us-east-1`.
+
+
+
+    - **Hardened CI Cleanup:** Implemented `if: always()` mandatory cleanup steps in `ci.yml` to force `kitchen destroy` regardless of job outcome.
+
+
+
+    - **Fixed Credential Logic:** Prevented setting empty `aws_session_token` which could cause SDK auth failures.
+
+
+
+    - **Tightened Concurrency:** Optimized concurrency groups to prevent parallel runs on the same branch/PR, reducing AWS resource churn.
+
+
+
+
+
+
 
 ## Why These Decisions Were Made
 
+
+
 - **Why initialize all memory files now:** `.clinerules` mandates memory-bank as primary cross-agent state and requires initialization when missing.
+
+
 
 - **Why include `progress.md` in addition to the four required files:** `.clinerules` explicitly requires real-time updates to both `activeContext.md` and `progress.md` after changes/tests.
 
+
+
 - **Why document k3s/ArgoCD as guardrails instead of implementation details:** repository scan found no direct k3s/ArgoCD assets; documenting this avoids inventing architecture while preserving policy intent.
+
+
 
 - **Why emphasize secret lookup patterns:** `.clinerules` forbids plaintext secrets and requires Vault-oriented compliance, which aligns with existing service-account documentation.
 
+
+
 - **Why offline linting:** Prevents `ansible-lint` from trying to fetch private dependencies over HTTPS, which fails in CI.
+
+
 
 - **Why tightened CI triggers:** Prevents integration jobs from running (or appearing to run) on irrelevant branches (e.g., Azure running on an AWS PR), reducing noise and confusion.
 
+
+
 - **Why manual selection:** Allows operators to force a specific integration environment regardless of branch name when troubleshooting.
 
+
+
 - **Why D: Drive pre-tasks:** AWS EBS volumes are attached but not initialized or formatted. Automating this in Ansible ensures the roles can install software to D: without manual intervention.
+
+
+
+- **Why Mandatory Cleanup:** AGC sandboxes have strict limits. If a CI job is cancelled or fails after creating an instance, leaving it running can lead to account bans. `if: always()` ensures we attempt to destroy the instance every time.
+
+
+
+
 
 
 
