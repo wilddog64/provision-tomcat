@@ -71,6 +71,7 @@ jobs:
       - name: Install Ansible collections
         run: |
           source venv/bin/activate
+          ansible-galaxy collection install -r requirements.yml
           make deps
 
       - name: Run Validation
@@ -148,6 +149,7 @@ jobs:
           source venv/bin/activate
           python3 -m pip install --upgrade pip
           pip install "ansible-core>=2.15.0,<2.16.0" pywinrm
+          ansible-galaxy collection install -r requirements.yml
           make deps
 
       - name: Install Ruby Dependencies
