@@ -1,23 +1,26 @@
 # Active Context
 
 ## Current Session Objective
-Successfully stabilized the AWS integration testing pipeline, achieving full end-to-end verification on the `aws-dev` branch.
+Address CI fragility due to ephemeral AWS sandbox resource ID changes, implementing a "Hybrid Zero-Touch Sync" strategy.
 
-## Recent Success: AWS Integration Verified
-- **End-to-End Success**: Successfully provisioned Tomcat on Windows Server 2022 in AWS with a raw EBS volume attached as the D: drive.
-- **AZ Compatibility Resolution**: Switched instance types to the `t2` family (e.g., `t2.medium`) for the `us-east-1e` availability zone. 
-    - **Reasoning**: `us-east-1e` is a legacy AZ that does not support Nitro-based instances (`t3`, `m5`, etc.). Since this AZ is crucial for the current sandbox allocation, architectural integrity required adjusting the instance family rather than forcing a zone change.
-- **CI Hardening**:
-    - Migrated to `aws-actions/configure-aws-credentials@v4` for robust authentication.
-    - Implemented automatic Security Group ingress authorization (`5985`, `8080`, `9080`) within the CI workflow.
-    - **Reasoning**: Ensures environment consistency and self-healing tests, even if the sandbox environment is refreshed with restricted default security settings.
-- **Dynamic Verification**: Updated Test Kitchen verifier to dynamically resolve the `INSTANCE_HOSTNAME` from the state file.
-    - **Reasoning**: This allows the same test suite to work seamlessly across local Vagrant (localhost) and remote AWS (public IP) environments without manual port-forwarding configuration.
+## Recent AWS Integration Update
+- **New Critical Error**: Encountered `The subnet ID 'subnet-0bf736b950e25a150' does not exist in the specified region us-east-1.`
+- **Root Cause**: The underlying AWS sandbox environment (specifically resource IDs like `subnet_id`) has changed or been recreated.
+- **Distinction: Credentials vs. Resource IDs**:
+    - `make sync-aws` refreshes **AWS credentials** (Access Key, Secret Key, Session Token) in GitHub Secrets. This is a manual step required when the sandbox's OAuth keys change.
+    - The current error is about **infrastructure resource IDs** (like subnet ID) hardcoded in `.kitchen.yml`. `make sync-aws` does NOT update these resource IDs.
+- **CI Fragility**: Hardcoding ephemeral resource IDs makes the CI process fragile, as changes in the sandbox infrastructure will break the tests.
+
+## Solution: Hybrid Zero-Touch Sync Strategy
+Adopted a "Hybrid Zero-Touch Sync" approach as a new architectural pattern to mitigate CI fragility in ephemeral AWS sandboxes:
+1.  **Manual Credential Sync**: `make sync-aws` will remain a manual initial step performed locally by the user to refresh OAuth/session tokens and push them to GitHub Secrets. This acknowledges the hard constraint of dynamic credential updates on sandbox recreation.
+2.  **Automatic Resource Discovery**: After successful manual credential sync, subsequent local `make` targets for AWS integration will dynamically discover resource IDs (subnet, security group, AMI) from the live sandbox using AWS APIs. These discovered IDs will then be used for the test run.
+This approach balances security (explicit credential refresh) with automation (resource ID discovery), mitigating CI fragility due to infrastructure drift.
 
 ## Current State Snapshot
-- AWS Integration pipeline is fully stabilized and verified on the `aws-dev` branch.
+- AWS Integration pipeline is fully stabilized and verified on the `aws-dev` branch (based on previous, now outdated, sandbox resources).
 - Created PR #6 to merge AWS stabilization into `main`.
-- **Sandbox Status**: AWS sandbox session was extended by the user after expiration. Fresh credentials are required for continued CI verification.
+- **Sandbox Status**: AWS sandbox session was extended by the user after expiration, leading to new resource IDs. Local `make sync-aws` was performed for credentials.
 - Established "Zero-Touch Sync" via `.envrc` for rotating sandbox credentials.
 - Achieved CI portability using `DEPLOY_KEY` secrets for all private roles.
 
