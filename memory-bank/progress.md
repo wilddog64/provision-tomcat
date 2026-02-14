@@ -20,10 +20,16 @@
 - [x] Synchronized AWS sandbox credentials to GitHub (refreshed session).
 - [x] Renamed CI validation job to `lint` for branch protection compliance.
 - [x] Defended architectural choices in PR #6 review with Codex.
+- [x] Implemented CI path filtering to exclude `docs/` and `memory-bank/` from triggering workflows.
+- [x] Created `docs/issues/2026-02-14-aws-integration-hurdles.md` documenting resolved AWS issues.
+- [x] Created `docs/issues/2026-02-14-aws-infrastructure-drift.md` detailing Hybrid Zero-Touch Sync strategy.
+- [x] Created `docs/plans/2026-02-14-controlled-ci-execution.md` for CI optimization.
 
 ## In Progress
 - [ ] Merge `aws-dev` into `main`.
 - [ ] Finalize administrative merge of PR #6.
+- [ ] Implement Hybrid Zero-Touch Sync for AWS resource ID discovery (see `docs/issues/2026-02-14-aws-infrastructure-drift.md`).
+- [ ] Implement Draft PR conditional CI execution (see `docs/plans/2026-02-14-controlled-ci-execution.md`).
 
 ## Future / Pending
 - [ ] Expand `systemPatterns.md` if k3s/ArgoCD scope is added.

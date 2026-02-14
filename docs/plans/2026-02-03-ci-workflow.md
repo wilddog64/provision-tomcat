@@ -1,5 +1,7 @@
 # Plan: GitHub Actions Validation Workflow
 
+**Status**: IMPLEMENTED (see `.github/workflows/ci.yml`)
+
 ## Context
 The `provision-tomcat` repository requires a CI workflow to ensure code quality and stability. We aim to replicate the validation logic found in `provision-jenkins`, adapted for `provision-tomcat`'s specific dependencies and structure.
 
@@ -38,6 +40,10 @@ To support private repositories, the following secrets will be documented as req
 - `PROVISION_WINDOWS_SECURITY_DEPLOY_KEY` (if `provision-windows-security` is private)
 
 ## Implementation Steps
-1.  Create `.github/workflows/validation.yml`.
-2.  Verify `make check` behavior locally with `ANSIBLE_ROLES_PATH` set.
-3.  (Optional) Create a helper script `bin/install-deps` if complex logic is needed, but inline steps in YAML should suffice for now.
+1.  [x] Create `.github/workflows/ci.yml` (consolidated validation + integration).
+2.  [x] Verify `make check` behavior locally with `ANSIBLE_ROLES_PATH` set.
+3.  [x] Inline steps in YAML (no helper script needed).
+
+## Evolution Notes
+- Original plan called for `validation.yml`; actual implementation uses consolidated `ci.yml` with lint + integration jobs.
+- Path filtering added per `docs/plans/2026-02-14-controlled-ci-execution.md`.
