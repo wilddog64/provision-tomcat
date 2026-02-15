@@ -50,6 +50,15 @@ This approach successfully mitigated the CI failure and improved pipeline effici
 - **AZ Drift**: If the sandbox allocation moves to a non-legacy AZ, `t2` instances may be less efficient than `t3`. Recommend periodic review of instance types against AZ capabilities.
 - **Cleanup Persistence**: While `if: always()` is implemented, manual monitoring of the AWS console is still advised during active development to ensure no orphaned resources remain due to workflow cancellation limits.
 
+## Security Audit (2026-02-14)
+A comprehensive red-team security audit was performed across the full codebase. **15 findings** identified (5 HIGH, 6 MEDIUM, 4 LOW). Key critical items:
+- **HIGH-1**: No download checksum verification for Tomcat zip (supply chain risk)
+- **HIGH-2**: AWS SG opened to 0.0.0.0/0 in CI (WinRM + Tomcat exposed to internet)
+- **HIGH-3**: Missing CI fork protection (documented in CI-SECURITY.md but not implemented in ci.yml)
+- **HIGH-4**: WinRM plaintext transport over public internet (AWS platforms)
+- **HIGH-5**: No `no_log` on password-handling tasks (credential exposure in logs)
+- Full report: `docs/SECURITY-AUDIT.md`
+
 ## Controlled CI Execution [IMPLEMENTED]
 - **Problem**: Unnecessary CI workflow runs trigger during discussion or documentation updates, wasting resources and creating noise.
 - **Solution**: Implement path filtering in `ci.yml` to prevent triggers on changes to `docs/` or `memory-bank/`. Utilize Draft PRs to signal when a PR is not yet ready for full CI.
