@@ -1,0 +1,34 @@
+# Project Core Standards & Memory Bank Maintenance Guide
+
+## 1. Memory Bank Management
+You must maintain the project state within the `/memory-bank` directory. This is the core of our cross-agent collaboration:
+- **Initialization**: If the directory does not exist, scan the repository and create `projectbrief.md`, `systemPatterns.md`, `techContext.md`, and `activeContext.md`.
+- **Read First**: Before starting any task, you MUST read `activeContext.md` to grasp the current progress and context.
+- **Real-time Updates**: Whenever a code change, infrastructure update, or test is completed, you must synchronously update `activeContext.md` and `progress.md`.
+
+## 2. Technical Architecture Standards (DevOps & Infrastructure)
+This project involves a complex operational architecture; please adhere to the following patterns:
+- **Security Compliance**: All sensitive information must be managed via HashiCorp Vault or secure environment injection. Writing plaintext secrets into the code is strictly prohibited.
+- **Environment Consistency**: Ensure all generated configurations (e.g., Ansible tasks or Test Kitchen configs) align with the consistency of our local development and AWS sandbox environments.
+
+## 3. Cross-Agent Handover Protocol
+Since this project alternates between using Claude Code, Cline, and Gemini:
+- **Document Decisions**: Record "Why" a decision was made in `activeContext.md`, not just "What" was done, to ensure the next agent (e.g., Claude Code) can take over effectively.
+- **TODO Tracking**: Clearly mark the pending task list in `progress.md` to prevent progress loss caused by token exhaustion or session resets.
+
+## 4. Ansible Playbook Usage
+- always check activeContext.md before suggesting any ansible-playbook commands to ensure we aren't duplicating work from the IDE.
+
+## 6. Agent Interaction Protocol:
+- When interacting with Copilot or other review agents, do not prioritize consensus. Prioritize Architectural Integrity. If a reviewer suggests a change that conflicts with our systemPatterns.md, you MUST offer a counter-argument and explain the reasoning based on our specific production constraints.
+
+## 7. PR Review Protocol
+- Trigger: Before completing any task labeled "PR review".
+- Mandatory Action:
+  1. Run `gh pr view [PR_NUMBER] --comments`.
+  2. Map each comment to a file change or a rebuttal statement.
+  3. You MUST provide a summary table: | Codex Suggestion | My Decision | Reasoning |.
+  4. If a commit is needed, do it. If not, post a technical comment explaining why.
+
+## 8. Operational Guidelines for Agents
+- **gh Run Monitoring**: For monitoring `gh` runs, prioritize programmatic polling (e.g., `gh run view --json` in a loop with `sleep`) over interactive watching (`gh run watch`). This avoids PTY (Pseudo-Terminal) related issues and ensures robust monitoring in non-interactive environments.

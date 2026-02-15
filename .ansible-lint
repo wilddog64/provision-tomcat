@@ -1,0 +1,12 @@
+offline: true
+
+# Skip line-length check - .kitchen.yml contains ERB templates that can't be easily split
+skip_list:
+  - yaml[line-length]
+
+# Exclude files that aren't Ansible playbooks/roles
+exclude_paths:
+  - .kitchen.yml
+  - .github/
+  - vendor/
+  - .venv/
