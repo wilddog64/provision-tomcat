@@ -323,23 +323,23 @@ get_vault_token() {
 
 ## Summary Table
 
-| ID | Severity | Finding | Location |
-|----|----------|---------|----------|
-| HIGH-1 | **HIGH** | No download checksum verification | tasks/install-Windows-tomcat.yml |
-| HIGH-2 | **HIGH** | Security group opened to 0.0.0.0/0 | .github/workflows/ci.yml |
-| HIGH-3 | **HIGH** | Missing CI fork protection | .github/workflows/ci.yml |
-| HIGH-4 | **HIGH** | WinRM plaintext over public internet | .kitchen.yml (AWS platforms) |
-| HIGH-5 | **HIGH** | No `no_log` on password operations | tasks/, tests/ |
-| MED-1 | **MEDIUM** | CredSSP wildcard delegation | windows-base role |
-| MED-2 | **MEDIUM** | Hardcoded test passwords | tests/playbook.yml |
-| MED-3 | **MEDIUM** | GH_PAT broad scope risk | .github/workflows/ci.yml |
-| MED-4 | **MEDIUM** | Shutdown port exposed | defaults/main.yml |
-| MED-5 | **MEDIUM** | LocalSystem as default service account | defaults/main.yml |
-| MED-6 | **MEDIUM** | `eval` of make output in CI | .github/workflows/ci.yml |
-| LOW-1 | **LOW** | SG ingress rules not revoked after CI | .github/workflows/ci.yml |
-| LOW-2 | **LOW** | Private SSL API usage | lookup_plugins/controller_http.py |
-| LOW-3 | **LOW** | Hardcoded AWS resource ID fallbacks | .kitchen.yml, Makefile |
-| LOW-4 | **LOW** | Vault root token usage | bin/_lib.sh |
+| ID | Severity | Finding | Location | Status |
+|----|----------|---------|----------|--------|
+| HIGH-1 | **HIGH** | No download checksum verification | tasks/install-Windows-tomcat.yml | **FIXED** |
+| HIGH-2 | **HIGH** | Security group opened to 0.0.0.0/0 | .github/workflows/ci.yml | **FIXED** |
+| HIGH-3 | **HIGH** | Missing CI fork protection | .github/workflows/ci.yml | **FIXED** |
+| HIGH-4 | **HIGH** | WinRM plaintext over public internet | .kitchen.yml (AWS platforms) | DEFERRED |
+| HIGH-5 | **HIGH** | No `no_log` on password operations | tasks/, tests/ | **FIXED** |
+| MED-1 | **MEDIUM** | CredSSP wildcard delegation | windows-base role | OPEN |
+| MED-2 | **MEDIUM** | Hardcoded test passwords | tests/playbook.yml | **FIXED** |
+| MED-3 | **MEDIUM** | GH_PAT broad scope risk | .github/workflows/ci.yml | OPEN |
+| MED-4 | **MEDIUM** | Shutdown port exposed | defaults/main.yml | **FIXED** |
+| MED-5 | **MEDIUM** | LocalSystem as default service account | defaults/main.yml | **FIXED** |
+| MED-6 | **MEDIUM** | `eval` of make output in CI | .github/workflows/ci.yml | **FIXED** |
+| LOW-1 | **LOW** | SG ingress rules not revoked after CI | .github/workflows/ci.yml | **FIXED** |
+| LOW-2 | **LOW** | Private SSL API usage | lookup_plugins/controller_http.py | **FIXED** |
+| LOW-3 | **LOW** | Hardcoded AWS resource ID fallbacks | .kitchen.yml, Makefile | **FIXED** |
+| LOW-4 | **LOW** | Vault root token usage | bin/_lib.sh | OPEN |
 
 ---
 
