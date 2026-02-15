@@ -58,6 +58,7 @@
         - svcjenkins
       when: ansible_facts['os_family'] == 'Windows'
       become: no
+      no_log: true
 
   roles:
     - windows-base

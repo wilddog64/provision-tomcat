@@ -40,5 +40,8 @@ tomcat_candidate_delegate_status_codes:
 tomcat_candidate_manual_control: false
 
 # Windows service account configuration
+# SECURITY NOTE: Using LocalSystem (default) is highly permissive.
+# Production deployments MUST override this with a low-privilege service account.
+# See docs/SERVICE-ACCOUNTS.md for implementation guidance.
 tomcat_service_account_username: LocalSystem
 tomcat_service_account_password: ''
