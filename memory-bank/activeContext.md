@@ -48,9 +48,16 @@ This approach successfully mitigated the CI failure and improved pipeline effici
 - **Grade**: A- (after portability fix)
 
 ## Immediate Next Actions
-- Merge PR #6 (AWS stabilization + Security hardening) into `main`.
-- Audit CredSSP wildcard delegation in `windows-base` role (MED-1).
-- Migrate `provision-java` checkout to SSH deploy key (MED-3).
+- Finalize resolution of unresolved Copilot feedback.
+- Push changes to `aws-dev` and verify via CI.
+- Request final review and merge PR #6 into `main`.
+
+## Recent Security Hardening (Final Refinements)
+- **CI Trigger Hardening**: Expanded path filters to include `requirements.txt`, `Gemfile`, and `Vagrantfile` to prevent dependency regressions.
+- **Workflow Optimization**: Added `ready_for_review` trigger to ensure full CI runs when draft PRs are converted.
+- **Manual Trigger Fix**: Enabled `auto` environment mode for `aws_integration` manual triggers.
+- **Makefile Robustness**: Added explicit error exit for failed AWS resource discovery to prevent "None" variable propagation.
+- **Rule Clean-up**: Removed unrelated platform/architecture constraints from `.clinerules`.
 
 ## Recent Security Hardening (Phase 3)
 - **CI Safety**: Replaced `eval` with a robust line-by-line parser for `Makefile` output in `ci.yml`, preventing potential command injection.
