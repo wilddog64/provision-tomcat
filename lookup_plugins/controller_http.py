@@ -37,7 +37,10 @@ class LookupModule(LookupBase):
 
         context = None
         if not validate_certs and url.startswith("https"):
-            context = ssl._create_unverified_context()
+            # Avoid using private ssl._create_unverified_context()
+            context = ssl.create_default_context()
+            context.check_hostname = False
+            context.verify_mode = ssl.CERT_NONE
 
         try:
             req = request.Request(url, method=method)
