@@ -92,6 +92,8 @@ env:
 jobs:
   lint:
     name: lint
+    # Security: Only run on trusted PRs/pushes (No Forks)
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: [self-hosted, macOS, ARM64]
     steps:
       - name: Debug Runner Environment
@@ -417,9 +419,11 @@ jobs:
     runs-on: [self-hosted, macOS, ARM64]
     needs: lint
     if: |
-      (github.event_name == 'push' && (github.ref == 'refs/heads/aws-dev' || github.ref == 'refs/heads/main')) ||
-      (github.event_name == 'pull_request' && github.event.pull_request.draft == false && (github.base_ref == 'main' || github.head_ref == 'aws-dev')) ||
-      (github.event_name == 'workflow_dispatch' && inputs.environment == 'aws')
+      (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository) && (
+        (github.event_name == 'push' && (github.ref == 'refs/heads/aws-dev' || github.ref == 'refs/heads/main')) ||
+        (github.event_name == 'pull_request' && github.event.pull_request.draft == false && (github.base_ref == 'main' || github.head_ref == 'aws-dev')) ||
+        (github.event_name == 'workflow_dispatch' && inputs.environment == 'aws')
+      )
     outputs:
       AWS_AVAILABLE: ${{ steps.aws_check.outputs.AWS_AVAILABLE }}
     steps:
@@ -627,10 +631,12 @@ jobs:
       - name: Authorize Security Group Ingress
         if: steps.aws_check.outputs.AWS_AVAILABLE == 'true'
         run: |
-          # Ensure WinRM and Tomcat ports are open in the dynamically discovered default SG
-          aws ec2 authorize-security-group-ingress --group-id $AWS_SECURITY_GROUP_ID --protocol tcp --port 5985 --cidr 0.0.0.0/0 || true
-          aws ec2 authorize-security-group-ingress --group-id $AWS_SECURITY_GROUP_ID --protocol tcp --port 8080 --cidr 0.0.0.0/0 || true
-          aws ec2 authorize-security-group-ingress --group-id $AWS_SECURITY_GROUP_ID --protocol tcp --port 9080 --cidr 0.0.0.0/0 || true
+          # Restrict CIDR to the runner's public IP for security
+          RUNNER_IP=$(curl -s https://checkip.amazonaws.com)
+          echo "Authorizing ingress for runner IP: $RUNNER_IP"
+          aws ec2 authorize-security-group-ingress --group-id $AWS_SECURITY_GROUP_ID --protocol tcp --port 5985 --cidr ${RUNNER_IP}/32 || true
+          aws ec2 authorize-security-group-ingress --group-id $AWS_SECURITY_GROUP_ID --protocol tcp --port 8080 --cidr ${RUNNER_IP}/32 || true
+          aws ec2 authorize-security-group-ingress --group-id $AWS_SECURITY_GROUP_ID --protocol tcp --port 9080 --cidr ${RUNNER_IP}/32 || true
 
       - name: Checkout Roles
         if: steps.aws_check.outputs.AWS_AVAILABLE == 'true'
@@ -694,15 +700,24 @@ jobs:
           source venv/bin/activate || true
           bundle exec kitchen destroy default-aws-minimal-win-disk || true
           bundle exec kitchen destroy upgrade-candidate-aws-disk-aws-minimal-win-disk || true
+          
+          # Revoke security group ingress after test completion
+          RUNNER_IP=$(curl -s https://checkip.amazonaws.com)
+          echo "Revoking ingress for runner IP: $RUNNER_IP"
+          aws ec2 revoke-security-group-ingress --group-id $AWS_SECURITY_GROUP_ID --protocol tcp --port 5985 --cidr ${RUNNER_IP}/32 || true
+          aws ec2 revoke-security-group-ingress --group-id $AWS_SECURITY_GROUP_ID --protocol tcp --port 8080 --cidr ${RUNNER_IP}/32 || true
+          aws ec2 revoke-security-group-ingress --group-id $AWS_SECURITY_GROUP_ID --protocol tcp --port 9080 --cidr ${RUNNER_IP}/32 || true
 
   azure_integration:
     name: Azure Integration Tests
     runs-on: [self-hosted, macOS, ARM64]
     needs: lint
     if: >-
-      (github.event_name == 'pull_request' && github.event.pull_request.draft == false && github.head_ref == 'azure-dev') ||
-      (github.event_name == 'push' && github.ref_name == 'azure-dev') ||
-      (github.event_name == 'workflow_dispatch' && (github.ref_name == 'azure-dev' || inputs.environment == 'azure'))
+      (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository) && (
+        (github.event_name == 'pull_request' && github.event.pull_request.draft == false && github.head_ref == 'azure-dev') ||
+        (github.event_name == 'push' && github.ref_name == 'azure-dev') ||
+        (github.event_name == 'workflow_dispatch' && (github.ref_name == 'azure-dev' || inputs.environment == 'azure'))
+      )
     steps:
       - name: Checkout provision-tomcat
         uses: actions/checkout@v4
@@ -757,6 +772,7 @@ jobs:
     if: |
       always() &&
       needs.lint.result == 'success' &&
+      (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository) &&
       (
         (github.event_name == 'pull_request' && github.event.pull_request.draft == false && github.head_ref == 'vagrant-dev') ||
         (github.event_name == 'push' && github.ref_name == 'vagrant-dev') ||
