@@ -54,9 +54,10 @@ This approach successfully mitigated the CI failure and improved pipeline effici
 
 ## Recent Security Hardening (Phase 3)
 - **CI Safety**: Replaced `eval` with a robust line-by-line parser for `Makefile` output in `ci.yml`, preventing potential command injection.
-- **Credential Management**: Moved hardcoded test passwords to `tomcat_test_password` variable in `defaults/main.yml`.
+- **Credential Management**: Moved hardcoded test passwords to `tomcat_test_password` variable in `defaults/main.yml`, ensuring consistency across both standard and upgrade playbooks.
 - **Code Quality**: Updated `controller_http` lookup plugin to use standard `ssl.create_default_context()` instead of private `_` APIs.
-- **Infrastructure Cleanup**: Removed stale AWS resource IDs from `Makefile` to prevent accidental execution against wrong resources.
+- **Infrastructure Hardening**: Hardened `.kitchen.yml` and `Makefile` to fail explicitly if dynamic resource discovery fails, eliminating stale fallback IDs.
+- **Feedback Integrated**: Successfully reviewed and refined by `@copilot` (via PR #17), incorporating missed variable updates and additional repository cleanup.
 
 ## Risks / Follow-ups
 - **AZ Drift**: If the sandbox allocation moves to a non-legacy AZ, `t2` instances may be less efficient than `t3`. Recommend periodic review of instance types against AZ capabilities.
