@@ -123,6 +123,13 @@
       tags:
         - tomcat-install
 
+    - name: Debug Tomcat checksum
+      ansible.builtin.debug:
+        var: tomcat_checksum
+      when: not tomcat_target_installed.stat.exists
+      tags:
+        - tomcat-install
+
     - name: Download Tomcat zip
       ansible.windows.win_get_url:
         url: "{{ tomcat_download_url }}"
