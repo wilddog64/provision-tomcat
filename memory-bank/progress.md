@@ -24,8 +24,8 @@
 - [x] Created `docs/issues/2026-02-14-aws-integration-hurdles.md` documenting resolved AWS issues.
 - [x] Created `docs/issues/2026-02-14-aws-infrastructure-drift.md` detailing Hybrid Zero-Touch Sync strategy.
 - [x] Created `docs/plans/2026-02-14-controlled-ci-execution.md` for CI optimization.
-- [x] Implement Hybrid Zero-Touch Sync for AWS resource ID discovery (see `docs/issues/2026-02-14-aws-infrastructure-drift.md`).
-- [x] Implement Draft PR conditional CI execution (see `docs/plans/2026-02-14-controlled-ci-execution.md`).
+- [x] Implement Hybrid Zero-Touch Sync for AWS resource ID discovery.
+- [x] Implement Draft PR conditional CI execution.
 - [x] Fix CI stdout pollution in `Makefile` to support `eval` in workflows.
 - [x] Fix hardcoded absolute path in `.kitchen.yml` for environment portability.
 - [x] Initial role scaffold for Windows Tomcat installation.
@@ -48,20 +48,13 @@
   - [x] Avoid private SSL API usage in lookup plugins (LOW-2).
   - [x] Remove stale AWS resource ID fallbacks from Makefile and .kitchen.yml (LOW-3).
   - [x] Feedback Integrated: Refined by `@copilot` to include missed variables and .gitignore updates.
+- [x] Consolidate AWS stabilization and security hardening into final PR to main (#6).
 
 ## In Progress
-- [ ] Merge PR #16 (Phase 3 security hardening) to `aws-dev`.
-- [ ] Finalize merge of `aws-dev` to `main`.
+- [ ] Finalize merge of `aws-dev` to `main` (PR #6).
 
 ## Future / Pending
 - [ ] Expand `systemPatterns.md` if k3s/ArgoCD scope is added.
 - [ ] Document Shopping Cart microservice API contracts if integration expands.
-- [ ] **[SECURITY]** Remediate Phase 2 & 3 roadmap items:
-  - [ ] Enable WinRM HTTPS for AWS platforms (HIGH-4)
-  - [ ] Add `no_log: true` to password-handling tasks (HIGH-5)
-  - [ ] Restrict CredSSP delegation from wildcard (MED-1)
-  - [ ] Replace hardcoded test passwords (MED-2)
-  - [ ] Audit GH_PAT scope / migrate to deploy key (MED-3)
-  - [ ] Bind shutdown port to localhost (MED-4)
-  - [ ] Change default service account from LocalSystem (MED-5)
-  - [ ] Replace eval with safer parsing in CI (MED-6)
+- [ ] Audit CredSSP wildcard delegation in `windows-base` role (MED-1).
+- [ ] Migrate `provision-java` checkout to SSH deploy key (MED-3).

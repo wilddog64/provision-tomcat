@@ -48,9 +48,9 @@ This approach successfully mitigated the CI failure and improved pipeline effici
 - **Grade**: A- (after portability fix)
 
 ## Immediate Next Actions
-- Merge PR #16 (Phase 3 hardening).
-- Finalize administrative merge of `aws-dev` to `main`.
+- Merge PR #6 (AWS stabilization + Security hardening) into `main`.
 - Audit CredSSP wildcard delegation in `windows-base` role (MED-1).
+- Migrate `provision-java` checkout to SSH deploy key (MED-3).
 
 ## Recent Security Hardening (Phase 3)
 - **CI Safety**: Replaced `eval` with a robust line-by-line parser for `Makefile` output in `ci.yml`, preventing potential command injection.
