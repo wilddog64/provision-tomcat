@@ -135,6 +135,7 @@
         url: "{{ tomcat_download_url }}"
         dest: "{{ tomcat_temp_dir }}/apache-tomcat-{{ tomcat_version }}.zip"
         checksum: "{{ tomcat_checksum }}"
+        checksum_algorithm: sha512
       register: tomcat_download
       when: not tomcat_target_installed.stat.exists
       tags:
