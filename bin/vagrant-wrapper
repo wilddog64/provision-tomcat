@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# Wrapper that gives Vagrant a completely clean environment.
+#
+# Kitchen-vagrant runs under rbenv Ruby + Bundler, which pollutes the
+# environment with GEM_PATH, RUBYOPT, BUNDLE_GEMFILE, etc.  Vagrant ships
+# its own embedded Ruby and MUST NOT see any of those variables — otherwise
+# its Ruby loads the wrong Bundler/gems and crashes.
+#
+# Rather than playing whack-a-mole with individual variables, we use env -i
+# to start from a blank slate and forward only what Vagrant actually needs.
+# Build the clean env, only forwarding vars that are actually set.
+ENV_ARGS=(
+  HOME="$HOME"
+  PATH="/opt/vagrant/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+  TERM="${TERM:-dumb}"
+  LANG="${LANG:-en_US.UTF-8}"
+  USER="$USER"
+  SHELL="$SHELL"
+  TMPDIR="${TMPDIR:-/tmp}"
+)
+[[ -n "${SSH_AUTH_SOCK:-}" ]] && ENV_ARGS+=( SSH_AUTH_SOCK="$SSH_AUTH_SOCK" )
+[[ -n "${VAGRANT_CWD:-}" ]]  && ENV_ARGS+=( VAGRANT_CWD="$VAGRANT_CWD" )
+[[ -n "${DISPLAY:-}" ]]      && ENV_ARGS+=( DISPLAY="$DISPLAY" )
+
+exec env -i "${ENV_ARGS[@]}" vagrant "$@"

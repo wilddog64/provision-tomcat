@@ -15,12 +15,13 @@ endif
 KITCHEN_YAML ?= $(DEFAULT_KITCHEN_YAML)
 RBENV_BIN := $(shell command -v rbenv 2>/dev/null)
 ifdef RBENV_BIN
-  KITCHEN_CMD ?= rbenv exec kitchen
+  export RBENV_VERSION := $(shell cat .ruby-version 2>/dev/null)
+  KITCHEN_CMD ?= rbenv exec bundle exec kitchen
 else
-  KITCHEN_CMD ?= kitchen
+  KITCHEN_CMD ?= bundle exec kitchen
 endif
 
-PLATFORMS := win11 win11-disk ubuntu-2404 rockylinux9
+PLATFORMS := win11 win11-disk ubuntu-2404 rockylinux9 aws-minimal-win aws-minimal-win-disk
 SUITES := default latest idempotence
 
 # Version variables for upgrade/downgrade testing
@@ -37,21 +38,150 @@ TOMCAT_NEW_VERSION ?= 9.0.113
 .PHONY: lint
 lint: deps
 	@echo "Running ansible-lint..."
-	ansible-lint .
+	ansible-lint --offline .
 
 .PHONY: syntax
 syntax: deps
 	@echo "Checking playbook syntax..."
-	ansible-playbook --syntax-check tests/playbook.yml -i tests/inventory
+	@mkdir -p roles
+	@ln -sfn .. roles/provision-tomcat
+	ANSIBLE_ROLES_PATH=./roles:../ ansible-playbook --syntax-check tests/playbook.yml -i tests/inventory
 
 .PHONY: check
 check: lint syntax
 	@echo "All validation checks passed."
 
+# ============================================================================ 
+# AWS Configuration (Universal Overrides)
+# ============================================================================ 
+# Dynamically resolve account and region if not provided
+AWS_ACCOUNT_ID ?= $(shell aws sts get-caller-identity --query Account --output text 2>/dev/null)
+AWS_REGION ?= $(shell aws configure get region 2>/dev/null)
+ifeq ($(AWS_REGION),)
+  AWS_REGION := us-east-1
+endif
+
+# ============================================================================ 
+# Secret Management
+# ============================================================================ 
+.PHONY: sync-aws
+sync-aws:
+	@if [ -x "../bin/sync-aws-secrets" ]; then \
+		echo "Syncing AWS secrets from local session..."; \
+		"../bin/sync-aws-secrets"; \
+	else \
+		echo "Error: ../bin/sync-aws-secrets not found or not executable."; \
+		exit 1; \
+	fi
+
+.PHONY: sync-azure
+sync-azure:
+	@echo "Syncing Azure secrets to GitHub..."
+	@gh secret set AZURE_CLIENT_ID --body "$$AZURE_CLIENT_ID"
+	@gh secret set AZURE_CLIENT_SECRET --body "$$AZURE_CLIENT_SECRET"
+	@gh secret set AZURE_TENANT_ID --body "$$AZURE_TENANT_ID"
+	@gh secret set AZURE_SUBSCRIPTION_ID --body "$$AZURE_SUBSCRIPTION_ID"
+
+.PHONY: sync-secrets
+sync-secrets: sync-aws sync-azure
+	@echo "All secrets synchronized to GitHub."
+
+.PHONY: check-aws-credentials
+check-aws-credentials:
+	@echo "=== Checking AWS Credentials ===" >&2
+	@if aws sts get-caller-identity > /dev/null 2>&1; then \
+		echo "AWS Credentials are valid." >&2; \
+	else \
+		echo "ERROR: AWS Credentials invalid or expired. Please run 'make sync-aws' manually." >&2; \
+		exit 1; \
+	fi
+
+.PHONY: discover-aws-resources
+discover-aws-resources: check-aws-credentials
+	@NEW_SUBNET_ID=$$(aws ec2 describe-subnets --region $(AWS_REGION) --filters "Name=tag:Project,Values=Tomcat-Provisioning" "Name=tag:Type,Values=Test" --query "Subnets[0].SubnetId" --output text 2>/dev/null); \
+	if [ "$$NEW_SUBNET_ID" = "None" ] || [ -z "$$NEW_SUBNET_ID" ]; then \
+		NEW_SUBNET_ID=$$(aws ec2 describe-subnets --region $(AWS_REGION) --filters "Name=availability-zone,Values=$(AWS_REGION)e" --query "Subnets[0].SubnetId" --output text 2>/dev/null); \
+	fi; \
+	if [ "$$NEW_SUBNET_ID" = "None" ] || [ -z "$$NEW_SUBNET_ID" ]; then \
+		NEW_SUBNET_ID=$$(aws ec2 describe-subnets --region $(AWS_REGION) --query "Subnets[0].SubnetId" --output text 2>/dev/null); \
+	fi; \
+	if [ "$$NEW_SUBNET_ID" = "None" ] || [ -z "$$NEW_SUBNET_ID" ]; then \
+		echo "ERROR: Failed to discover subnet." >&2; \
+		exit 1; \
+	fi; \
+	NEW_SECURITY_GROUP_IDS=$$(aws ec2 describe-security-groups --region $(AWS_REGION) --filters "Name=tag:Project,Values=Tomcat-Provisioning" "Name=tag:Type,Values=Test" --query "SecurityGroups[0].GroupId" --output text 2>/dev/null); \
+	if [ "$$NEW_SECURITY_GROUP_IDS" = "None" ] || [ -z "$$NEW_SECURITY_GROUP_IDS" ]; then \
+		NEW_SECURITY_GROUP_IDS=$$(aws ec2 describe-security-groups --region $(AWS_REGION) --filters "Name=group-name,Values=default" --query "SecurityGroups[0].GroupId" --output text 2>/dev/null); \
+	fi; \
+	if [ "$$NEW_SECURITY_GROUP_IDS" = "None" ] || [ -z "$$NEW_SECURITY_GROUP_IDS" ]; then \
+		echo "ERROR: Failed to discover security group." >&2; \
+		exit 1; \
+	fi; \
+	NEW_AMI_ID=$$(aws ec2 describe-images --region $(AWS_REGION) --owners amazon --filters "Name=name,Values=Windows_Server-2019-English-Full-Base*" --query 'sort_by(Images, &CreationDate)[-1].ImageId' --output text 2>/dev/null); \
+	if [ "$$NEW_AMI_ID" = "None" ] || [ -z "$$NEW_AMI_ID" ]; then \
+		NEW_AMI_ID=$$(aws ec2 describe-images --region $(AWS_REGION) --owners amazon --filters "Name=name,Values=Windows_Server-2016-English-Full-Base*" --query 'sort_by(Images, &CreationDate)[-1].ImageId' --output text 2>/dev/null); \
+	fi; \
+	if [ "$$NEW_AMI_ID" = "None" ] || [ -z "$$NEW_AMI_ID" ]; then \
+		echo "ERROR: Failed to discover AMI." >&2; \
+		exit 1; \
+	fi; \
+	NEW_AZ=$$(aws ec2 describe-subnets --region $(AWS_REGION) --subnet-ids $$NEW_SUBNET_ID --query "Subnets[0].AvailabilityZone" --output text 2>/dev/null || echo "$(AWS_REGION)e"); \
+	NEW_REGION=$$(aws configure --region $(AWS_REGION) get region 2>/dev/null || echo "$(AWS_REGION)"); \
+	echo "AWS_SUBNET_ID=$$NEW_SUBNET_ID"; \
+	echo "AWS_SECURITY_GROUP_ID=$$NEW_SECURITY_GROUP_IDS"; \
+	echo "AWS_SECURITY_GROUP_IDS=[\"$$NEW_SECURITY_GROUP_IDS\"]"; \
+	echo "AWS_AMI_ID=$$NEW_AMI_ID"; \
+	echo "AWS_AZ=$$NEW_AZ"; \
+	echo "AWS_REGION=$$NEW_REGION"
+
+.PHONY: test-aws-provision-tomcat
+test-aws-provision-tomcat: update-roles check-aws-credentials discover-aws-resources
+	@set -e; \
+	echo "=== Detecting AWS Environment ==="; \
+	ACC=$(AWS_ACCOUNT_ID); \
+	REG=$(AWS_REGION); \
+	echo "Using Account: $$ACC"; \
+	echo "Using Region: $$REG"; \
+	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) destroy default-aws-minimal-win-disk; \
+	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) create default-aws-minimal-win-disk; \
+	IP=$$(yq .hostname .kitchen/default-aws-minimal-win-disk.yml); \
+	echo "=== Waiting for WinRM on $$IP:5985... ==="; \
+	for i in {1..60}; do if nc -z -w 5 $$IP 5985; then break; fi; echo "Waiting... ($$i/60)"; sleep 10; if [ $$i -eq 60 ]; then echo "Timeout waiting for WinRM"; exit 1; fi; done; \
+	sleep 10; \
+	echo "=== Running Integration Test ==="; \
+	KITCHEN_YAML=$(KITCHEN_YAML) ANSIBLE_HOST_OVERRIDE=$$IP $(KITCHEN_CMD) converge default-aws-minimal-win-disk; \
+	echo "=== Verifying Ansible Connectivity (win_ping) ==="; \
+	ANSIBLE_CONFIG=ansible.cfg ANSIBLE_HOST_OVERRIDE=$$IP ansible -i .kitchen/ansible_inventory/ansible_inventory.ini -m win_ping all; \
+	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) verify default-aws-minimal-win-disk; \
+	if [ -z "$$KEEP_AWS_VM" ]; then echo "=== Cleaning up... ==="; KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) destroy default-aws-minimal-win-disk; else echo "=== KEEP_AWS_VM is set. Skipping cleanup. ==="; fi
+
+.PHONY: test-aws-upgrade-candidate
+test-aws-upgrade-candidate: update-roles check-aws-credentials discover-aws-resources
+	@set -e; \
+	echo "=== Detecting AWS Environment ==="; \
+	ACC=$(AWS_ACCOUNT_ID); \
+	REG=$(AWS_REGION); \
+	echo "Using Account: $$ACC"; \
+	echo "Using Region: $$REG"; \
+	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) destroy upgrade-candidate-aws-disk-aws-minimal-win-disk; \
+	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) create upgrade-candidate-aws-disk-aws-minimal-win-disk; \
+	IP=$$(yq .hostname .kitchen/upgrade-candidate-aws-disk-aws-minimal-win-disk.yml); \
+	echo "=== Waiting for WinRM on $$IP:5985... ==="; \
+	for i in {1..60}; do if nc -z -w 5 $$IP 5985; then break; fi; echo "Waiting... ($$i/60)"; sleep 10; if [ $$i -eq 60 ]; then echo "Timeout waiting for WinRM"; exit 1; fi; done; \
+	sleep 10; \
+	echo "=== Running Candidate Upgrade Test ==="; \
+	KITCHEN_YAML=$(KITCHEN_YAML) ANSIBLE_HOST_OVERRIDE=$$IP $(KITCHEN_CMD) converge upgrade-candidate-aws-disk-aws-minimal-win-disk; \
+	echo "=== Verifying Ansible Connectivity (win_ping) ==="; \
+	ANSIBLE_CONFIG=ansible.cfg ANSIBLE_HOST_OVERRIDE=$$IP ansible -i .kitchen/ansible_inventory/ansible_inventory.ini -m win_ping all; \
+	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) verify upgrade-candidate-aws-disk-aws-minimal-win-disk; \
+	if [ -z "$$KEEP_AWS_VM" ]; then echo "=== Cleaning up... ==="; KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) destroy upgrade-candidate-aws-disk-aws-minimal-win-disk; else echo "=== KEEP_AWS_VM is set. Skipping cleanup. ==="; fi
+
+.PHONY: test-azure-provision-tomcat
+test-azure-provision-tomcat: update-roles
+	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) test default-azure-minimal-win-disk
+
 # ============================================================================
-
 # Utility Targets
-
 # ============================================================================ 
 
 .PHONY: setup
@@ -63,11 +193,11 @@ setup:
 
 
 .PHONY: deps
-
-
 deps:
+	@echo "Installing Ruby dependencies..."
+	@rbenv exec bundle install || bundle install
 	@echo "Installing Ansible collections..."
-	ansible-galaxy collection install ansible.windows chocolatey.chocolatey -p ./collections
+	ansible-galaxy collection install -r requirements.yml -p ./collections
 
 # ============================================================================ 
 # Help
@@ -276,7 +406,6 @@ update-roles:
 # Upgrade testing helpers
 .PHONY: test-upgrade-win11
 test-upgrade-win11: update-roles
-	@rm -f .kitchen.local.yml
 	@echo "=== Testing Java + Tomcat upgrade on Windows 11 ==="
 	@echo "Step 1: Installing Java 17 + Tomcat 9.0.112..."
 	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) create upgrade-win11
@@ -284,83 +413,30 @@ test-upgrade-win11: update-roles
 	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) verify upgrade-win11
 	@echo ""
 	@echo "Step 2: Upgrading to Java 21 + Tomcat 9.0.113..."
-	@echo "Updating .kitchen.local.yml for step 2..."
-	@echo "---" > .kitchen.local.yml
-	@echo "suites:" >> .kitchen.local.yml
-	@echo "  - name: upgrade" >> .kitchen.local.yml
-	@echo "    provisioner:" >> .kitchen.local.yml
-	@echo "      playbook: tests/playbook-upgrade.yml" >> .kitchen.local.yml
-	@echo "      extra_vars:" >> .kitchen.local.yml
-	@echo "        upgrade_step: 2" >> .kitchen.local.yml
-	@echo "        tomcat_auto_start: true" >> .kitchen.local.yml
-	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) converge upgrade-win11
-	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) verify upgrade-win11
-	@rm -f .kitchen.local.yml
+	@sed 's/upgrade_step: 1/upgrade_step: 2/' $(KITCHEN_YAML) > .kitchen.step2.yml
+	KITCHEN_YAML=.kitchen.step2.yml $(KITCHEN_CMD) converge upgrade-win11
+	KITCHEN_YAML=.kitchen.step2.yml $(KITCHEN_CMD) verify upgrade-win11
+	@rm -f .kitchen.step2.yml
 	@echo ""
 	@echo "Upgrade test complete!"
 
 
 .PHONY: test-upgrade-candidate-win11
 test-upgrade-candidate-win11: upgrade-cleanup-win11 update-roles
-	@rm -f .kitchen.local.yml
-	@echo "Preparing .kitchen.local.yml with candidate port forwarding..."
-	@printf '%s\n' \
-		'---' \
-		'suites:' \
-		'  - name: upgrade' \
-		'    driver:' \
-		"      network:" \
-		"        - [\'forwarded_port\', {guest: 8080, host: 18080, auto_correct: true}]" \
-		"        - [\'forwarded_port\', {guest: 9080, host: 19080, auto_correct: true}]" \
-	> .kitchen.local.yml
-	@echo
 	@echo "=== Testing Java + Tomcat upgrade (candidate mode) on Windows 11 (D: drive) ==="
 	@echo "Step 1: Installing Java 17 + Tomcat 9.0.112..."
-	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) create upgrade-win11-disk
-	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) converge upgrade-win11-disk
-	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) verify upgrade-win11-disk || true
+	@sed 's/.*guest: 8080, host: 8080, auto_correct: true.*/        - ["forwarded_port", {guest: 8080, host: 18080, auto_correct: true}]\n        - ["forwarded_port", {guest: 9080, host: 19080, auto_correct: true}]/' $(KITCHEN_YAML) > .kitchen.cand1.yml
+	KITCHEN_YAML=.kitchen.cand1.yml $(KITCHEN_CMD) create upgrade-win11-disk
+	KITCHEN_YAML=.kitchen.cand1.yml $(KITCHEN_CMD) converge upgrade-win11-disk
+	KITCHEN_YAML=.kitchen.cand1.yml $(KITCHEN_CMD) verify upgrade-win11-disk || true
 	@echo ""
 	@echo "Step 2: Upgrading to Java 21 + Tomcat 9.0.113 with candidate workflow..."
-	@echo "Updating .kitchen.local.yml for candidate testing..."
-	@printf '%s\n' \
-		'---' \
-		'suites:' \
-		'  - name: upgrade' \
-		'    driver:' \
-		"      network:" \
-		"        - [\'forwarded_port\', {guest: 8080, host: 18080, auto_correct: true}]" \
-		"        - [\'forwarded_port\', {guest: 9080, host: 19080, auto_correct: true}]" \
-		'    provisioner:' \
-		'      playbook: tests/playbook-upgrade.yml' \
-		'      extra_vars:' \
-		'        upgrade_step: 2' \
-		'        tomcat_auto_start: true' \
-		'        tomcat_candidate_enabled: true' \
-		'        tomcat_candidate_delegate: localhost' \
-		'        tomcat_candidate_delegate_port: 19080' \
-		'    verifier:' \
-		'      name: shell' \
-		'      command: |' \
-		'        echo "=== Verifying Tomcat from controller (localhost:18080) ===" ' \
-		'        for attempt in 1 2 3 4 5 6 7 8 9 10; do' \
-		'          echo "" ' \
-		'          echo "--- Attempt $${attempt}/10 ---" ' \
-		'          echo "curl -v --connect-timeout 5 --max-time 10 http://localhost:18080" ' \
-		'          if curl -v --connect-timeout 5 --max-time 10 http://localhost:18080 2>&1; then' \
-		'            echo "" ' \
-		'            echo "SUCCESS: Tomcat responded on port 18080" ' \
-		'            exit 0' \
-		'          fi' \
-		'          echo "  Waiting 10 seconds before retry..." ' \
-		'          sleep 10' \
-		'        done' \
-		'        echo "" ' \
-		'        echo "FAILED: Tomcat did not respond on port 18080 after 10 attempts" >&2' \
-		'        exit 1' \
-	> .kitchen.local.yml
-	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) converge upgrade-win11-disk
-	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) verify upgrade-win11-disk
-	@rm -f .kitchen.local.yml
+	@sed -e 's/upgrade_step: 1/upgrade_step: 2/' \
+	     -e 's/tomcat_auto_start: true/tomcat_auto_start: true\n        tomcat_candidate_enabled: true\n        tomcat_candidate_delegate: localhost\n        tomcat_candidate_delegate_port: 19080/' \
+	     .kitchen.cand1.yml > .kitchen.cand2.yml
+	KITCHEN_YAML=.kitchen.cand2.yml $(KITCHEN_CMD) converge upgrade-win11-disk
+	KITCHEN_YAML=.kitchen.cand2.yml $(KITCHEN_CMD) verify upgrade-win11-disk
+	@rm -f .kitchen.cand1.yml .kitchen.cand2.yml
 	@echo ""
 	@echo "Candidate upgrade test complete!"
 
@@ -385,23 +461,16 @@ test-upgrade-candidate-stack: test-upgrade-candidate-win11 candidate-cleanup-win
 test-downgrade-win11: update-roles
 	@echo "=== Testing Java + Tomcat downgrade on Windows 11 ==="
 	@echo "Step 1: Installing Java $(JAVA_NEW_VERSION) + Tomcat $(TOMCAT_NEW_VERSION)..."
-	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) create downgrade-win11
-	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) converge downgrade-win11
-	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) verify downgrade-win11
+	@sed 's/downgrade_step: 1/downgrade_step: 1/' $(KITCHEN_YAML) > .kitchen.down1.yml
+	KITCHEN_YAML=.kitchen.down1.yml $(KITCHEN_CMD) create downgrade-win11
+	KITCHEN_YAML=.kitchen.down1.yml $(KITCHEN_CMD) converge downgrade-win11
+	KITCHEN_YAML=.kitchen.down1.yml $(KITCHEN_CMD) verify downgrade-win11
 	@echo ""
 	@echo "Step 2: Downgrading to Java $(JAVA_OLD_VERSION) + Tomcat $(TOMCAT_OLD_VERSION)..."
-	@echo "Updating .kitchen.local.yml for step 2..."
-	@echo "---" > .kitchen.local.yml
-	@echo "suites:" >> .kitchen.local.yml
-	@echo "  - name: downgrade" >> .kitchen.local.yml
-	@echo "    provisioner:" >> .kitchen.local.yml
-	@echo "      playbook: tests/playbook-downgrade.yml" >> .kitchen.local.yml
-	@echo "      extra_vars:" >> .kitchen.local.yml
-	@echo "        downgrade_step: 2" >> .kitchen.local.yml
-	@echo "        tomcat_auto_start: true" >> .kitchen.local.yml
-	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) converge downgrade-win11
-	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) verify downgrade-win11
-	@rm -f .kitchen.local.yml
+	@sed 's/downgrade_step: 1/downgrade_step: 2/' .kitchen.down1.yml > .kitchen.down2.yml
+	KITCHEN_YAML=.kitchen.down2.yml $(KITCHEN_CMD) converge downgrade-win11
+	KITCHEN_YAML=.kitchen.down2.yml $(KITCHEN_CMD) verify downgrade-win11
+	@rm -f .kitchen.down1.yml .kitchen.down2.yml
 	@echo ""
 	@echo "Downgrade test complete!"
 

@@ -29,7 +29,7 @@ check_command() {
 
 install_ansible_collections() {
     log_info "Installing Ansible collections..."
-    ansible-galaxy collection install ansible.windows chocolatey.chocolatey -p ./collections --force
+    ansible-galaxy collection install ansible.windows community.windows chocolatey.chocolatey -p ./collections --force
 }
 
 install_python_deps() {
