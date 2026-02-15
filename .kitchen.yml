@@ -454,12 +454,17 @@ platforms:
       username: Administrator
       winrm_transport: :negotiate
 <<<<<<< HEAD
+<<<<<<< HEAD
       port: 5985
       ssl: false
 =======
       port: 5986
       ssl: true
 >>>>>>> 21f2a0c (security: implement phase 2 hardening (no_log, shutdown port localhost, WinRM HTTPS))
+=======
+      port: 5985
+      ssl: false
+>>>>>>> 4ba39e3 (fix: revert WinRM to HTTP port 5985 for AWS due to connection issues)
       connection_retries: 15
       connection_retry_sleep: 10
       operation_timeout: 600
@@ -489,12 +494,12 @@ platforms:
         skip_migration: true
         ansible_connection: winrm
         ansible_winrm_transport: ntlm
-        ansible_winrm_scheme: https
+        ansible_winrm_scheme: http
         ansible_winrm_server_cert_validation: ignore
         ansible_user: Administrator
         ansible_become_method: runas
         ansible_become_user: Administrator
-        ansible_port: 5986
+        ansible_port: 5985
         ansible_host: "<%= ENV['ANSIBLE_HOST_OVERRIDE'] %>"
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -536,8 +541,8 @@ platforms:
       elevated: true
       username: Administrator
       winrm_transport: :negotiate
-      port: 5986
-      ssl: true
+      port: 5985
+      ssl: false
       connection_retries: 15
       connection_retry_sleep: 10
       operation_timeout: 600
@@ -565,12 +570,12 @@ platforms:
         skip_migration: true
         ansible_connection: winrm
         ansible_winrm_transport: ntlm
-        ansible_winrm_scheme: https
+        ansible_winrm_scheme: http
         ansible_winrm_server_cert_validation: ignore
         ansible_user: Administrator
         ansible_become_method: runas
         ansible_become_user: Administrator
-        ansible_port: 5986
+        ansible_port: 5985
         ansible_host: "<%= ENV['ANSIBLE_HOST_OVERRIDE'] %>"
         security_service_account: ""
         security_jenkins_accounts: []

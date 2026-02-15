@@ -637,7 +637,7 @@ jobs:
           RUNNER_IP=$(curl -s https://checkip.amazonaws.com)
           echo "RUNNER_IP=${RUNNER_IP}" >> $GITHUB_ENV
           echo "Authorizing ingress for runner IP: $RUNNER_IP"
-          aws ec2 authorize-security-group-ingress --group-id $AWS_SECURITY_GROUP_ID --protocol tcp --port 5986 --cidr ${RUNNER_IP}/32 || true
+          aws ec2 authorize-security-group-ingress --group-id $AWS_SECURITY_GROUP_ID --protocol tcp --port 5985 --cidr ${RUNNER_IP}/32 || true
           aws ec2 authorize-security-group-ingress --group-id $AWS_SECURITY_GROUP_ID --protocol tcp --port 8080 --cidr ${RUNNER_IP}/32 || true
           aws ec2 authorize-security-group-ingress --group-id $AWS_SECURITY_GROUP_ID --protocol tcp --port 9080 --cidr ${RUNNER_IP}/32 || true
 
@@ -707,7 +707,7 @@ jobs:
           # Revoke security group ingress after test completion
           # Re-using RUNNER_IP from environment to ensure consistency
           echo "Revoking ingress for runner IP: $RUNNER_IP"
-          aws ec2 revoke-security-group-ingress --group-id $AWS_SECURITY_GROUP_ID --protocol tcp --port 5986 --cidr ${RUNNER_IP}/32 || true
+          aws ec2 revoke-security-group-ingress --group-id $AWS_SECURITY_GROUP_ID --protocol tcp --port 5985 --cidr ${RUNNER_IP}/32 || true
           aws ec2 revoke-security-group-ingress --group-id $AWS_SECURITY_GROUP_ID --protocol tcp --port 8080 --cidr ${RUNNER_IP}/32 || true
           aws ec2 revoke-security-group-ingress --group-id $AWS_SECURITY_GROUP_ID --protocol tcp --port 9080 --cidr ${RUNNER_IP}/32 || true
 
