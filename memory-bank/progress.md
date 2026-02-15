@@ -36,9 +36,14 @@
   - [x] Restrict AWS SG ingress to runner IP + add revoke in cleanup (HIGH-2 + LOW-1).
   - [x] Add fork protection to ci.yml (HIGH-3).
   - [x] Address feedback: include manual triggers in guards and reuse runner IP.
+- [x] **[SECURITY] Security Hardening Roadmap (Phase 2)**
+  - [x] Add `no_log: true` to password-handling tasks (HIGH-5).
+  - [x] Bind shutdown port to localhost (MED-4).
+  - [x] Add security warning against `LocalSystem` default (MED-5).
+  - [x] Note: WinRM HTTPS (HIGH-4) deferred due to AMI connectivity issues.
 
 ## In Progress
-- [ ] Merge PR #9 (Phase 1 security hardening) to `aws-dev`.
+- [ ] Merge PR #13 (Phase 2 security hardening) to `aws-dev`.
 - [ ] Finalize merge of `aws-dev` to `main`.
 
 ## Future / Pending

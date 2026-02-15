@@ -48,15 +48,15 @@ This approach successfully mitigated the CI failure and improved pipeline effici
 - **Grade**: A- (after portability fix)
 
 ## Immediate Next Actions
-- Merge PR #9 (Phase 1 hardening).
-- Proceed to Phase 2 hardening (Data & Transport Security).
-- Address HIGH-5 (no_log) and HIGH-4 (WinRM HTTPS).
+- Merge PR #13 (Phase 2 hardening).
+- Proceed to Phase 3 hardening (Infrastructure & Credential Hardening).
+- Address MED-6 (safer CI parsing) and MED-1 (CredSSP restriction).
 
-## Recent Security Hardening (Phase 1)
-- **Tomcat Checksum**: Implemented SHA-512 verification for version 9.0.115.
-- **Fork Protection**: Added job-level guards to `ci.yml` (including `workflow_dispatch`).
-- **AWS SG Hardening**: Restricted ingress to runner IP and implemented revocation in cleanup.
-- **Feedback Addressed**: Resolved Codex/Copilot feedback regarding manual trigger authorization and consistent runner IP reuse.
+## Recent Security Hardening (Phase 2)
+- **Log Security**: Implemented `no_log: true` for all sensitive password-handling tasks in `install-Windows-tomcat.yml` and `playbook.yml`.
+- **Shutdown Port Security**: Bound Tomcat shutdown port to `127.0.0.1` in `server.xml` via `win_shell` tasks.
+- **Safer Defaults**: Added explicit security warning in `defaults/main.yml` regarding `LocalSystem` default service account.
+- **Connectivity Maintenance**: Reverted WinRM to port 5985 after determining default AMI lacks HTTPS listener on 5986.
 
 ## Risks / Follow-ups
 - **AZ Drift**: If the sandbox allocation moves to a non-legacy AZ, `t2` instances may be less efficient than `t3`. Recommend periodic review of instance types against AZ capabilities.
