@@ -21,8 +21,6 @@ else
   KITCHEN_CMD ?= bundle exec kitchen
 endif
 
-<<<<<<< HEAD
-<<<<<<< HEAD
 # Keep Ansible tooling on a consistent install path to avoid
 # ansible-lint/ansible-core mismatch errors.
 ANSIBLE_LINT_BIN ?= $(shell command -v ansible-lint 2>/dev/null)
@@ -37,13 +35,7 @@ ANSIBLE_BIN ?= $(call resolve_bin,ansible)
 ANSIBLE_PLAYBOOK_BIN ?= $(call resolve_bin,ansible-playbook)
 ANSIBLE_GALAXY_BIN ?= $(call resolve_bin,ansible-galaxy)
 
-PLATFORMS := win11 win11-disk ubuntu-2404 rockylinux9 win11-azure
-=======
-PLATFORMS := win11 win11-disk ubuntu-2404 rockylinux9 aws-minimal-win
->>>>>>> 5dba6f7 (feat(aws): add AWS EC2 platform to Test Kitchen configuration)
-=======
-PLATFORMS := win11 win11-disk ubuntu-2404 rockylinux9 aws-minimal-win aws-minimal-win-disk
->>>>>>> 3efd77f (feat(aws): add support for EC2 instances with secondary D: drive)
+PLATFORMS := win11 win11-disk ubuntu-2404 rockylinux9 win11-azure aws-minimal-win aws-minimal-win-disk
 SUITES := default latest idempotence
 
 # Version variables for upgrade/downgrade testing
@@ -67,8 +59,6 @@ AZURE_IMAGE ?= MicrosoftWindowsServer:WindowsServer:2022-datacenter-g2:latest
 AZURE_VM_SIZE ?= Standard_DS1_v2
 AZURE_VM_NAME ?= kqvm-win11
 AZURE_ADMIN_USERNAME ?= azureadmin
-# WARNING: Default password is weak and for testing only. Set AZURE_ADMIN_PASSWORD
-# environment variable with a secure password before use.
 AZURE_ADMIN_PASSWORD ?= ChangeM3!SecurePassword
 
 .DEFAULT_GOAL := help
@@ -78,35 +68,20 @@ AZURE_ADMIN_PASSWORD ?= ChangeM3!SecurePassword
 # ============================================================================ 
 .PHONY: lint
 lint: deps
-	@if [ -z "$(ANSIBLE_LINT_BIN)" ]; then echo "ERROR: ansible-lint not found in PATH"; exit 1; fi
 	@echo "Running ansible-lint..."
-<<<<<<< HEAD
-	PATH="$(dir $(ANSIBLE_LINT_BIN)):$$PATH" $(ANSIBLE_LINT_BIN) --offline .
-=======
 	ansible-lint --offline .
->>>>>>> 1b1cd19 (fix(ci): resolve workflow failures and synchronize stabilization patterns)
 
 .PHONY: syntax
 syntax: deps
-	@if [ -z "$(ANSIBLE_PLAYBOOK_BIN)" ]; then echo "ERROR: ansible-playbook not found"; exit 1; fi
 	@echo "Checking playbook syntax..."
 	@mkdir -p roles
 	@ln -sfn .. roles/provision-tomcat
-<<<<<<< HEAD
-	ANSIBLE_ROLES_PATH="$(ANSIBLE_ROLES_PATH)" $(ANSIBLE_PLAYBOOK_BIN) --syntax-check tests/playbook.yml -i tests/inventory
-=======
 	ANSIBLE_ROLES_PATH=./roles:../ ansible-playbook --syntax-check tests/playbook.yml -i tests/inventory
->>>>>>> 1b1cd19 (fix(ci): resolve workflow failures and synchronize stabilization patterns)
 
 .PHONY: check
 check: lint syntax
 	@echo "All validation checks passed."
 
-<<<<<<< HEAD
-# ============================================================================
-<<<<<<< HEAD
-=======
-=======
 # ============================================================================ 
 # AWS Configuration (Universal Overrides)
 # ============================================================================ 
@@ -117,14 +92,9 @@ ifeq ($(AWS_REGION),)
   AWS_REGION := us-east-1
 endif
 
-<<<<<<< HEAD
->>>>>>> 76e4837 (fix(aws): stabilize AWS integration testing pipeline and achieve parity with Azure)
-# AWS Targets
-=======
 # ============================================================================ 
 # Secret Management
 # ============================================================================ 
->>>>>>> 68e32dd (feat(ci): implement dynamic secret sync and conditional vagrant fallback)
 .PHONY: sync-aws
 sync-aws:
 	@if [ -x "../bin/sync-aws-secrets" ]; then \
@@ -237,12 +207,7 @@ test-aws-upgrade-candidate: update-roles check-aws-credentials discover-aws-reso
 	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) verify upgrade-candidate-aws-disk-aws-minimal-win-disk; \
 	if [ -z "$$KEEP_AWS_VM" ]; then echo "=== Cleaning up... ==="; KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) destroy upgrade-candidate-aws-disk-aws-minimal-win-disk; else echo "=== KEEP_AWS_VM is set. Skipping cleanup. ==="; fi
 
-.PHONY: test-azure-provision-tomcat
-test-azure-provision-tomcat: update-roles
-	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) test default-azure-minimal-win-disk
-
 # ============================================================================
->>>>>>> 5dba6f7 (feat(aws): add AWS EC2 platform to Test Kitchen configuration)
 # Utility Targets
 # ============================================================================ 
 
@@ -255,11 +220,7 @@ deps:
 	@echo "Installing Ruby dependencies..."
 	@rbenv exec bundle install || bundle install
 	@echo "Installing Ansible collections..."
-<<<<<<< HEAD
-	$(ANSIBLE_GALAXY_BIN) collection install ansible.windows community.windows chocolatey.chocolatey -p ./collections
-=======
 	ansible-galaxy collection install -r requirements.yml -p ./collections
->>>>>>> 1b1cd19 (fix(ci): resolve workflow failures and synchronize stabilization patterns)
 
 # ============================================================================ 
 # Help
@@ -296,8 +257,13 @@ help:
 	@echo ""
 	@echo "Override KITCHEN_YAML=/path/to/.kitchen.yml when needed."
 
-# Build extra vars for Ansible
-EXTRA_VARS := $(if $(ADO_PAT_TOKEN),ado_pat_token=$(ADO_PAT_TOKEN),)
+.PHONY: list-kitchen-instances
+list-kitchen-instances:
+	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) list
+
+.PHONY: update-roles
+update-roles:
+	@echo
 
 .PHONY: test-azure-provision-tomcat
 test-azure-provision-tomcat: update-roles
@@ -311,11 +277,6 @@ test-azure-provision-tomcat: update-roles
 	if [ -z "$$LOC" ]; then LOC=$$(az group show --name "$$RG" --query location -o tsv); fi; \
 	echo "Using Location: $$LOC"; \
 	MY_IP=$$(curl -s https://api.ipify.org); \
-	if [ -z "$$MY_IP" ]; then \
-		echo "ERROR: Failed to detect public IP address. Cannot configure NSG rules."; \
-		exit 1; \
-	fi; \
-	echo "Detected source IP: $$MY_IP"; \
 	NAME=$(AZURE_VM_NAME); \
 	USER=$(AZURE_ADMIN_USERNAME); \
 	PASS="$(AZURE_ADMIN_PASSWORD)"; \
@@ -331,32 +292,14 @@ test-azure-provision-tomcat: update-roles
 	echo "=== Configuring WinRM Inside VM ==="; \
 	az vm run-command invoke --subscription "$$SUB" --resource-group "$$RG" --name "$$NAME" --command-id RunPowerShellScript --scripts 'winrm quickconfig -q; Set-Item -Path "WSMan:\localhost\Service\Auth\Basic" -Value $$true; Set-Item -Path "WSMan:\localhost\Service\AllowUnencrypted" -Value $$true; New-NetFirewallRule -DisplayName "Allow WinRM HTTP" -Direction Inbound -LocalPort 5985 -Protocol TCP -Action Allow'; \
 	echo "=== Creating Local Admin Account (testadmin) ==="; \
-	echo "WARNING: Using weak password 'Password123!' for testadmin account in sandbox VM."; \
 	az vm run-command invoke --subscription "$$SUB" --resource-group "$$RG" --name "$$NAME" --command-id RunPowerShellScript --scripts \
 		'$$Password = ConvertTo-SecureString "Password123!" -AsPlainText -Force; if (-not (Get-LocalUser -Name "testadmin" -ErrorAction SilentlyContinue)) { New-LocalUser "testadmin" -Password $$Password -Description "Ansible Admin"; Add-LocalGroupMember -Group "Administrators" -Member "testadmin" };'; \
 	IP=$$(az vm show --subscription "$$SUB" -d -g "$$RG" -n "$$NAME" --query publicIps -o tsv); \
 	echo "=== Waiting for WinRM on $$IP:5985... ==="; \
-	for i in {1..60}; do \
-		if nc -z -w 5 $$IP 5985; then \
-			echo "[$$(date -u +%Y-%m-%dT%H:%M:%SZ)] WinRM is reachable on $$IP:5985 (attempt $$i/60)"; \
-			break; \
-		else \
-			STATUS_CODE=$$?; \
-			echo "[$$(date -u +%Y-%m-%dT%H:%M:%SZ)] WinRM not reachable on $$IP:5985 (attempt $$i/60, nc exit $$STATUS_CODE)"; \
-		fi; \
-		if [ $$i -eq 60 ]; then \
-			echo "ERROR: Timeout waiting for WinRM on $$IP:5985 after 60 attempts."; \
-			echo "=== Fetching VM instance view for diagnostics ==="; \
-			az vm get-instance-view --subscription "$$SUB" --resource-group "$$RG" --name "$$NAME" --query "{powerState:instanceView.statuses[?starts_with(code,'PowerState/')][0].displayStatus, provisioningState:provisioningState}" -o table || echo "Failed to retrieve VM instance view."; \
-			exit 1; \
-		fi; \
-		sleep 10; \
-	done; \
+	for i in {1..60}; do if nc -z -w 5 $$IP 5985; then break; fi; echo "Waiting... ($$i/60)"; sleep 10; if [ $$i -eq 60 ]; then echo "Timeout waiting for WinRM"; exit 1; fi; done; \
 	sleep 10; \
 	mkdir -p scratch; \
-	chmod 700 scratch; \
 	printf "[azure]\ndefault-win11-azure ansible_host=$$IP ansible_user=testadmin ansible_password=\"Password123!\" ansible_port=5985 ansible_connection=winrm ansible_winrm_transport=basic ansible_winrm_scheme=http ansible_winrm_server_cert_validation=ignore ansible_winrm_read_timeout_sec=300 ansible_become_method=runas ansible_become_user=$$USER ansible_become_password=\"$$PASS\"\n" > scratch/azure-inventory.ini; \
-	chmod 600 scratch/azure-inventory.ini; \
 	echo "=== Verifying Ansible Connectivity (win_ping) ==="; \
 	ansible -i scratch/azure-inventory.ini -m win_ping all; \
 	echo "=== Running Integration Test ==="; \
@@ -403,11 +346,6 @@ test-azure-upgrade-candidate: update-roles
 	if [ -z "$$LOC" ]; then LOC=$$(az group show --name "$$RG" --query location -o tsv); fi; \
 	echo "Using Location: $$LOC"; \
 	MY_IP=$$(curl -s https://api.ipify.org); \
-	if [ -z "$$MY_IP" ]; then \
-		echo "ERROR: Failed to detect public IP address. Cannot configure NSG rules."; \
-		exit 1; \
-	fi; \
-	echo "Detected source IP: $$MY_IP"; \
 	NAME=$(AZURE_VM_NAME); \
 	USER=$(AZURE_ADMIN_USERNAME); \
 	PASS="$(AZURE_ADMIN_PASSWORD)"; \
@@ -422,32 +360,14 @@ test-azure-upgrade-candidate: update-roles
 	az network nsg rule create --subscription "$$SUB" --resource-group "$$RG" --nsg-name "$${NAME}NSG" --name AllowTomcat --priority 1020 --destination-port-ranges 8080 9080 --access Allow --protocol Tcp --direction Inbound --source-address-prefixes "$$MY_IP"; \
 	echo "=== 3. Configuring WinRM & Local Admin ==="; \
 	az vm run-command invoke --subscription "$$SUB" --resource-group "$$RG" --name "$$NAME" --command-id RunPowerShellScript --scripts 'winrm quickconfig -q; Set-Item -Path "WSMan:\localhost\Service\Auth\Basic" -Value $$true; Set-Item -Path "WSMan:\localhost\Service\AllowUnencrypted" -Value $$true; New-NetFirewallRule -DisplayName "Allow WinRM HTTP" -Direction Inbound -LocalPort 5985 -Protocol TCP -Action Allow'; \
-	echo "WARNING: Using weak password 'Password123!' for testadmin account in sandbox VM."; \
 	az vm run-command invoke --subscription "$$SUB" --resource-group "$$RG" --name "$$NAME" --command-id RunPowerShellScript --scripts \
 		'$$Password = ConvertTo-SecureString "Password123!" -AsPlainText -Force; if (-not (Get-LocalUser -Name "testadmin" -ErrorAction SilentlyContinue)) { New-LocalUser "testadmin" -Password $$Password -Description "Ansible Admin"; Add-LocalGroupMember -Group "Administrators" -Member "testadmin" };'; \
 	IP=$$(az vm show --subscription "$$SUB" -d -g "$$RG" -n "$$NAME" --query publicIps -o tsv); \
 	echo "=== Waiting for WinRM on $$IP:5985... ==="; \
-	for i in {1..60}; do \
-		if nc -z -w 5 $$IP 5985; then \
-			echo "[$$(date -u +%Y-%m-%dT%H:%M:%SZ)] WinRM is reachable on $$IP:5985 (attempt $$i/60)"; \
-			break; \
-		else \
-			STATUS_CODE=$$?; \
-			echo "[$$(date -u +%Y-%m-%dT%H:%M:%SZ)] WinRM not reachable on $$IP:5985 (attempt $$i/60, nc exit $$STATUS_CODE)"; \
-		fi; \
-		if [ $$i -eq 60 ]; then \
-			echo "ERROR: Timeout waiting for WinRM on $$IP:5985 after 60 attempts."; \
-			echo "=== Fetching VM instance view for diagnostics ==="; \
-			az vm get-instance-view --subscription "$$SUB" --resource-group "$$RG" --name "$$NAME" --query "{powerState:instanceView.statuses[?starts_with(code,'PowerState/')][0].displayStatus, provisioningState:provisioningState}" -o table || echo "Failed to retrieve VM instance view."; \
-			exit 1; \
-		fi; \
-		sleep 10; \
-	done; \
+	for i in {1..60}; do if nc -z -w 5 $$IP 5985; then break; fi; echo "Waiting... ($$i/60)"; sleep 10; if [ $$i -eq 60 ]; then echo "Timeout waiting for WinRM"; exit 1; fi; done; \
 	sleep 10; \
 	mkdir -p scratch; \
-	chmod 700 scratch; \
 	printf "[azure]\ndefault-win11-azure ansible_host=$$IP ansible_user=testadmin ansible_password=\"Password123!\" ansible_port=5985 ansible_connection=winrm ansible_winrm_transport=basic ansible_winrm_scheme=http ansible_winrm_server_cert_validation=ignore ansible_winrm_read_timeout_sec=300 ansible_become_method=runas ansible_become_user=$$USER ansible_become_password=\"$$PASS\"\n" > scratch/azure-inventory.ini; \
-	chmod 600 scratch/azure-inventory.ini; \
 	echo "=== 5. Step 1: Installing Initial Version ==="; \
 	ansible-playbook -i scratch/azure-inventory.ini tests/playbook-upgrade.yml -e "env=stage2 upgrade_step=1 tomcat_auto_start=true install_drive=D:"; \
 	echo "=== 6. Step 2: Installing Candidate Version ==="; \
@@ -456,217 +376,6 @@ test-azure-upgrade-candidate: update-roles
 	curl -v --connect-timeout 5 --max-time 10 http://$$IP:9080; \
 	echo "=== Success! Test Complete. ==="; \
 	if [ -z "$$KEEP_AZURE_VM" ]; then echo "=== Cleaning up... ==="; $(MAKE) test-azure-destroy; else echo "=== Keeping VM... ==="; fi
-
-.PHONY: vagrant-up
-vagrant-up: vagrant-destroy vbox-cleanup-disks
-	vagrant up
-
-.PHONY: vagrant-login
-vagrant-login:
-	vagrant powershell
-
-.PHONY: vagrant-ssh
-vagrant-ssh: vagrant-login
-
-.PHONY: vagrant-up-disk
-vagrant-up-disk:
-	VAGRANT_BOX=windows11-disk vagrant up
-
-.PHONY: vagrant-up-baseline
-vagrant-up-baseline:
-	VAGRANT_BOX=windows11-tomcat112 vagrant up
-
-.PHONY: vagrant-update-baseline
-vagrant-update-baseline:
-	./bin/vagrant-update-baseline
-
-.PHONY: vagrant-upgrade-demo
-vagrant-upgrade-demo:
-	./bin/vagrant-upgrade-demo $(if $(KEEP),--keep,)
-
-.PHONY: vagrant-destroy
-vagrant-destroy:
-	vagrant destroy -f
-
-.PHONY: vagrant-destroy-upgrade
-vagrant-destroy-upgrade:
-	VAGRANT_VAGRANTFILE=Vagrantfile-upgrade vagrant destroy -f
-
-.PHONY: vbox-cleanup-disks
-vbox-cleanup-disks:
-	./bin/vbox-cleanup-disks
-
-.PHONY: fix-vbox-locks
-fix-vbox-locks:
-	@echo "Checking for locked VirtualBox VMs..."
-	@pids=$$(ps aux | grep VBoxHeadless | grep "provision-tomcat" | grep -v grep | awk '{print $$2}'); \
-	if [ -n "$$pids" ]; then \
-		echo "Found hung VBoxHeadless process(es): $$pids"; \
-		echo "Killing..."; \
-		kill -9 $$pids; \
-	else \
-		echo "No hung VBox processes found."; \
-	fi
-	@echo "Cleaning up stuck VMs..."
-	@vms=$$(VBoxManage list vms | grep "provision-tomcat" | grep -o '{\(.*\)}' | tr -d '{}'); \
-	for uuid in $$vms; do \
-		echo "Checking VM: $$uuid"; \
-		state=$$(VBoxManage showvminfo $$uuid --machinereadable | grep '^VMState=' | cut -d'"' -f2); \
-		if [ "$$state" = "aborted" ] || [ "$$state" = "stopping" ]; then \
-			echo "  VM in bad state ($$state). Unregistering..."; \
-			VBoxManage unregistervm $$uuid --delete || true; \
-		fi; \
-	done
-	@echo "Done."
-
-.PHONY: vagrant-disk-setup
-vagrant-disk-setup:
-	$(if $(EXTRA_VARS),ansible_extra_vars="$(EXTRA_VARS)" ,)vagrant provision --provision-with disk_setup
-
-.PHONY: vagrant-provision
-vagrant-provision:
-	$(if $(EXTRA_VARS),ansible_extra_vars="$(EXTRA_VARS)" ,)vagrant provision --provision-with ansible
-
-.PHONY: vagrant-provision-step1
-vagrant-provision-step1:
-	$(if $(EXTRA_VARS),ansible_extra_vars="$(EXTRA_VARS)" ,)vagrant provision --provision-with ansible_upgrade_step1
-
-.PHONY: vagrant-provision-step2
-vagrant-provision-step2:
-	$(if $(EXTRA_VARS),ansible_extra_vars="$(EXTRA_VARS)" ,)vagrant provision --provision-with ansible_upgrade_step2
-
-.PHONY: vagrant-build-baseline
-vagrant-build-baseline: vbox-cleanup-disks
-	./bin/vagrant-build-baseline
-
-.PHONY: vagrant-build-baseline-minimal
-vagrant-build-baseline-minimal: vbox-cleanup-disks
-	./bin/vagrant-build-baseline --disk-only
-
-# Test all suites on a platform
-define TEST_ALL_SUITES
-.PHONY: test-all-$(1)
-test-all-$(1): update-roles destroy-$(1)
-	@$(foreach s,$(SUITES),echo "=== Testing suite: $(s)-$(1) ===" && KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) test $(s)-$(1) &&) true
-endef
-
-# Test specific suite on platform
-define KITCHEN_SUITE_PLATFORM_TARGETS
-.PHONY: test-$(1)-$(2)
-test-$(1)-$(2): update-roles destroy-$(1)-$(2)
-	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) test $(1)-$(2)
-
-.PHONY: converge-$(1)-$(2)
-converge-$(1)-$(2): update-roles
-	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) converge $(1)-$(2)
-
-.PHONY: verify-$(1)-$(2)
-verify-$(1)-$(2):
-	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) verify $(1)-$(2)
-endef
-
-# Platform-level targets (shortcuts for default suite)
-define KITCHEN_PLATFORM_TARGETS
-.PHONY: test-$(1)
-test-$(1): update-roles destroy-$(1)
-	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) test default-$(1)
-
-.PHONY: converge-$(1)
-converge-$(1): update-roles
-	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) converge default-$(1)
-
-.PHONY: verify-$(1)
-verify-$(1):
-	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) verify default-$(1)
-
-.PHONY: destroy-$(1)
-destroy-$(1):
-	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) destroy '.*-$(1)'
-endef
-
-$(foreach platform,$(PLATFORMS),$(eval $(call TEST_ALL_SUITES,$(platform))))
-$(foreach platform,$(PLATFORMS),$(eval $(call KITCHEN_PLATFORM_TARGETS,$(platform))))
-$(foreach platform,$(PLATFORMS),$(foreach suite,$(SUITES),$(eval $(call KITCHEN_SUITE_PLATFORM_TARGETS,$(suite),$(platform)))))
-
-# Update test roles from parent directory
-.PHONY: update-roles
-update-roles:
-	@echo
-
-# Upgrade testing helpers
-.PHONY: test-upgrade-win11
-test-upgrade-win11: update-roles
-	@echo "=== Testing Java + Tomcat upgrade on Windows 11 ==="
-	@echo "Step 1: Installing Java 17 + Tomcat 9.0.112..."
-	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) create upgrade-win11
-	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) converge upgrade-win11
-	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) verify upgrade-win11
-	@echo ""
-	@echo "Step 2: Upgrading to Java 21 + Tomcat 9.0.113..."
-	@sed 's/upgrade_step: 1/upgrade_step: 2/' $(KITCHEN_YAML) > .kitchen.step2.yml
-	KITCHEN_YAML=.kitchen.step2.yml $(KITCHEN_CMD) converge upgrade-win11
-	KITCHEN_YAML=.kitchen.step2.yml $(KITCHEN_CMD) verify upgrade-win11
-	@rm -f .kitchen.step2.yml
-	@echo ""
-	@echo "Upgrade test complete!"
-
-
-.PHONY: test-upgrade-candidate-win11
-test-upgrade-candidate-win11: upgrade-cleanup-win11 update-roles
-	@echo "=== Testing Java + Tomcat upgrade (candidate mode) on Windows 11 (D: drive) ==="
-	@echo "Step 1: Installing Java 17 + Tomcat 9.0.112..."
-	@sed 's/.*guest: 8080, host: 8080, auto_correct: true.*/        - ["forwarded_port", {guest: 8080, host: 18080, auto_correct: true}]\n        - ["forwarded_port", {guest: 9080, host: 19080, auto_correct: true}]/' $(KITCHEN_YAML) > .kitchen.cand1.yml
-	KITCHEN_YAML=.kitchen.cand1.yml $(KITCHEN_CMD) create upgrade-win11-disk
-	KITCHEN_YAML=.kitchen.cand1.yml $(KITCHEN_CMD) converge upgrade-win11-disk
-	KITCHEN_YAML=.kitchen.cand1.yml $(KITCHEN_CMD) verify upgrade-win11-disk || true
-	@echo ""
-	@echo "Step 2: Upgrading to Java 21 + Tomcat 9.0.113 with candidate workflow..."
-	@sed -e 's/upgrade_step: 1/upgrade_step: 2/' \
-	     -e 's/tomcat_auto_start: true/tomcat_auto_start: true\n        tomcat_candidate_enabled: true\n        tomcat_candidate_delegate: localhost\n        tomcat_candidate_delegate_port: 19080/' \
-	     .kitchen.cand1.yml > .kitchen.cand2.yml
-	KITCHEN_YAML=.kitchen.cand2.yml $(KITCHEN_CMD) converge upgrade-win11-disk
-	KITCHEN_YAML=.kitchen.cand2.yml $(KITCHEN_CMD) verify upgrade-win11-disk
-	@rm -f .kitchen.cand1.yml .kitchen.cand2.yml
-	@echo ""
-	@echo "Candidate upgrade test complete!"
-
-.PHONY: upgrade-cleanup-win11
-upgrade-cleanup-win11:
-	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) destroy upgrade-win11-disk || true
-
-.PHONY: test-upgrade-baseline-win11
-test-upgrade-baseline-win11: update-roles
-	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) test upgrade-baseline-win11-baseline
-
-.PHONY: candidate-cleanup-win11
-candidate-cleanup-win11: upgrade-cleanup-win11
-	@rm -f .kitchen.local.yml
-
-.PHONY: test-upgrade-candidate-stack
-test-upgrade-candidate-stack: test-upgrade-candidate-win11 candidate-cleanup-win11
-	@echo ""
-	@echo "Full candidate upgrade + cleanup complete!"
-
-.PHONY: test-downgrade-win11
-test-downgrade-win11: update-roles
-	@echo "=== Testing Java + Tomcat downgrade on Windows 11 ==="
-	@echo "Step 1: Installing Java $(JAVA_NEW_VERSION) + Tomcat $(TOMCAT_NEW_VERSION)..."
-	@sed 's/downgrade_step: 1/downgrade_step: 1/' $(KITCHEN_YAML) > .kitchen.down1.yml
-	KITCHEN_YAML=.kitchen.down1.yml $(KITCHEN_CMD) create downgrade-win11
-	KITCHEN_YAML=.kitchen.down1.yml $(KITCHEN_CMD) converge downgrade-win11
-	KITCHEN_YAML=.kitchen.down1.yml $(KITCHEN_CMD) verify downgrade-win11
-	@echo ""
-	@echo "Step 2: Downgrading to Java $(JAVA_OLD_VERSION) + Tomcat $(TOMCAT_OLD_VERSION)..."
-	@sed 's/downgrade_step: 1/downgrade_step: 2/' .kitchen.down1.yml > .kitchen.down2.yml
-	KITCHEN_YAML=.kitchen.down2.yml $(KITCHEN_CMD) converge downgrade-win11
-	KITCHEN_YAML=.kitchen.down2.yml $(KITCHEN_CMD) verify downgrade-win11
-	@rm -f .kitchen.down1.yml .kitchen.down2.yml
-	@echo ""
-	@echo "Downgrade test complete!"
-
-.PHONY: downgrade-cleanup-win11
-downgrade-cleanup-win11:
-	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) destroy downgrade-win11
 
 # ============================================================================ 
 # Recording Tools
