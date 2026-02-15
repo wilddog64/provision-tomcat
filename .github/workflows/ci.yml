@@ -590,6 +590,7 @@ jobs:
           github.ref == 'refs/heads/aws-dev' ||
           github.ref == 'refs/heads/main' ||
           github.base_ref == 'main' ||
+          github.base_ref == 'aws-dev' ||
           (github.event_name == 'workflow_dispatch' && inputs.environment == 'aws')
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -603,6 +604,7 @@ jobs:
           github.ref == 'refs/heads/aws-dev' ||
           github.ref == 'refs/heads/main' ||
           github.base_ref == 'main' ||
+          github.base_ref == 'aws-dev' ||
           (github.event_name == 'workflow_dispatch' && inputs.environment == 'aws')
         id: aws_check
         run: |
