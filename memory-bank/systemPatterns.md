@@ -93,7 +93,32 @@ To manage CI runs during discussion, documentation, or minor non-code changes:
 - **Path Filtering**: Workflows will be configured with `paths:` filters to only trigger for changes in relevant code/config files, excluding documentation (`docs/`) or memory bank (`memory-bank/`) directories.
 - **Draft Pull Requests**: Utilize Draft PRs to signal that a PR is not yet ready for full integration testing, allowing for lighter or conditional CI checks.
 
-## 10) Architecture Guardrail Notes from `.clinerules`
-- `.clinerules` requests prioritizing k3s/ArgoCD deployment logic references.
-- Current repository scan did not find implemented k3s/ArgoCD manifests or automation paths.
-- Pattern adopted for now: preserve this as a guardrail/constraint in memory docs and flag as a future alignment task if scope expands.
+## 11) Security Implementation Patterns
+
+
+
+### Supply Chain Integrity
+
+- **Artifact Verification**: All binary downloads (e.g., Tomcat ZIP) must use `win_get_url` with explicit SHA-512 checksums defined in `defaults/main.yml`.
+
+- **Version Pinning**: Versions and their corresponding hashes are updated in tandem to ensure repeatable and secure builds.
+
+
+
+### CI/CD Hardening (Self-Hosted)
+
+- **Fork Protection**: Job-level guards enforce that code only executes on self-hosted runners if it originates from the main repository or authorized manual dispatches.
+
+- **Dynamic Network Gating**: AWS Security Groups are programmatically restricted to the CI runner's public IP (`RUNNER_IP/32`) at runtime and revoked immediately in an `always()` cleanup step.
+
+- **Environment Isolation**: Runner IP is persisted in `$GITHUB_ENV` to ensure consistent revocation even if NAT/Proxy rotation occurs during the job.
+
+
+
+### Data & Transport Protection
+
+- **Credential Masking**: `no_log: true` is mandatory for all tasks handling passwords (service accounts, test users).
+
+- **Service Hardening**: Network-facing ports that do not require external access (e.g., Tomcat Shutdown Port) are explicitly bound to `127.0.0.1`.
+
+- **WinRM Security**: While port `5985` is currently used due to AMI limitations, access is strictly gated by IP-restricted Security Group rules.
