@@ -28,22 +28,18 @@
 - [x] Implement Draft PR conditional CI execution (see `docs/plans/2026-02-14-controlled-ci-execution.md`).
 - [x] Fix CI stdout pollution in `Makefile` to support `eval` in workflows.
 - [x] Fix hardcoded absolute path in `.kitchen.yml` for environment portability.
-
-## In Progress
-- [ ] Merge `aws-dev` into `main`.
-- [ ] Finalize administrative merge of PR #6.
-
-## Completed
-- [x] Initial role scaffold for Windows Tomcat installation
-- [x] Side-by-side candidate upgrade pattern
-- [x] Test Kitchen orchestration for Vagrant and AWS
+- [x] Initial role scaffold for Windows Tomcat installation.
+- [x] Side-by-side candidate upgrade pattern.
+- [x] Test Kitchen orchestration for Vagrant and AWS.
 - [x] **[SECURITY] Security Hardening Roadmap (Phase 1)**
-  - [x] Add checksum verification to Tomcat download (HIGH-1)
-  - [x] Restrict AWS SG ingress to runner IP + add revoke in cleanup (HIGH-2 + LOW-1)
-  - [x] Add fork protection to ci.yml (HIGH-3)
+  - [x] Add checksum verification to Tomcat download (HIGH-1).
+  - [x] Restrict AWS SG ingress to runner IP + add revoke in cleanup (HIGH-2 + LOW-1).
+  - [x] Add fork protection to ci.yml (HIGH-3).
+  - [x] Address feedback: include manual triggers in guards and reuse runner IP.
 
 ## In Progress
-- [ ] Finalize merge of `aws-dev` to `main` (on hold for security hardening)
+- [ ] Merge PR #9 (Phase 1 security hardening) to `aws-dev`.
+- [ ] Finalize merge of `aws-dev` to `main`.
 
 ## Future / Pending
 - [ ] Expand `systemPatterns.md` if k3s/ArgoCD scope is added.
