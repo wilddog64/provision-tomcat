@@ -46,7 +46,8 @@
   - [x] Replace `eval` with safer parsing in CI (MED-6).
   - [x] Externalize hardcoded test passwords to variables (MED-2).
   - [x] Avoid private SSL API usage in lookup plugins (LOW-2).
-  - [x] Remove stale AWS resource ID fallbacks from Makefile (LOW-3).
+  - [x] Remove stale AWS resource ID fallbacks from Makefile and .kitchen.yml (LOW-3).
+  - [x] Feedback Integrated: Refined by `@copilot` to include missed variables and .gitignore updates.
 
 ## In Progress
 - [ ] Merge PR #16 (Phase 3 security hardening) to `aws-dev`.
