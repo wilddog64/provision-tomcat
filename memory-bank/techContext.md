@@ -42,10 +42,15 @@
 - No plaintext service credentials should be committed.
 
 ## Security Audit Status (2026-02-14)
-- Full red-team audit completed: `docs/SECURITY-AUDIT.md`
-- **15 findings**: 5 HIGH, 6 MEDIUM, 4 LOW
-- Critical gaps: no download integrity checks, WinRM plaintext over internet, missing CI fork protection, no `no_log` usage, AWS SG wide-open during CI
-- Positive: no secrets in repo, SSH deploy keys, good documentation, cleanup patterns
+- Full red-team audit completed: `docs/SECURITY-AUDIT.md`.
+- **Phase 1 & 2 Remediated**:
+    - [x] **Supply Chain**: Mandatory SHA-512 checksum verification for all binary downloads.
+    - [x] **Runner Security**: Missing fork protection guards implemented in CI.
+    - [x] **Network Hardening**: AWS SG ingress restricted to CI runner IP during execution.
+    - [x] **Log Security**: `no_log: true` implemented for all credential-handling tasks.
+    - [x] **Service Security**: Tomcat shutdown port bound to `127.0.0.1`.
+- **Remaining Items (Phase 3)**: CredSSP restriction, safer CI parsing (`eval` removal), GH_PAT migration.
+- **Positive observations**: No production secrets in repo, SSH deploy keys used for private roles, aggressive cleanup patterns.
 
 ## Known Gaps / Guardrails
 - `.clinerules` references k3s and ArgoCD architecture alignment, but this repo currently centers on Ansible role execution and Windows host provisioning.
