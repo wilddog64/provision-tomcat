@@ -90,8 +90,8 @@ Bypasses filesystem dependencies on self-hosted runners:
 
 ### Controlled CI Execution
 To manage CI runs during discussion, documentation, or minor non-code changes:
-- **Path Filtering**: Workflows will be configured with `paths:` filters to only trigger for changes in relevant code/config files, excluding documentation (`docs/`) or memory bank (`memory-bank/`) directories.
-- **Draft Pull Requests**: Utilize Draft PRs to signal that a PR is not yet ready for full integration testing, allowing for lighter or conditional CI checks.
+- **Path Filtering**: Workflows are configured with `paths:` filters to only trigger for changes in relevant code/config files. Critical manifests (e.g., `requirements.txt`, `Gemfile`, `Vagrantfile`) are explicitly included to prevent dependency regressions. Documentation (`docs/`) or memory bank (`memory-bank/`) changes do not trigger CI if they are the only files modified.
+- **Draft Pull Requests**: Utilize Draft PRs to signal that a PR is not yet ready for full integration testing. High-resource integration jobs are gated by `ready_for_review` and `draft: false` conditions.
 
 ## 11) Security Implementation Patterns
 

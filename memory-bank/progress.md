@@ -49,6 +49,12 @@
   - [x] Remove stale AWS resource ID fallbacks from Makefile and .kitchen.yml (LOW-3).
   - [x] Feedback Integrated: Refined by `@copilot` to include missed variables and .gitignore updates.
 - [x] Consolidate AWS stabilization and security hardening into final PR to main (#6).
+- [x] Resolve all remaining Copilot (Codex) feedback on PR #6:
+  - [x] Added root-level manifests to CI path filters.
+  - [x] Added `ready_for_review` trigger to `ci.yml`.
+  - [x] Fixed `auto` mode for manual AWS triggers.
+  - [x] Hardened Makefile to fail on discovery errors.
+  - [x] Cleaned up `.clinerules`.
 
 ## In Progress
 - [ ] Finalize merge of `aws-dev` to `main` (PR #6).

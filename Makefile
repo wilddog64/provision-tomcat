@@ -106,21 +106,24 @@ discover-aws-resources: check-aws-credentials
 		NEW_SUBNET_ID=$$(aws ec2 describe-subnets --region $(AWS_REGION) --query "Subnets[0].SubnetId" --output text 2>/dev/null); \
 	fi; \
 	if [ "$$NEW_SUBNET_ID" = "None" ] || [ -z "$$NEW_SUBNET_ID" ]; then \
-		echo "WARNING: Failed to discover subnet. Using default fallback." >&2; \
+		echo "ERROR: Failed to discover subnet." >&2; \
+		exit 1; \
 	fi; \
 	NEW_SECURITY_GROUP_IDS=$$(aws ec2 describe-security-groups --region $(AWS_REGION) --filters "Name=tag:Project,Values=Tomcat-Provisioning" "Name=tag:Type,Values=Test" --query "SecurityGroups[0].GroupId" --output text 2>/dev/null); \
 	if [ "$$NEW_SECURITY_GROUP_IDS" = "None" ] || [ -z "$$NEW_SECURITY_GROUP_IDS" ]; then \
 		NEW_SECURITY_GROUP_IDS=$$(aws ec2 describe-security-groups --region $(AWS_REGION) --filters "Name=group-name,Values=default" --query "SecurityGroups[0].GroupId" --output text 2>/dev/null); \
 	fi; \
 	if [ "$$NEW_SECURITY_GROUP_IDS" = "None" ] || [ -z "$$NEW_SECURITY_GROUP_IDS" ]; then \
-		echo "WARNING: Failed to discover security group." >&2; \
+		echo "ERROR: Failed to discover security group." >&2; \
+		exit 1; \
 	fi; \
 	NEW_AMI_ID=$$(aws ec2 describe-images --region $(AWS_REGION) --owners amazon --filters "Name=name,Values=Windows_Server-2019-English-Full-Base*" --query 'sort_by(Images, &CreationDate)[-1].ImageId' --output text 2>/dev/null); \
 	if [ "$$NEW_AMI_ID" = "None" ] || [ -z "$$NEW_AMI_ID" ]; then \
 		NEW_AMI_ID=$$(aws ec2 describe-images --region $(AWS_REGION) --owners amazon --filters "Name=name,Values=Windows_Server-2016-English-Full-Base*" --query 'sort_by(Images, &CreationDate)[-1].ImageId' --output text 2>/dev/null); \
 	fi; \
 	if [ "$$NEW_AMI_ID" = "None" ] || [ -z "$$NEW_AMI_ID" ]; then \
-		echo "WARNING: Failed to discover AMI." >&2; \
+		echo "ERROR: Failed to discover AMI." >&2; \
+		exit 1; \
 	fi; \
 	NEW_AZ=$$(aws ec2 describe-subnets --region $(AWS_REGION) --subnet-ids $$NEW_SUBNET_ID --query "Subnets[0].AvailabilityZone" --output text 2>/dev/null || echo "$(AWS_REGION)e"); \
 	NEW_REGION=$$(aws configure --region $(AWS_REGION) get region 2>/dev/null || echo "$(AWS_REGION)"); \
