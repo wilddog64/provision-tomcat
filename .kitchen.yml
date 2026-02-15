@@ -187,6 +187,8 @@ platforms:
       elevated: true
       username: Administrator
       winrm_transport: :negotiate
+      port: 5985
+      ssl: false
       connection_retries: 15
       connection_retry_sleep: 10
       operation_timeout: 600
@@ -250,6 +252,8 @@ platforms:
       elevated: true
       username: Administrator
       winrm_transport: :negotiate
+      port: 5985
+      ssl: false
       connection_retries: 15
       connection_retry_sleep: 10
       operation_timeout: 600
