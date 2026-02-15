@@ -192,6 +192,18 @@
       tags:
         - tomcat-install
 
+    - name: Configure primary shutdown port to bind to localhost
+      ansible.windows.win_shell: |
+        $file = "{{ tomcat_versioned_dir }}/conf/server.xml"
+        $xml = [xml](Get-Content -Path $file)
+        $xml.Server.address = "127.0.0.1"
+        $xml.Save($file)
+      when:
+        - not tomcat_target_installed.stat.exists
+        - not (tomcat_candidate_active | default(false) | bool)
+      tags:
+        - tomcat-install
+
     - name: Configure Candidate Tomcat
       when: tomcat_candidate_active | default(false) | bool
       tags:
