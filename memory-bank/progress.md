@@ -33,16 +33,24 @@
 - [ ] Merge `aws-dev` into `main`.
 - [ ] Finalize administrative merge of PR #6.
 
+## Completed
+- [x] Initial role scaffold for Windows Tomcat installation
+- [x] Side-by-side candidate upgrade pattern
+- [x] Test Kitchen orchestration for Vagrant and AWS
+- [x] **[SECURITY] Security Hardening Roadmap (Phase 1)**
+  - [x] Add checksum verification to Tomcat download (HIGH-1)
+  - [x] Restrict AWS SG ingress to runner IP + add revoke in cleanup (HIGH-2 + LOW-1)
+  - [x] Add fork protection to ci.yml (HIGH-3)
+
+## In Progress
+- [ ] Finalize merge of `aws-dev` to `main` (on hold for security hardening)
+
 ## Future / Pending
 - [ ] Expand `systemPatterns.md` if k3s/ArgoCD scope is added.
 - [ ] Document Shopping Cart microservice API contracts if integration expands.
-- [ ] **[SECURITY]** Remediate 5 HIGH findings from security audit (see `docs/SECURITY-AUDIT.md`):
-  - [ ] Add checksum verification to Tomcat download (HIGH-1)
-  - [ ] Restrict AWS SG ingress to runner IP + add revoke in cleanup (HIGH-2 + LOW-1)
-  - [ ] Add fork protection to ci.yml (HIGH-3)
+- [ ] **[SECURITY]** Remediate Phase 2 & 3 roadmap items:
   - [ ] Enable WinRM HTTPS for AWS platforms (HIGH-4)
   - [ ] Add `no_log: true` to password-handling tasks (HIGH-5)
-- [ ] **[SECURITY]** Remediate 6 MEDIUM findings:
   - [ ] Restrict CredSSP delegation from wildcard (MED-1)
   - [ ] Replace hardcoded test passwords (MED-2)
   - [ ] Audit GH_PAT scope / migrate to deploy key (MED-3)
