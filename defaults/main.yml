@@ -40,3 +40,8 @@ tomcat_candidate_manual_control: false
 # See docs/SERVICE-ACCOUNTS.md for implementation guidance.
 tomcat_service_account_username: LocalSystem
 tomcat_service_account_password: ''
+
+# Test configuration (used only in test playbooks)
+# SECURITY NOTE: This is a well-known default password for testing purposes only.
+# Never use this in production environments.
+tomcat_test_password: "Password123!"

@@ -48,16 +48,16 @@ This approach successfully mitigated the CI failure and improved pipeline effici
 - **Grade**: A- (after portability fix)
 
 ## Immediate Next Actions
-- Merge PR #13 (Phase 2 hardening).
-- Proceed to Phase 3 hardening (Infrastructure & Credential Hardening).
-- Address MED-6 (safer CI parsing) and MED-1 (CredSSP restriction).
+- Merge PR #16 (Phase 3 hardening).
+- Finalize administrative merge of `aws-dev` to `main`.
+- Audit CredSSP wildcard delegation in `windows-base` role (MED-1).
 
-## Recent Security Hardening (Phase 2)
-- **Log Security**: Implemented `no_log: true` for all sensitive password-handling tasks in `install-Windows-tomcat.yml` and `playbook.yml`.
-- **Shutdown Port Security**: Bound Tomcat shutdown port to `127.0.0.1` in `server.xml` via `win_shell` tasks.
-- **Safer Defaults**: Added explicit security warning in `defaults/main.yml` regarding `LocalSystem` default service account.
-- **Connectivity Maintenance**: Reverted WinRM to port 5985 after determining default AMI lacks HTTPS listener on 5986.
-- **Code Review**: Successfully reviewed by `@copilot` (via PR #15 description), confirming all objectives met and recommending merge.
+## Recent Security Hardening (Phase 3)
+- **CI Safety**: Replaced `eval` with a robust line-by-line parser for `Makefile` output in `ci.yml`, preventing potential command injection.
+- **Credential Management**: Moved hardcoded test passwords to `tomcat_test_password` variable in `defaults/main.yml`, ensuring consistency across both standard and upgrade playbooks.
+- **Code Quality**: Updated `controller_http` lookup plugin to use standard `ssl.create_default_context()` instead of private `_` APIs.
+- **Infrastructure Hardening**: Hardened `.kitchen.yml` and `Makefile` to fail explicitly if dynamic resource discovery fails, eliminating stale fallback IDs.
+- **Feedback Integrated**: Successfully reviewed and refined by `@copilot` (via PR #17), incorporating missed variable updates and additional repository cleanup.
 
 ## Risks / Follow-ups
 - **AZ Drift**: If the sandbox allocation moves to a non-legacy AZ, `t2` instances may be less efficient than `t3`. Recommend periodic review of instance types against AZ capabilities.

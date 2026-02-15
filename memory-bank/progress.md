@@ -42,9 +42,15 @@
   - [x] Add security warning against `LocalSystem` default (MED-5).
   - [x] Note: WinRM HTTPS (HIGH-4) deferred due to AMI connectivity issues.
   - [x] Code Review: Confirmed all objectives met by `@copilot`.
+- [x] **[SECURITY] Security Hardening Roadmap (Phase 3)**
+  - [x] Replace `eval` with safer parsing in CI (MED-6).
+  - [x] Externalize hardcoded test passwords to variables (MED-2).
+  - [x] Avoid private SSL API usage in lookup plugins (LOW-2).
+  - [x] Remove stale AWS resource ID fallbacks from Makefile and .kitchen.yml (LOW-3).
+  - [x] Feedback Integrated: Refined by `@copilot` to include missed variables and .gitignore updates.
 
 ## In Progress
-- [ ] Merge PR #13 (Phase 2 security hardening) to `aws-dev`.
+- [ ] Merge PR #16 (Phase 3 security hardening) to `aws-dev`.
 - [ ] Finalize merge of `aws-dev` to `main`.
 
 ## Future / Pending
