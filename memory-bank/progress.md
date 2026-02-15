@@ -55,8 +55,14 @@
   - [x] Fixed `auto` mode for manual AWS triggers.
   - [x] Hardened Makefile to fail on discovery errors.
   - [x] Cleaned up `.clinerules`.
+- [x] **[AZURE-DEV MERGE] Finalize main -> azure-dev consolidation (PR #20)**
+  - [x] Remediated all 15 security audit findings.
+  - [x] Implemented granular job-level permissions in `ci.yml`.
+  - [x] Re-enabled Vagrant fallback for Azure-unavailable scenarios.
+  - [x] Verified 171 commits consolidated ahead of `azure-dev`.
 
 ## In Progress
+- [ ] Finalize merge of `merge-main-into-azure-dev` to `azure-dev` (PR #20).
 - [ ] Finalize merge of `aws-dev` to `main` (PR #6).
 
 ## Future / Pending
