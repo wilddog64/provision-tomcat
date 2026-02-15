@@ -68,6 +68,8 @@ env:
 jobs:
   lint:
     name: lint
+    permissions:
+      contents: read
     # Security: Only run on trusted PRs/pushes/dispatches (No Forks)
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: [self-hosted, macOS, ARM64]
@@ -85,7 +87,7 @@ jobs:
         with:
           repository: wilddog64/provision-java
           path: roles/provision-java
-          token: ${{ secrets.GH_PAT || github.token }}
+          token: ${{ github.token }}
 
       - name: Checkout windows-base
         uses: actions/checkout@v4
@@ -117,7 +119,7 @@ jobs:
           source venv/bin/activate
           python3 -m pip install --upgrade pip
           # Use stable ansible-core version
-          pip install "ansible-core>=2.15.0,<2.16.0" pywinrm
+          python3 -m pip install "ansible-core>=2.15.0,<2.16.0" pywinrm
           if [ -f requirements.txt ]; then python3 -m pip install -r requirements.txt; fi
           python3 -m pip install ansible-lint
 
@@ -133,6 +135,8 @@ jobs:
 
   aws_integration:
     name: AWS Integration Tests
+    permissions:
+      contents: read
     runs-on: [self-hosted, macOS, ARM64]
     needs: lint
     if: |
@@ -220,7 +224,7 @@ jobs:
         with:
           repository: wilddog64/provision-java
           path: roles/provision-java
-          token: ${{ secrets.GH_PAT || github.token }}
+          token: ${{ github.token }}
 
       - name: Checkout windows-base
         if: steps.aws_check.outputs.AWS_AVAILABLE == 'true'
@@ -280,6 +284,8 @@ jobs:
 
   azure_integration:
     name: Azure Integration Tests
+    permissions:
+      contents: read
     runs-on: [self-hosted, macOS, ARM64]
     needs: lint
     if: >-
@@ -335,7 +341,7 @@ jobs:
         with:
           repository: wilddog64/provision-java
           path: roles/provision-java
-          token: ${{ secrets.GH_PAT || github.token }}
+          token: ${{ github.token }}
 
       - name: Checkout windows-base
         if: env.AZURE_AVAILABLE == 'true'
@@ -359,6 +365,8 @@ jobs:
 
   vagrant_integration:
     name: Vagrant Integration Tests
+    permissions:
+      contents: read
     runs-on: [self-hosted, macOS, ARM64]
     needs: [lint, aws_integration]
     if: |

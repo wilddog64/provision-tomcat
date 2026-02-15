@@ -332,7 +332,7 @@ get_vault_token() {
 | HIGH-5 | **HIGH** | No `no_log` on password operations | tasks/, tests/ | **FIXED** |
 | MED-1 | **MEDIUM** | CredSSP wildcard delegation | windows-base role | OPEN |
 | MED-2 | **MEDIUM** | Hardcoded test passwords | tests/playbook.yml | **FIXED** |
-| MED-3 | **MEDIUM** | GH_PAT broad scope risk | .github/workflows/ci.yml | OPEN |
+| MED-3 | **MEDIUM** | GH_PAT broad scope risk | .github/workflows/ci.yml | **FIXED** |
 | MED-4 | **MEDIUM** | Shutdown port exposed | defaults/main.yml | **FIXED** |
 | MED-5 | **MEDIUM** | LocalSystem as default service account | defaults/main.yml | **FIXED** |
 | MED-6 | **MEDIUM** | `eval` of make output in CI | .github/workflows/ci.yml | **FIXED** |

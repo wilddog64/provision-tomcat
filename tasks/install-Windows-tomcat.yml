@@ -199,7 +199,6 @@
         $xml.Server.address = "127.0.0.1"
         $xml.Save($file)
       when:
-        - not tomcat_target_installed.stat.exists
         - not (tomcat_candidate_active | default(false) | bool)
       tags:
         - tomcat-install
