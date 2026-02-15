@@ -622,13 +622,18 @@ jobs:
         if: steps.aws_check.outputs.AWS_AVAILABLE == 'true'
         id: discover_resources
         run: |
-          # Call the make target to discover resources and export them as environment variables
-          eval "$(make discover-aws-resources --silent)"
-          echo "AWS_SUBNET_ID=$AWS_SUBNET_ID" >> $GITHUB_ENV
-          echo "AWS_SECURITY_GROUP_ID=$AWS_SECURITY_GROUP_ID" >> $GITHUB_ENV
-          echo "AWS_SECURITY_GROUP_IDS=$AWS_SECURITY_GROUP_IDS" >> $GITHUB_ENV
-          echo "AWS_AMI_ID=$AWS_AMI_ID" >> $GITHUB_ENV
-          echo "AWS_AZ=$AWS_AZ" >> $GITHUB_ENV
+          # Call the make target to discover resources and save to a file
+          make discover-aws-resources --silent > aws_env.txt
+          
+          # Safely parse and export to GITHUB_ENV
+          # Only allows keys matching the AWS_[A-Z0-9_]+ pattern
+          while IFS='=' read -r key value; do
+            if [[ $key =~ ^AWS_[A-Z0-9_]+$ ]]; then
+              echo "Exporting $key"
+              echo "$key=$value" >> $GITHUB_ENV
+            fi
+          done < aws_env.txt
+          rm aws_env.txt
 
       - name: Authorize Security Group Ingress
         if: steps.aws_check.outputs.AWS_AVAILABLE == 'true'

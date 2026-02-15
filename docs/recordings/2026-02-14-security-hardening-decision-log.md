@@ -24,6 +24,22 @@ This document records key architectural and implementation decisions made during
 - **Decision:** Applied `no_log: true` to all service installation and user creation tasks.
 - **Rationale:** Prevents service account passwords from appearing in CI logs or Ansible artifacts.
 
+## [MED-6] Safe CI Variable Export
+- **Decision:** Replaced `eval` with a `while read` loop and regex validation.
+- **Rationale:** Evaluates only keys matching `AWS_[A-Z0-9_]+`, mitigating risk of command injection via `Makefile` output.
+
+## [MED-2] Test Credential Externalization
+- **Decision:** Moved hardcoded passwords to `tomcat_test_password`.
+- **Rationale:** Centralizes test configuration and allows for easier rotation or environment-specific overrides without code changes.
+
+## [LOW-2] Standard SSL API Usage
+- **Decision:** Replaced `ssl._create_unverified_context()` with `ssl.create_default_context()`.
+- **Rationale:** Uses public, supported APIs and improves code quality/maintainability.
+
+## [LOW-3] Resource Discovery Hardening
+- **Decision:** Removed stale hardcoded resource IDs from `Makefile`.
+- **Rationale:** Ensures the system fails or warns explicitly if dynamic discovery fails, rather than silently running against outdated or unintended infrastructure.
+
 ## [MED-4] Shutdown Port Binding
 - **Decision:** Explicitly set `<Server port="..." address="127.0.0.1">` in `server.xml`.
 - **Rationale:** Prevents remote unauthenticated shutdown of the Tomcat service while allowing local management scripts to function.
