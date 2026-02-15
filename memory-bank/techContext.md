@@ -41,6 +41,12 @@
 - HashiCorp Vault pattern is documented and should be preferred to satisfy `.clinerules`.
 - No plaintext service credentials should be committed.
 
+## Security Audit Status (2026-02-14)
+- Full red-team audit completed: `docs/SECURITY-AUDIT.md`
+- **15 findings**: 5 HIGH, 6 MEDIUM, 4 LOW
+- Critical gaps: no download integrity checks, WinRM plaintext over internet, missing CI fork protection, no `no_log` usage, AWS SG wide-open during CI
+- Positive: no secrets in repo, SSH deploy keys, good documentation, cleanup patterns
+
 ## Known Gaps / Guardrails
 - `.clinerules` references k3s and ArgoCD architecture alignment, but this repo currently centers on Ansible role execution and Windows host provisioning.
 - No direct k3s/ArgoCD manifests or controllers were detected in current repository scan.

@@ -1,7 +1,12 @@
 # Active Context
 
 ## Current Session Objective
-Finalized AWS infrastructure stabilization and CI optimization. Verified all fixes (dynamic discovery, portability, and trigger logic) through successful end-to-end CI runs.
+Security hardening and remediation of audit findings. Following a comprehensive security audit, we are implementing a phased hardening roadmap to address high and medium-severity vulnerabilities.
+
+## Security Hardening Roadmap (2026-02-14)
+- **Roadmap Created**: `docs/plans/2026-02-14-security-hardening-roadmap.md` outlines a 3-phase remediation plan.
+- **Priority 1**: Addressing High-severity CI and Supply Chain risks (Checksums, Fork Protection, SG Hardening).
+- **Audit findings**: 15 total (5 HIGH, 6 MEDIUM, 4 LOW) documented in `docs/SECURITY-AUDIT.md`.
 
 ## Recent AWS Integration Update
 - **Fixed Critical Error**: Resolved `The subnet ID 'subnet-0bf736b950e25a150' does not exist` by improving the `discover-aws-resources` target in `Makefile`.
@@ -17,10 +22,10 @@ Adopted a "Hybrid Zero-Touch Sync" approach as a new architectural pattern to mi
 This approach successfully mitigated the CI failure and improved pipeline efficiency.
 
 ## Current State Snapshot
-- AWS Integration pipeline is fully stabilized and verified in CI (Run #22025974089).
-- Dynamic resource discovery (Subnet, SG, AMI) is confirmed working in the self-hosted environment.
-- `ci.yml` successfully utilizes path filtering and Draft PR logic to optimize resource usage.
-- Makefile targets are hardened for both local and CI usage.
+- Security audit completed and committed.
+- Planning roadmap created and awaiting priority discussion.
+- AWS Integration pipeline is stable but requires network hardening (HIGH-2).
+- Tomcat installation is functional but requires integrity verification (HIGH-1).
 
 ## What Was Done
 1. **Applied Fixes:** Restored missing collection to `deps` targets, implemented offline linting, and added symlink-based role resolution in `Makefile`.
@@ -43,12 +48,28 @@ This approach successfully mitigated the CI failure and improved pipeline effici
 - **Grade**: A- (after portability fix)
 
 ## Immediate Next Actions
-- Finalize administrative merge to `main`.
-- Consider squashing 145 commits into logical groups before merge.
+- Merge PR #9 (Phase 1 hardening).
+- Proceed to Phase 2 hardening (Data & Transport Security).
+- Address HIGH-5 (no_log) and HIGH-4 (WinRM HTTPS).
+
+## Recent Security Hardening (Phase 1)
+- **Tomcat Checksum**: Implemented SHA-512 verification for version 9.0.115.
+- **Fork Protection**: Added job-level guards to `ci.yml` (including `workflow_dispatch`).
+- **AWS SG Hardening**: Restricted ingress to runner IP and implemented revocation in cleanup.
+- **Feedback Addressed**: Resolved Codex/Copilot feedback regarding manual trigger authorization and consistent runner IP reuse.
 
 ## Risks / Follow-ups
 - **AZ Drift**: If the sandbox allocation moves to a non-legacy AZ, `t2` instances may be less efficient than `t3`. Recommend periodic review of instance types against AZ capabilities.
 - **Cleanup Persistence**: While `if: always()` is implemented, manual monitoring of the AWS console is still advised during active development to ensure no orphaned resources remain due to workflow cancellation limits.
+
+## Security Audit (2026-02-14)
+A comprehensive red-team security audit was performed across the full codebase. **15 findings** identified (5 HIGH, 6 MEDIUM, 4 LOW). Key critical items:
+- **HIGH-1**: No download checksum verification for Tomcat zip (supply chain risk)
+- **HIGH-2**: AWS SG opened to 0.0.0.0/0 in CI (WinRM + Tomcat exposed to internet)
+- **HIGH-3**: Missing CI fork protection (documented in CI-SECURITY.md but not implemented in ci.yml)
+- **HIGH-4**: WinRM plaintext transport over public internet (AWS platforms)
+- **HIGH-5**: No `no_log` on password-handling tasks (credential exposure in logs)
+- Full report: `docs/SECURITY-AUDIT.md`
 
 ## Controlled CI Execution [IMPLEMENTED]
 - **Problem**: Unnecessary CI workflow runs trigger during discussion or documentation updates, wasting resources and creating noise.
