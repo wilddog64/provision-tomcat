@@ -1,7 +1,12 @@
 # Active Context
 
 ## Current Session Objective
-Finalized AWS infrastructure stabilization and CI optimization. Verified all fixes (dynamic discovery, portability, and trigger logic) through successful end-to-end CI runs.
+Security hardening and remediation of audit findings. Following a comprehensive security audit, we are implementing a phased hardening roadmap to address high and medium-severity vulnerabilities.
+
+## Security Hardening Roadmap (2026-02-14)
+- **Roadmap Created**: `docs/plans/2026-02-14-security-hardening-roadmap.md` outlines a 3-phase remediation plan.
+- **Priority 1**: Addressing High-severity CI and Supply Chain risks (Checksums, Fork Protection, SG Hardening).
+- **Audit findings**: 15 total (5 HIGH, 6 MEDIUM, 4 LOW) documented in `docs/SECURITY-AUDIT.md`.
 
 ## Recent AWS Integration Update
 - **Fixed Critical Error**: Resolved `The subnet ID 'subnet-0bf736b950e25a150' does not exist` by improving the `discover-aws-resources` target in `Makefile`.
@@ -17,10 +22,10 @@ Adopted a "Hybrid Zero-Touch Sync" approach as a new architectural pattern to mi
 This approach successfully mitigated the CI failure and improved pipeline efficiency.
 
 ## Current State Snapshot
-- AWS Integration pipeline is fully stabilized and verified in CI (Run #22025974089).
-- Dynamic resource discovery (Subnet, SG, AMI) is confirmed working in the self-hosted environment.
-- `ci.yml` successfully utilizes path filtering and Draft PR logic to optimize resource usage.
-- Makefile targets are hardened for both local and CI usage.
+- Security audit completed and committed.
+- Planning roadmap created and awaiting priority discussion.
+- AWS Integration pipeline is stable but requires network hardening (HIGH-2).
+- Tomcat installation is functional but requires integrity verification (HIGH-1).
 
 ## What Was Done
 1. **Applied Fixes:** Restored missing collection to `deps` targets, implemented offline linting, and added symlink-based role resolution in `Makefile`.
@@ -43,8 +48,9 @@ This approach successfully mitigated the CI failure and improved pipeline effici
 - **Grade**: A- (after portability fix)
 
 ## Immediate Next Actions
-- Finalize administrative merge to `main`.
-- Consider squashing 145 commits into logical groups before merge.
+- Tag `@copilot` for code review on PR #9.
+- Address any feedback from the code review.
+- Proceed to Phase 2 hardening (Data & Transport Security).
 
 ## Risks / Follow-ups
 - **AZ Drift**: If the sandbox allocation moves to a non-legacy AZ, `t2` instances may be less efficient than `t3`. Recommend periodic review of instance types against AZ capabilities.
