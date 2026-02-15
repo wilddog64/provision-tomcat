@@ -28,11 +28,28 @@
 - [x] Implement Draft PR conditional CI execution (see `docs/plans/2026-02-14-controlled-ci-execution.md`).
 - [x] Fix CI stdout pollution in `Makefile` to support `eval` in workflows.
 - [x] Fix hardcoded absolute path in `.kitchen.yml` for environment portability.
+- [x] Initial role scaffold for Windows Tomcat installation.
+- [x] Side-by-side candidate upgrade pattern.
+- [x] Test Kitchen orchestration for Vagrant and AWS.
+- [x] **[SECURITY] Security Hardening Roadmap (Phase 1)**
+  - [x] Add checksum verification to Tomcat download (HIGH-1).
+  - [x] Restrict AWS SG ingress to runner IP + add revoke in cleanup (HIGH-2 + LOW-1).
+  - [x] Add fork protection to ci.yml (HIGH-3).
+  - [x] Address feedback: include manual triggers in guards and reuse runner IP.
 
 ## In Progress
-- [ ] Merge `aws-dev` into `main`.
-- [ ] Finalize administrative merge of PR #6.
+- [ ] Merge PR #9 (Phase 1 security hardening) to `aws-dev`.
+- [ ] Finalize merge of `aws-dev` to `main`.
 
 ## Future / Pending
 - [ ] Expand `systemPatterns.md` if k3s/ArgoCD scope is added.
 - [ ] Document Shopping Cart microservice API contracts if integration expands.
+- [ ] **[SECURITY]** Remediate Phase 2 & 3 roadmap items:
+  - [ ] Enable WinRM HTTPS for AWS platforms (HIGH-4)
+  - [ ] Add `no_log: true` to password-handling tasks (HIGH-5)
+  - [ ] Restrict CredSSP delegation from wildcard (MED-1)
+  - [ ] Replace hardcoded test passwords (MED-2)
+  - [ ] Audit GH_PAT scope / migrate to deploy key (MED-3)
+  - [ ] Bind shutdown port to localhost (MED-4)
+  - [ ] Change default service account from LocalSystem (MED-5)
+  - [ ] Replace eval with safer parsing in CI (MED-6)
