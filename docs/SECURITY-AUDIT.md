@@ -339,7 +339,7 @@ get_vault_token() {
 | LOW-1 | **LOW** | SG ingress rules not revoked after CI | .github/workflows/ci.yml | **FIXED** |
 | LOW-2 | **LOW** | Private SSL API usage | lookup_plugins/controller_http.py | **FIXED** |
 | LOW-3 | **LOW** | Hardcoded AWS resource ID fallbacks | .kitchen.yml, Makefile | **FIXED** |
-| LOW-4 | **LOW** | Vault root token usage | bin/_lib.sh | OPEN |
+| LOW-4 | **LOW** | Vault root token usage | bin/_lib.sh | **FIXED** |
 
 ---
 

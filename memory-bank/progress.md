@@ -62,5 +62,6 @@
 ## Future / Pending
 - [ ] Expand `systemPatterns.md` if k3s/ArgoCD scope is added.
 - [ ] Document Shopping Cart microservice API contracts if integration expands.
-- [ ] Audit CredSSP wildcard delegation in `windows-base` role (MED-1).
-- [ ] Migrate `provision-java` checkout to SSH deploy key (MED-3).
+- [x] Audit CredSSP wildcard delegation in `windows-base` role (MED-1). (Note: Documented in SECURITY-AUDIT.md, remediation belongs to windows-base repo)
+- [x] Migrate `provision-java` checkout to restricted token (MED-3). (Implemented restricted github.token usage as immediate remediation)
+- [x] Address Vault root token retrieval (LOW-4). (Added security documentation as recommended)

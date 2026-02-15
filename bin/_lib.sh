@@ -10,6 +10,9 @@ require_var() {
 }
 
 get_vault_token() {
+    # SECURITY NOTE: This function retrieves the Vault root token for bootstrapping purposes.
+    # While root tokens have unlimited access, they are currently used here for initial 
+    # configuration when scoped tokens (AppRole/K8s auth) are not yet available.
     local ns="${VAULT_NS:-vault}"
     local token
     token=$(kubectl get secret vault-root -n "$ns" \
