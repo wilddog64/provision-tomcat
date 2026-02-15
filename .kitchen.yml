@@ -176,12 +176,12 @@ platforms:
     driver:
       name: ec2
       region: us-east-1
-      availability_zone: <%= ENV.fetch('AWS_AZ', 'us-east-1e') %>
+      availability_zone: <%= ENV.fetch('AWS_AZ') %>
       instance_type: t2.micro
       associate_public_ip: true
-      subnet_id: <%= ENV.fetch('AWS_SUBNET_ID', 'subnet-023f40afbc9e46c37') %>
-      security_group_ids: <%= ENV.fetch('AWS_SECURITY_GROUP_IDS', '["sg-0210845b571c6a0e1"]') %>
-      image_id: <%= ENV.fetch('AWS_AMI_ID', 'ami-047f5596e26649c59') %>
+      subnet_id: <%= ENV.fetch('AWS_SUBNET_ID') %>
+      security_group_ids: <%= ENV.fetch('AWS_SECURITY_GROUP_IDS') %>
+      image_id: <%= ENV.fetch('AWS_AMI_ID') %>
     transport:
       name: winrm
       elevated: true
@@ -230,12 +230,12 @@ platforms:
     driver:
       name: ec2
       region: us-east-1
-      availability_zone: <%= ENV.fetch('AWS_AZ', 'us-east-1e') %>
+      availability_zone: <%= ENV.fetch('AWS_AZ') %>
       instance_type: t2.medium
       associate_public_ip: true
-      subnet_id: <%= ENV.fetch('AWS_SUBNET_ID', 'subnet-023f40afbc9e46c37') %>
-      security_group_ids: <%= ENV.fetch('AWS_SECURITY_GROUP_IDS', '["sg-0210845b571c6a0e1"]') %>
-      image_id: <%= ENV.fetch('AWS_AMI_ID', 'ami-047f5596e26649c59') %>
+      subnet_id: <%= ENV.fetch('AWS_SUBNET_ID') %>
+      security_group_ids: <%= ENV.fetch('AWS_SECURITY_GROUP_IDS') %>
+      image_id: <%= ENV.fetch('AWS_AMI_ID') %>
       block_device_mappings:
         - device_name: /dev/sda1
           ebs:

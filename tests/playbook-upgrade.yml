@@ -30,7 +30,7 @@
     - name: Create local test accounts
       ansible.windows.win_user:
         name: "{{ item }}"
-        password: "Password123!"
+        password: "{{ tomcat_test_password | default('Password123!') }}"
         password_never_expires: true
         state: present
         groups:
