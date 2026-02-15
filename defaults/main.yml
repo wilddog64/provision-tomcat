@@ -2,14 +2,14 @@
 ---
 # defaults file for provision-tomcat
 install_drive: "C:"
-tomcat_version: 9.0.113  # Tomcat version to install
+tomcat_version: 9.0.115  # Tomcat version to install
 tomcat_major_version: 9   # Major version (used for service name and paths)
 tomcat_service_name: "Tomcat{{ tomcat_major_version }}"
 tomcat_install_dir: "{{ install_drive }}/Tomcat"  # Base installation directory
 tomcat_symlink_name: current   # Symlink name pointing to active version
 tomcat_download_url: >-
   https://dlcdn.apache.org/tomcat/tomcat-{{ tomcat_major_version }}/v{{ tomcat_version }}/bin/apache-tomcat-{{ tomcat_version }}-windows-x64.zip
-tomcat_checksum: "sha512:a80c4176f0e9e2c3f4557fbd2d68a2dd91695f6aff7ebb2f4217b19e9a0bfb9af1cb1e59663a4b74822e7cce6a5a50195053ca2ea0a6e0c5e3d76fc5aa5339ca"
+tomcat_checksum: "sha512:77e79950cc7fd1b00888fb351e542ec8235c071e5a021b980b5dabc3023a23bdee42beccaedf529c530c8ec85bab13d83662b8df22ac3dc596f295526375f5d5"
 tomcat_temp_dir: "{{ install_drive }}/temp"
 tomcat_auto_start: true  # Set to false if you want to start Tomcat manually
 tomcat_keep_versions: 10  # Number of old Tomcat versions to keep (0 = keep all)
