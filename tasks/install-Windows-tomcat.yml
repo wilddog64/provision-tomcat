@@ -203,6 +203,7 @@
             $file = "{{ tomcat_versioned_dir }}/conf/server.xml"
             $xml = [xml](Get-Content -Path $file)
             $xml.Server.port = "{{ tomcat_candidate_shutdown_port }}"
+            $xml.Server.address = "127.0.0.1"
             $xml.Save($file)
 
         - name: Gather candidate service status
@@ -217,6 +218,7 @@
           environment:
             CATALINA_HOME: "{{ tomcat_versioned_dir }}"
           when: (tomcat_candidate_service_info.services | default([])) | length == 0
+          no_log: true
 
         - name: Add Windows Firewall rule for candidate
           community.windows.win_firewall_rule:
@@ -324,6 +326,7 @@
             $file = "{{ tomcat_versioned_dir }}/conf/server.xml"
             $xml = [xml](Get-Content -Path $file)
             $xml.Server.port = "{{ tomcat_shutdown_port }}"
+            $xml.Server.address = "127.0.0.1"
             $xml.Save($file)
 
         - name: Create symlink to promoted Tomcat version
@@ -335,6 +338,7 @@
           ansible.windows.win_command: '"{{ tomcat_home }}/bin/service.bat" install'
           environment:
             CATALINA_HOME: "{{ tomcat_home }}"
+          no_log: true
 
         - name: Configure promoted service startup type
           ansible.windows.win_service:
@@ -458,6 +462,7 @@
       register: service_install
       tags:
         - tomcat-install
+      no_log: true
 
 
     - name: Add Windows Firewall rule for Tomcat
