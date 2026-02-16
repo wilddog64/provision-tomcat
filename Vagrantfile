@@ -31,8 +31,13 @@ Vagrant.configure("2") do |config|
     disk_file = File.join(File.dirname(__FILE__), ".vagrant", "data_disk_#{timestamp}.vdi")
 
     # Clean up ANY stale disks in the .vagrant directory to save space in CI
+    # We use system call to VBoxManage to ensure they are unregistered first
     Dir.glob(File.join(File.dirname(__FILE__), ".vagrant", "data_disk_*.vdi")).each do |old_disk|
-      File.delete(old_disk) if File.exist?(old_disk)
+      if File.exist?(old_disk)
+        # Attempt to unregister if it's still in the DB
+        system("VBoxManage closemedium disk \"#{old_disk}\" --delete 2>/dev/null")
+        File.delete(old_disk) if File.exist?(old_disk)
+      end
     end
 
     vb.customize ['createhd', '--filename', disk_file, '--size', disk_size_gb * 1024]
@@ -68,7 +73,7 @@ Vagrant.configure("2") do |config|
   # default playbook for simple testing
   config.vm.provision :ansible do |ansible|
     ansible.limit = 'all'
-    ansible.galaxy_role_file = 'requirements.yml'
+    # ansible.galaxy_role_file = 'requirements.yml' # Skip galaxy; roles are pre-checked out
     ansible.playbook = 'tests/playbook.yml'
     ansible.extra_vars = common_env
   end
@@ -76,7 +81,7 @@ Vagrant.configure("2") do |config|
   # Upgrade step 1 (install older Java/Tomcat)
   config.vm.provision 'ansible_upgrade_step1', type: :ansible, run: 'never' do |ansible|
     ansible.limit = 'all'
-    ansible.galaxy_role_file = 'requirements.yml'
+    # ansible.galaxy_role_file = 'requirements.yml'
     ansible.playbook = 'tests/playbook-upgrade.yml'
     ansible.extra_vars = common_env.merge(
       'upgrade_step' => 1,
@@ -87,7 +92,7 @@ Vagrant.configure("2") do |config|
   # Upgrade step 2 with candidate workflow enabled (auto promote)
   config.vm.provision 'ansible_upgrade_step2', type: :ansible, run: 'never' do |ansible|
     ansible.limit = 'all'
-    ansible.galaxy_role_file = 'requirements.yml'
+    # ansible.galaxy_role_file = 'requirements.yml'
     ansible.playbook = 'tests/playbook-upgrade.yml'
     ansible.extra_vars = common_env.merge(
       'upgrade_step' => 2,
@@ -100,7 +105,7 @@ Vagrant.configure("2") do |config|
   # Upgrade step 2 (prepare only – leaves candidate running)
   config.vm.provision 'ansible_upgrade_step2_prepare', type: :ansible, run: 'never' do |ansible|
     ansible.limit = 'all'
-    ansible.galaxy_role_file = 'requirements.yml'
+    # ansible.galaxy_role_file = 'requirements.yml'
     ansible.playbook = 'tests/playbook-upgrade.yml'
     ansible.extra_vars = common_env.merge(
       'upgrade_step' => 2,
@@ -114,7 +119,7 @@ Vagrant.configure("2") do |config|
   # Upgrade step 2 finalization (promote + cleanup)
   config.vm.provision 'ansible_upgrade_step2_finalize', type: :ansible, run: 'never' do |ansible|
     ansible.limit = 'all'
-    ansible.galaxy_role_file = 'requirements.yml'
+    # ansible.galaxy_role_file = 'requirements.yml'
     ansible.playbook = 'tests/playbook-upgrade.yml'
     ansible.extra_vars = common_env.merge(
       'upgrade_step' => 2,
