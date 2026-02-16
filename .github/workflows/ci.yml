@@ -403,8 +403,8 @@ jobs:
         run: |
           source venv/bin/activate
           # Use established local box name
-          # Using make vagrant-provision as a more robust fallback target than the dynamic win11
-          make vagrant-provision
+          # Using make vagrant-up as a more robust fallback target
+          make vagrant-up
 
   vagrant_integration:
     name: Vagrant Integration Tests

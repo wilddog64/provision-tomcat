@@ -265,6 +265,22 @@ list-kitchen-instances:
 update-roles:
 	@echo
 
+.PHONY: vagrant-up
+vagrant-up: update-roles
+	./bin/vagrant-wrapper up --provision
+
+.PHONY: vagrant-login
+vagrant-login:
+	./bin/vagrant-wrapper powershell
+
+.PHONY: vagrant-disk-setup
+vagrant-disk-setup:
+	./bin/vagrant-wrapper provision --provision-with disk-setup
+
+.PHONY: vagrant-provision
+vagrant-provision: update-roles
+	./bin/vagrant-wrapper provision
+
 .PHONY: test-azure-provision-tomcat
 test-azure-provision-tomcat: update-roles
 	@set -e; \
