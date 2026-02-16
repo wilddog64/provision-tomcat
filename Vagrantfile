@@ -64,6 +64,8 @@ Vagrant.configure("2") do |config|
   common_env = {
     'ansible_user'                         => 'vagrant',
     'ansible_password'                     => 'vagrant',
+    'ansible_become_method'                => 'runas',
+    'ansible_become_user'                  => 'vagrant',
     'ansible_connection'                   => 'winrm',
     'ansible_winrm_transport'              => 'basic',
     'ansible_winrm_server_cert_validation' => 'ignore',
