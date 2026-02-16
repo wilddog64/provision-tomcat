@@ -355,13 +355,11 @@ jobs:
           fi
 
       - name: Checkout Roles
-        if: env.AZURE_AVAILABLE == 'true'
         run: |
           mkdir -p roles
           ln -sfn "$PWD" roles/provision-tomcat
 
       - name: Checkout provision-java
-        if: env.AZURE_AVAILABLE == 'true'
         uses: actions/checkout@v4
         with:
           repository: wilddog64/provision-java
@@ -369,7 +367,6 @@ jobs:
           token: ${{ github.token }}
 
       - name: Checkout windows-base
-        if: env.AZURE_AVAILABLE == 'true'
         uses: actions/checkout@v4
         with:
           repository: wilddog64/windows-base
@@ -377,7 +374,6 @@ jobs:
           ssh-key: ${{ secrets.WINDOWS_BASE_DEPLOY_KEY }}
 
       - name: Checkout provision-windows-security
-        if: env.AZURE_AVAILABLE == 'true'
         uses: actions/checkout@v4
         with:
           repository: wilddog64/provision-windows-security
@@ -400,19 +396,15 @@ jobs:
           source venv/bin/activate
           make test-azure-provision-tomcat
 
-      - name: Pre-download Vagrant Box
-        if: env.AZURE_AVAILABLE == 'false' || steps.azure_test.outcome == 'failure'
-        run: |
-          source venv/bin/activate
-          ./bin/vagrant-wrapper box add --provider virtualbox --force gusztavvargadr/windows-11-22h2-pro-arm64 || true
-
       - name: Fallback to Vagrant Test
         if: env.AZURE_AVAILABLE == 'false' || steps.azure_test.outcome == 'failure'
         env:
           OBJC_DISABLE_INITIALIZE_FORK_SAFETY: "YES"
         run: |
           source venv/bin/activate
-          make test-win11
+          # Use established local box name
+          # Using make vagrant-provision as a more robust fallback target than the dynamic win11
+          make vagrant-provision
 
   vagrant_integration:
     name: Vagrant Integration Tests
