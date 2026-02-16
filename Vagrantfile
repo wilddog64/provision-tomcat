@@ -48,11 +48,23 @@ Vagrant.configure("2") do |config|
   # Initialize and format D: drive (runs automatically on first boot)
   config.vm.provision "disk_setup", type: "shell" do |s|
     s.inline = <<-POWERSHELL
-      # Tune WinRM for Ansible stability
-      Write-Host "Tuning WinRM configuration..."
+      # Tune WinRM just in case, but we prefer SSH
       winrm set winrm/config '@{MaxEnvelopeSizekb="16384"}'
       winrm set winrm/config/Service '@{AllowUnencrypted="true"}'
       winrm set winrm/config/Service/Auth '@{Basic="true"}'
+
+      # Enable OpenSSH Server
+      Write-Host "Enabling OpenSSH Server..."
+      try {
+        Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0 -ErrorAction Stop
+        Start-Service sshd
+        Set-Service -Name sshd -StartupType 'Automatic'
+        if (!(Get-NetFirewallRule -Name "OpenSSH-Server-In-TCP" -ErrorAction SilentlyContinue)) {
+          New-NetFirewallRule -Name "OpenSSH-Server-In-TCP" -DisplayName "OpenSSH Server (sshd)" -Enabled True -Direction Inbound -Protocol TCP -LocalPort 22 -Action Allow
+        }
+      } catch {
+        Write-Warning "Failed to enable OpenSSH: $($_.Exception.Message)"
+      }
       
       $disk = Get-Disk | Where-Object PartitionStyle -eq 'RAW'
       if ($disk) {
@@ -72,12 +84,9 @@ Vagrant.configure("2") do |config|
     'ansible_password'                     => 'vagrant',
     'ansible_become_method'                => 'runas',
     'ansible_become_user'                  => 'vagrant',
-    'ansible_connection'                   => 'winrm',
-    'ansible_winrm_transport'              => 'basic',
-    'ansible_winrm_server_cert_validation' => 'ignore',
-    'ansible_winrm_scheme'                 => 'http',
-    'ansible_winrm_read_timeout_sec'       => 600,
-    'ansible_winrm_operation_timeout_sec'  => 540,
+    'ansible_connection'                   => 'ssh',
+    'ansible_shell_type'                   => 'powershell',
+    'ansible_ssh_common_args'              => '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null',
     'install_drive'                        => 'D:',
     'ado_pat_token'                        => ENV.fetch('ADO_PAT_TOKEN', 'placeholder'),
   }
