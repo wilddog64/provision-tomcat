@@ -266,12 +266,35 @@ update-roles:
 	@echo
 
 .PHONY: vagrant-up
-vagrant-up: update-roles
+vagrant-up: vagrant-destroy vbox-cleanup-disks fix-vbox-locks
 	./bin/vagrant-wrapper up --provision
 
 .PHONY: vagrant-login
 vagrant-login:
 	./bin/vagrant-wrapper powershell
+
+.PHONY: fix-vbox-locks
+fix-vbox-locks:
+	@echo "Checking for locked VirtualBox VMs..."
+	@pids=$$(ps aux | grep VBoxHeadless | grep -v grep | awk '{print $$2}'); \
+	if [ -n "$$pids" ]; then \
+		echo "Found hung VBoxHeadless process(es): $$pids"; \
+		echo "Killing..."; \
+		kill -9 $$pids; \
+	else \
+		echo "No hung VBox processes found."; \
+	fi
+	@echo "Cleaning up stuck VMs..."
+	@vms=$$(VBoxManage list vms | grep -o '{\(.*\)}' | tr -d '{}'); \
+	for uuid in $$vms; do \
+		echo "Checking VM: $$uuid"; \
+		state=$$(VBoxManage showvminfo $$uuid --machinereadable | grep '^VMState=' | cut -d'"' -f2); \
+		if [ "$$state" = "aborted" ] || [ "$$state" = "stopping" ]; then \
+			echo "  VM in bad state ($$state). Unregistering..."; \
+			VBoxManage unregistervm $$uuid --delete || true; \
+		fi; \
+	done
+	@echo "Done."
 
 .PHONY: vagrant-disk-setup
 vagrant-disk-setup:
@@ -295,11 +318,11 @@ endef
 # Test specific suite on platform
 define KITCHEN_SUITE_PLATFORM_TARGETS
 .PHONY: test-$(1)-$(2)
-test-$(1)-$(2): update-roles destroy-$(1)-$(2)
+test-$(1)-$(2): update-roles fix-vbox-locks destroy-$(1)-$(2)
 	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) test $(1)-$(2)
 
 .PHONY: converge-$(1)-$(2)
-converge-$(1)-$(2): update-roles
+converge-$(1)-$(2): update-roles fix-vbox-locks
 	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) converge $(1)-$(2)
 
 .PHONY: verify-$(1)-$(2)
@@ -310,11 +333,11 @@ endef
 # Platform-level targets (shortcuts for default suite)
 define KITCHEN_PLATFORM_TARGETS
 .PHONY: test-$(1)
-test-$(1): update-roles destroy-$(1)
+test-$(1): update-roles fix-vbox-locks destroy-$(1)
 	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) test default-$(1)
 
 .PHONY: converge-$(1)
-converge-$(1): update-roles
+converge-$(1): update-roles fix-vbox-locks
 	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) converge default-$(1)
 
 .PHONY: verify-$(1)
@@ -332,7 +355,7 @@ $(foreach platform,$(PLATFORMS),$(foreach suite,$(SUITES),$(eval $(call KITCHEN_
 
 # Upgrade testing helpers
 .PHONY: test-upgrade-win11
-test-upgrade-win11: update-roles
+test-upgrade-win11: update-roles fix-vbox-locks
 	@echo "=== Testing Java + Tomcat upgrade on Windows 11 ==="
 	@echo "Step 1: Installing Java 17 + Tomcat 9.0.112..."
 	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) create upgrade-win11
