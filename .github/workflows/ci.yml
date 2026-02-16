@@ -291,7 +291,7 @@ jobs:
     needs: lint
     if: >-
       (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository) && (
-        (github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' && github.head_ref == 'azure-dev') ||
+        (github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.head_ref == 'azure-dev')) ||
         (github.event_name == 'push' && github.ref_name == 'azure-dev') ||
         (github.event_name == 'workflow_dispatch' && (github.ref_name == 'azure-dev' || inputs.environment == 'azure'))
       )
@@ -356,7 +356,6 @@ jobs:
           fi
           echo "AZURE_RESOURCE_GROUP=$RG_NAME" >> $GITHUB_ENV
           echo "Azure targeting: Sub: $SUB_ID, RG: $RG_NAME"
-          fi
 
       - name: Checkout Roles
         run: |
@@ -429,7 +428,7 @@ jobs:
       needs.lint.result == 'success' &&
       (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository) &&
       (
-        (github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' && (github.ref_name == 'vagrant-dev' || inputs.environment == 'vagrant')) ||
+        (github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && (github.ref_name == 'vagrant-dev' || inputs.environment == 'vagrant'))) ||
         (github.ref == 'refs/heads/main' && (needs.aws_integration.result == 'skipped' || needs.aws_integration.outputs.AWS_AVAILABLE == 'false'))
       )
     steps:
