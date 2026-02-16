@@ -412,7 +412,7 @@ jobs:
           OBJC_DISABLE_INITIALIZE_FORK_SAFETY: "YES"
         run: |
           source venv/bin/activate
-          make test-provision-tomcat
+          make test-win11
 
   vagrant_integration:
     name: Vagrant Integration Tests
