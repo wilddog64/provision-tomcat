@@ -16,7 +16,7 @@ provisioner:
   ansible_galaxy_role_file: requirements.yml
   idempotency_test: false
   ansible_verbosity: 2
-  require_windows_support: true
+  require_windows_support: false
   extra_vars:
     ansible_connection: winrm
     ansible_winrm_transport: basic
