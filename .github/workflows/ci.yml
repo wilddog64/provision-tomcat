@@ -127,6 +127,7 @@ jobs:
       - name: Install Ruby Dependencies
         run: |
           # Ensure rbenv is initialized and the correct Ruby version is used
+          export PATH="$HOME/.rbenv/bin:$PATH"
           eval "$(rbenv init - bash)"
           rbenv local 3.3.0 || rbenv install 3.3.0 && rbenv local 3.3.0
           bundle install --gemfile=Gemfile --path=vendor/bundle
