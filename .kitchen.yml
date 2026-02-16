@@ -93,12 +93,10 @@ platforms:
         skip_migration: true
         ansible_connection: winrm
         ansible_winrm_transport: basic
-        ansible_port: 55985
         ansible_winrm_scheme: http
         ansible_winrm_server_cert_validation: ignore
         ansible_user: vagrant
         ansible_password: vagrant
-        ansible_host: 127.0.0.1
         ansible_become_method: runas
         ansible_become_user: vagrant
   - name: win11-disk
@@ -144,12 +142,10 @@ platforms:
         skip_migration: true
         ansible_connection: winrm
         ansible_winrm_transport: basic
-        ansible_port: 55985
         ansible_winrm_scheme: http
         ansible_winrm_server_cert_validation: ignore
         ansible_user: vagrant
         ansible_password: vagrant
-        ansible_host: 127.0.0.1
         ansible_become_method: runas
         ansible_become_user: vagrant
         install_drive: "D:"
