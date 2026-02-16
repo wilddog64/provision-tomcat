@@ -51,7 +51,8 @@ Vagrant.configure("2") do |config|
       # Tune WinRM for Ansible stability
       Write-Host "Tuning WinRM configuration..."
       winrm set winrm/config '@{MaxEnvelopeSizekb="16384"}'
-      winrm set winrm/config/Service '@{AllowUnencrypted="true"}'
+      winrm set winrm/config/Winrs '@{MaxMemoryPerShellMB="2048";MaxConcurrentUsers="100"}'
+      winrm set winrm/config/Service '@{AllowUnencrypted="true";MaxConcurrentOperationsPerUser="1500"}'
       winrm set winrm/config/Service/Auth '@{Basic="true";Negotiate="false";Kerberos="false"}'
       
       $disk = Get-Disk | Where-Object PartitionStyle -eq 'RAW'
