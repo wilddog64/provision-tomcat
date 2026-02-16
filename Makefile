@@ -281,6 +281,10 @@ vagrant-disk-setup:
 vagrant-provision: update-roles
 	./bin/vagrant-wrapper provision
 
+.PHONY: vagrant-destroy
+vagrant-destroy:
+	./bin/vagrant-wrapper destroy -f
+
 .PHONY: test-azure-provision-tomcat
 test-azure-provision-tomcat: update-roles
 	@set -e; \

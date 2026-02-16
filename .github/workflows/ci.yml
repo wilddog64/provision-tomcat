@@ -406,6 +406,12 @@ jobs:
           # Using make vagrant-up as a more robust fallback target
           make vagrant-up
 
+      - name: Vagrant Cleanup
+        if: always() && (env.AZURE_AVAILABLE == 'false' || steps.azure_test.outcome == 'failure')
+        run: |
+          source venv/bin/activate || true
+          make vagrant-destroy || true
+
   vagrant_integration:
     name: Vagrant Integration Tests
     permissions:
