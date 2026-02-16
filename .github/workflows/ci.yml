@@ -124,12 +124,12 @@ jobs:
           if [ -f requirements.txt ]; then python3 -m pip install -r requirements.txt; fi
           python3 -m pip install ansible-lint
 
-      - name: Setup Ruby
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: '3.3.0'
-          bundler-cache: true # runs bundle install and caches gems
-          tool-cache-path: ~/.rubies
+      - name: Install Ruby Dependencies
+        run: |
+          # Ensure rbenv is initialized and the correct Ruby version is used
+          eval "$(rbenv init - bash)"
+          rbenv local 3.3.0 || rbenv install 3.3.0 && rbenv local 3.3.0
+          bundle install --gemfile=Gemfile --path=vendor/bundle
 
       - name: Install Ansible collections
         run: |
