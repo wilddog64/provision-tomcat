@@ -126,9 +126,8 @@ jobs:
 
       - name: Install Ruby Dependencies
         run: |
-          # Use system Ruby to install bundler and then bundle install
-          gem install bundler -N
-          bundle install --gemfile=Gemfile --path=vendor/bundle
+          bundle config set path 'vendor/bundle'
+          bundle install
 
       - name: Install Ansible collections
         run: |
