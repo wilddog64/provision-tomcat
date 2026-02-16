@@ -11,7 +11,7 @@
 # Build the clean env, only forwarding vars that are actually set.
 ENV_ARGS=(
   HOME="$HOME"
-  PATH="/opt/vagrant/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+  PATH="$PATH"
   TERM="${TERM:-dumb}"
   LANG="${LANG:-en_US.UTF-8}"
   USER="$USER"
