@@ -129,6 +129,7 @@ jobs:
         with:
           ruby-version: '3.3.0'
           bundler-cache: true # runs bundle install and caches gems
+          tool-cache-path: ~/.rubies
 
       - name: Install Ansible collections
         run: |
