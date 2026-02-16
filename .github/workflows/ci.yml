@@ -64,6 +64,7 @@ concurrency:
 
 env:
   ANSIBLE_ROLES_PATH: ${{ github.workspace }}/roles
+  AZURE_CONFIG_DIR: /Users/cliang/.azure
 
 jobs:
   lint:
