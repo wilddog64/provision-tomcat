@@ -404,14 +404,13 @@ jobs:
         if: env.AZURE_AVAILABLE == 'false' || steps.azure_test.outcome == 'failure'
         env:
           OBJC_DISABLE_INITIALIZE_FORK_SAFETY: "YES"
+          VAGRANT_IGNORE_WINRM_PLUGIN: "YES"
         run: |
           source venv/bin/activate
-          # Direct Vagrant up is more stable on this runner than Kitchen overhead
-          make vagrant-up
-          
-          # Basic verification since we're not using Kitchen verifier
-          echo "Verifying Tomcat accessibility..."
-          curl --connect-timeout 5 --max-time 10 -f "http://localhost:8080" || curl --connect-timeout 5 --max-time 10 "http://localhost:8080" | grep -q "404"
+          # Use Test Kitchen for full lifecycle verification (ported from vagrant-dev)
+          make test-win11
+          # Verify upgrades
+          make test-upgrade-win11
 
       - name: Vagrant Cleanup
         if: always() && (env.AZURE_AVAILABLE == 'false' || steps.azure_test.outcome == 'failure')

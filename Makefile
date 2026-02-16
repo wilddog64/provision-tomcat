@@ -285,12 +285,67 @@ vagrant-provision: update-roles
 vagrant-destroy:
 	./bin/vagrant-wrapper destroy -f
 
-test-%: update-roles
-	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) test default-$*
+# Test all suites on a platform
+define TEST_ALL_SUITES
+.PHONY: test-all-$(1)
+test-all-$(1): update-roles destroy-$(1)
+	@$(foreach s,$(SUITES),echo "=== Testing suite: $(s)-$(1) ===" && KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) test $(s)-$(1) &&) true
+endef
 
-.PHONY: test-win11-upgrade
-test-win11-upgrade: update-roles
-	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) test upgrade-win11
+# Test specific suite on platform
+define KITCHEN_SUITE_PLATFORM_TARGETS
+.PHONY: test-$(1)-$(2)
+test-$(1)-$(2): update-roles destroy-$(1)-$(2)
+	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) test $(1)-$(2)
+
+.PHONY: converge-$(1)-$(2)
+converge-$(1)-$(2): update-roles
+	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) converge $(1)-$(2)
+
+.PHONY: verify-$(1)-$(2)
+verify-$(1)-$(2):
+	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) verify $(1)-$(2)
+endef
+
+# Platform-level targets (shortcuts for default suite)
+define KITCHEN_PLATFORM_TARGETS
+.PHONY: test-$(1)
+test-$(1): update-roles destroy-$(1)
+	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) test default-$(1)
+
+.PHONY: converge-$(1)
+converge-$(1): update-roles
+	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) converge default-$(1)
+
+.PHONY: verify-$(1)
+verify-$(1):
+	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) verify default-$(1)
+
+.PHONY: destroy-$(1)
+destroy-$(1):
+	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) destroy '.*-$(1)'
+endef
+
+$(foreach platform,$(PLATFORMS),$(eval $(call TEST_ALL_SUITES,$(platform))))
+$(foreach platform,$(PLATFORMS),$(eval $(call KITCHEN_PLATFORM_TARGETS,$(platform))))
+$(foreach platform,$(PLATFORMS),$(foreach suite,$(SUITES),$(eval $(call KITCHEN_SUITE_PLATFORM_TARGETS,$(suite),$(platform)))))
+
+# Upgrade testing helpers
+.PHONY: test-upgrade-win11
+test-upgrade-win11: update-roles
+	@echo "=== Testing Java + Tomcat upgrade on Windows 11 ==="
+	@echo "Step 1: Installing Java 17 + Tomcat 9.0.112..."
+	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) create upgrade-win11
+	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) converge upgrade-win11
+	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) verify upgrade-win11
+	@echo ""
+	@echo "Step 2: Upgrading to Java 21 + Tomcat 9.0.115..."
+	@sed 's/upgrade_step: 1/upgrade_step: 2/' $(KITCHEN_YAML) > .kitchen.step2.yml
+	KITCHEN_YAML=.kitchen.step2.yml $(KITCHEN_CMD) converge upgrade-win11
+	KITCHEN_YAML=.kitchen.step2.yml $(KITCHEN_CMD) verify upgrade-win11
+	@rm -f .kitchen.step2.yml
+	@echo ""
+	@echo "Upgrade test complete!"
 
 .PHONY: test-azure-provision-tomcat
 test-azure-provision-tomcat: update-roles
