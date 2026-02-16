@@ -33,7 +33,7 @@ provisioner:
   host_key_checking: false
   ansible_galaxy_role_file: requirements.yml
   # vault_password_file: ./secrets/my_pass.txt
-  idempotency_test: <%= ENV.fetch('KITCHEN_IDEMPOTENCE', 'false') == 'true' %>
+  idempotency_test: <%= ENV['KITCHEN_IDEMPOTENCE'] == 'true' %>
   chef_bootstrap_url: null
   verbose: vv
   extra_vars:
@@ -201,20 +201,20 @@ platforms:
   - name: win11-azure
     driver:
       name: azurerm
-      subscription_id: <%= ENV.fetch('AZURE_SUBSCRIPTION_ID', '00000000-0000-0000-0000-000000000000') %>
-      tenant_id: <%= ENV.fetch('AZURE_TENANT_ID', '00000000-0000-0000-0000-000000000000') %>
+      subscription_id: <%= ENV['AZURE_SUBSCRIPTION_ID'] || '00000000-0000-0000-0000-000000000000' %>
+      tenant_id: <%= ENV['AZURE_TENANT_ID'] || '00000000-0000-0000-0000-000000000000' %>
       use_cli_credentials: true
       use_managed_identity: false
       location: southcentralus
-      explicit_resource_group_name: <%= ENV.fetch('AZURE_RESOURCE_GROUP', 'fallback-rg') %>
+      explicit_resource_group_name: <%= ENV['AZURE_RESOURCE_GROUP'] || 'fallback-rg' %>
       allow_resource_group_creation: false
       delete_resource_group: false
       destroy_explicit_resource_group: false
-      vm_name: <%= ENV.fetch('AZURE_VM_NAME', 'fallback-vm') %>
-      vm_size: <%= ENV.fetch('AZURE_VM_SIZE', 'Standard_DS1_v2') %>
-      image_urn: <%= ENV.fetch('AZURE_IMAGE_URN', 'MicrosoftWindowsServer:WindowsServer:2022-datacenter-g2:latest') %>
-      storage_account_type: <%= ENV.fetch('AZURE_STORAGE_SKU', 'Standard_LRS') %>
-      os_disk_size_gb: <%= ENV.fetch('AZURE_OS_DISK_GB', '128') %>
+      vm_name: <%= ENV['AZURE_VM_NAME'] || 'fallback-vm' %>
+      vm_size: <%= ENV['AZURE_VM_SIZE'] || 'Standard_DS1_v2' %>
+      image_urn: <%= ENV['AZURE_IMAGE_URN'] || 'MicrosoftWindowsServer:WindowsServer:2022-datacenter-g2:latest' %>
+      storage_account_type: <%= ENV['AZURE_STORAGE_SKU'] || 'Standard_LRS' %>
+      os_disk_size_gb: <%= ENV['AZURE_OS_DISK_GB'] || '128' %>
       public_ip_sku: Standard
       <% if ENV['AZURE_VNET_NAME'].to_s.strip != '' %>
       virtual_network_name: <%= ENV['AZURE_VNET_NAME'] %>
@@ -240,8 +240,8 @@ platforms:
       connection_retries: 15
       connection_retry_sleep: 10
       operation_timeout: 600
-      username: <%= ENV.fetch('AZURE_ADMIN_USERNAME') %>
-      password: <%= ENV.fetch('AZURE_ADMIN_PASSWORD') %>
+      username: <%= ENV['AZURE_ADMIN_USERNAME'] || 'azureadmin' %>
+      password: <%= ENV['AZURE_ADMIN_PASSWORD'] || 'ChangeM3!SecurePassword' %>
     provisioner:
       name: ansible_push
       ansible_playbook_bin: <%= Dir.glob("#{Dir.pwd}/venv/bin/ansible-playbook").first || Dir.glob("#{File.dirname(File.dirname(__FILE__))}/.direnv/python-*/bin/ansible-playbook").first || Dir.glob("#{Dir.pwd}/.direnv/python-*/bin/ansible-playbook").first || "ansible-playbook" %>
@@ -266,21 +266,21 @@ platforms:
         ansible_port: 55985
         ansible_winrm_scheme: http
         ansible_winrm_server_cert_validation: ignore
-        ansible_user: <%= ENV.fetch('AZURE_ADMIN_USERNAME') %>
-        ansible_password: <%= ENV.fetch('AZURE_ADMIN_PASSWORD') %>
+        ansible_user: <%= ENV['AZURE_ADMIN_USERNAME'] || 'azureadmin' %>
+        ansible_password: <%= ENV['AZURE_ADMIN_PASSWORD'] || 'ChangeM3!SecurePassword' %>
         ansible_become_method: runas
-        ansible_become_user: <%= ENV.fetch('AZURE_ADMIN_USERNAME') %>
+        ansible_become_user: <%= ENV['AZURE_ADMIN_USERNAME'] || 'azureadmin' %>
 
   - name: aws-minimal-win
     driver:
       name: ec2
       region: us-east-1
-      availability_zone: <%= ENV.fetch('AWS_AZ') %>
+      availability_zone: <%= ENV['AWS_AZ'] || 'us-east-1e' %>
       instance_type: t2.micro
       associate_public_ip: true
-      subnet_id: <%= ENV.fetch('AWS_SUBNET_ID') %>
-      security_group_ids: <%= ENV.fetch('AWS_SECURITY_GROUP_IDS') %>
-      image_id: <%= ENV.fetch('AWS_AMI_ID') %>
+      subnet_id: <%= ENV['AWS_SUBNET_ID'] || 'subnet-00000000' %>
+      security_group_ids: <%= ENV['AWS_SECURITY_GROUP_IDS'] || '["sg-00000000"]' %>
+      image_id: <%= ENV['AWS_AMI_ID'] || 'ami-00000000' %>
     transport:
       name: winrm
       elevated: true
@@ -304,7 +304,7 @@ platforms:
       ansible_version: latest
       ansible_host_key_checking: false
       ansible_galaxy_role_file: requirements.yml
-      idempotency_test: <%= ENV.fetch('KITCHEN_IDEMPOTENCE', 'false') == 'true' %>
+      idempotency_test: <%= ENV['KITCHEN_IDEMPOTENCE'] == 'true' %>
       chef_bootstrap_url: null
       ansible_verbosity: 2
       require_windows_support: true
@@ -329,12 +329,12 @@ platforms:
     driver:
       name: ec2
       region: us-east-1
-      availability_zone: <%= ENV.fetch('AWS_AZ') %>
+      availability_zone: <%= ENV['AWS_AZ'] || 'us-east-1e' %>
       instance_type: t2.medium
       associate_public_ip: true
-      subnet_id: <%= ENV.fetch('AWS_SUBNET_ID') %>
-      security_group_ids: <%= ENV.fetch('AWS_SECURITY_GROUP_IDS') %>
-      image_id: <%= ENV.fetch('AWS_AMI_ID') %>
+      subnet_id: <%= ENV['AWS_SUBNET_ID'] || 'subnet-00000000' %>
+      security_group_ids: <%= ENV['AWS_SECURITY_GROUP_IDS'] || '["sg-00000000"]' %>
+      image_id: <%= ENV['AWS_AMI_ID'] || 'ami-00000000' %>
       block_device_mappings:
         - device_name: /dev/sda1
           ebs:
@@ -369,7 +369,7 @@ platforms:
       ansible_version: latest
       ansible_host_key_checking: false
       ansible_galaxy_role_file: requirements.yml
-      idempotency_test: <%= ENV.fetch('KITCHEN_IDEMPOTENCE', 'false') == 'true' %>
+      idempotency_test: <%= ENV['KITCHEN_IDEMPOTENCE'] == 'true' %>
       chef_bootstrap_url: null
       ansible_verbosity: 2
       require_windows_support: true
