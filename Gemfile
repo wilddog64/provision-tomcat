@@ -2,9 +2,7 @@ source 'https://rubygems.org'
 
 ruby '>= 3.3.0', '< 5.0'
 
-gem 'test-kitchen'
-gem 'thor', '= 0.19.1'
-gem 'benchmark'
+gem 'test-kitchen', '~> 2.0'
 gem 'kitchen-ansible'
 gem 'kitchen-ansiblepush'
 gem 'kitchen-vagrant'
