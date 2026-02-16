@@ -129,14 +129,10 @@ jobs:
           # Ensure rbenv is initialized and the correct Ruby version is used
           export RBENV_ROOT="$HOME/.rbenv"
           export PATH="$RBENV_ROOT/bin:$PATH"
-          # Attempt to source a common profile file that might initialize rbenv
-          if [ -f "$HOME/.bash_profile" ]; then
-            source "$HOME/.bash_profile"
-          elif [ -f "$HOME/.profile" ]; then
-            source "$HOME/.profile"
-          fi
-          # Ensure rbenv init is evaluated
-          eval "$(rbenv init - bash)"
+          # Directly source rbenv.sh for non-interactive shells
+          source "$RBENV_ROOT/lib/rbenv.sh"
+          export PATH="$RBENV_ROOT/shims:$PATH"
+          
           rbenv install 3.3.0 || true # Install Ruby 3.3.0 if not present
           rbenv local 3.3.0
           gem install bundler -N # Install bundler outside of Gemfile context
