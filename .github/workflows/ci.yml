@@ -291,7 +291,7 @@ jobs:
     needs: lint
     if: >-
       (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository) && (
-        (github.event_name == 'pull_request' && github.event_name == 'workflow_dispatch' && github.head_ref == 'azure-dev') ||
+        (github.event_name == 'pull_request' && github.event.pull_request.draft == false && (github.base_ref == 'azure-dev' || github.head_ref == 'azure-dev')) ||
         (github.event_name == 'push' && github.ref_name == 'azure-dev') ||
         (github.event_name == 'workflow_dispatch' && (github.ref_name == 'azure-dev' || inputs.environment == 'azure'))
       )
