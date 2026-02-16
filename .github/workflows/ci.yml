@@ -127,10 +127,15 @@ jobs:
       - name: Install Ruby Dependencies
         run: |
           # Ensure rbenv is initialized and the correct Ruby version is used
-          export PATH="$HOME/.rbenv/bin:$PATH"
-          eval "$(rbenv init - bash)"
-          rbenv local 3.3.0 || rbenv install 3.3.0 && rbenv local 3.3.0
+          export RBENV_ROOT="$HOME/.rbenv"
+          export PATH="$RBENV_ROOT/bin:$PATH"
+          export PATH="$RBENV_ROOT/shims:$PATH"
+          rbenv init - || true # Initialize rbenv for current shell, ignore errors if already initialized
+          rbenv install 3.3.0 || true # Install Ruby 3.3.0 if not present
+          rbenv local 3.3.0
+          gem install bundler -N # Install bundler outside of Gemfile context
           bundle install --gemfile=Gemfile --path=vendor/bundle
+          rbenv rehash
 
       - name: Install Ansible collections
         run: |
