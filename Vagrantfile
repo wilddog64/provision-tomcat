@@ -48,6 +48,12 @@ Vagrant.configure("2") do |config|
   # Initialize and format D: drive (runs automatically on first boot)
   config.vm.provision "disk_setup", type: "shell" do |s|
     s.inline = <<-POWERSHELL
+      # Port forwarding
+      config.vm.network "forwarded_port", guest: 8080, host: 8080, auto_correct: true
+      config.vm.network "forwarded_port", guest: 9080, host: 9080, auto_correct: true
+      # WinRM port is usually automatically handled, but we can be explicit
+      config.vm.network "forwarded_port", guest: 5985, host: 55985, auto_correct: true
+
       # Tune WinRM for Ansible stability
       Write-Host "Tuning WinRM configuration..."
       winrm set winrm/config '@{MaxEnvelopeSizekb="16384"}'
