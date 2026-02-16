@@ -23,6 +23,11 @@
         timeout: 300
       become: no
 
+    - name: Ensure WinRM stabilization
+      ansible.builtin.pause:
+        seconds: 10
+      become: no
+
     - name: Gather facts
       ansible.builtin.setup:
       become: no
