@@ -301,24 +301,29 @@ jobs:
 
       - name: Detect Azure Availability
         id: azure_check
+        continue-on-error: true
         run: |
           if az account show > /dev/null 2>&1; then
             echo "AZURE_AVAILABLE=true" >> $GITHUB_ENV
             echo "SESSION_MODE=true" >> $GITHUB_ENV
 
             # Resolve metadata explicitly, favoring secrets if provided
-            SUB_ID="${{ secrets.AZURE_SUBSCRIPTION_ID }}"
-            if [ -z "$SUB_ID" ]; then
+            SECRET_SUB="${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+            if [ -n "$SECRET_SUB" ]; then
+              SUB_ID="$SECRET_SUB"
+            else
               SUB_ID=$(az account show --query id -o tsv)
             fi
             
-            RG_NAME="${{ secrets.AZURE_RESOURCE_GROUP }}"
-            if [ -z "$RG_NAME" ]; then
+            SECRET_RG="${{ secrets.AZURE_RESOURCE_GROUP }}"
+            if [ -n "$SECRET_RG" ]; then
+              RG_NAME="$SECRET_RG"
+            else
               RG_NAME=$(az group list --query "[?contains(name, 'sandbox')].name" -o tsv | head -n 1)
             fi
 
             echo "AZURE_SUBSCRIPTION_ID=$SUB_ID" >> $GITHUB_ENV
-            az account set --subscription "$SUB_ID"
+            az account set --subscription "$SUB_ID" || echo "Warning: Failed to set subscription $SUB_ID"
 
             if [ -n "$RG_NAME" ]; then
               echo "AZURE_RESOURCE_GROUP=$RG_NAME" >> $GITHUB_ENV
@@ -328,6 +333,10 @@ jobs:
               echo "AZURE_RESOURCE_GROUP=kqvm-win11-rg" >> $GITHUB_ENV
               echo "Azure session detected. Sub: $SUB_ID, RG fallback used: kqvm-win11-rg"
             fi
+          else
+            echo "AZURE_AVAILABLE=false" >> $GITHUB_ENV
+            echo "No Azure session or secrets found."
+          fi
           elif [ -n "${{ secrets.AZURE_CLIENT_ID }}" ]; then
             echo "AZURE_AVAILABLE=true" >> $GITHUB_ENV
             echo "SESSION_MODE=false" >> $GITHUB_ENV
