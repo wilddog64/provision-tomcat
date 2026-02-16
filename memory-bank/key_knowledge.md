@@ -1,0 +1,8 @@
+- **Azure Auth**: AADSTS130507 confirmed as ACG platform shift to TAP/User Account model; Service Principal creation is blocked by "Insufficient privileges". Direct Azure integration test currently not feasible.
+- **WinRM Stability**: ParseError (XML truncation) consistently triggered by windows-base role. Requires MaxEnvelopeSizekb: 16384, ansible_winrm_read_timeout_sec: 600, pipelining: False. Further stabilization required increasing MaxMemoryPerShellMB: 2048 and MaxConcurrentOperationsPerUser: 100.
+- **VDI Management**: Unique disk naming (data_disk_#{timestamp}.vdi) and VBoxManage closemedium are required to prevent VirtualBox VERR_ALREADY_EXISTS errors. Hung VBoxHeadless processes and aborted/stopping VMs can cause runner hangs; automatic cleanup is crucial.
+- **Kitchen Hardening**: .kitchen.yml must use ENV[...] or ENV.fetch with defaults to avoid KeyError when cloud secrets are missing during local runs.
+- **Copilot Firewall**: Agent is blocked by azcliprod.blob.core.windows.net, management.azure.com, login.microsoftonline.com, and graph.microsoft.com.
+- **Test Kitchen as Fallback**: vagrant-dev branch shows more robust Test Kitchen usage is key for stable local CI.
+- **Runner Name Discrepancy**: GitHub API refers to the runner as 'm2-air' (id: 21), despite the physical machine reporting as 'm4-air.local'.
+- **Ruby Environment**: Self-hosted runner's Ruby 4.0.0 has compatibility issues with older test-kitchen 1.x and its dependencies (thor, benchmark). ruby/setup-ruby@v1 has permission issues on this specific runner. Manual rbenv setup in non-interactive shell is complex. Loosening Gemfile Ruby version constraint to '>= 3.3.0', '< 5.0' and simplifying bundle install is the current working solution for linting.
