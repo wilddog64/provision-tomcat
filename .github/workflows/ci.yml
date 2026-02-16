@@ -336,11 +336,12 @@ jobs:
             SUB_ID=$(az account show --query id -o tsv)
           fi
           
-          SECRET_RG="${{ secrets.AZURE_RESOURCE_GROUP }}"
+          SECRET_RG="${{ secrets.AZURE_RESOURCE_GROUP || vars.AZURE_RESOURCE_GROUP }}"
           if [ -n "$SECRET_RG" ]; then
             RG_NAME="$SECRET_RG"
           else
-            RG_NAME=$(az group list --query "[?contains(name, 'sandbox')].name" -o tsv | head -n 1)
+            # Attempt dynamic discovery, but gracefully handle failures/blocks
+            RG_NAME=$(az group list --query "[?contains(name, 'sandbox')].name" -o tsv 2>/dev/null | head -n 1) || true
           fi
 
           echo "AZURE_SUBSCRIPTION_ID=$SUB_ID" >> $GITHUB_ENV
