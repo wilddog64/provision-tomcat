@@ -307,13 +307,13 @@ jobs:
             echo "AZURE_AVAILABLE=true" >> $GITHUB_ENV
             echo "SESSION_MODE=false" >> $GITHUB_ENV
             echo "Azure Service Principal credentials detected."
-          elif az account show > /dev/null 2>&1; then
+          elif az group list --output none 2>/dev/null; then
             echo "AZURE_AVAILABLE=true" >> $GITHUB_ENV
             echo "SESSION_MODE=true" >> $GITHUB_ENV
-            echo "Active Azure session detected."
+            echo "Active and valid Azure session detected."
           else
             echo "AZURE_AVAILABLE=false" >> $GITHUB_ENV
-            echo "No Azure session or SP credentials found."
+            echo "No valid Azure session or SP credentials found."
           fi
 
       - name: Login to Azure
@@ -413,9 +413,10 @@ jobs:
           OBJC_DISABLE_INITIALIZE_FORK_SAFETY: "YES"
         run: |
           source venv/bin/activate
-          # Use established local box name
-          # Using make vagrant-up as a more robust fallback target
-          make vagrant-up
+          # Use Test Kitchen for full lifecycle verification
+          make test-win11
+          # Verify upgrades
+          make test-win11-upgrade
 
       - name: Vagrant Cleanup
         if: always() && (env.AZURE_AVAILABLE == 'false' || steps.azure_test.outcome == 'failure')

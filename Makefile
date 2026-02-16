@@ -285,6 +285,13 @@ vagrant-provision: update-roles
 vagrant-destroy:
 	./bin/vagrant-wrapper destroy -f
 
+test-%: update-roles
+	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) test default-$*
+
+.PHONY: test-win11-upgrade
+test-win11-upgrade: update-roles
+	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) test upgrade-win11
+
 .PHONY: test-azure-provision-tomcat
 test-azure-provision-tomcat: update-roles
 	@set -e; \
