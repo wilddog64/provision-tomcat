@@ -26,21 +26,16 @@ Vagrant.configure("2") do |config|
   # Add secondary disk for D: drive (default 50GB, override with VAGRANT_DISK_SIZE_GB)
   disk_size_gb = ENV.fetch('VAGRANT_DISK_SIZE_GB', '50').to_i
   config.vm.provider "virtualbox" do |vb|
-    disk_file = File.join(File.dirname(__FILE__), ".vagrant", "data_disk.vdi")
+    # Generate unique disk filename to avoid collisions
+    timestamp = Time.now.to_i
+    disk_file = File.join(File.dirname(__FILE__), ".vagrant", "data_disk_#{timestamp}.vdi")
 
-    # Clean up stale VirtualBox registration if file doesn't exist but is still registered
-    unless File.exist?(disk_file)
-      # Check if disk is registered in VirtualBox and remove stale entry
-      vbox_list = `VBoxManage list hdds 2>/dev/null`
-      if vbox_list.include?(disk_file)
-        # Extract UUID and close the medium
-        uuid_match = vbox_list.match(/UUID:\s+([a-f0-9-]+).*?Location:\s+#{Regexp.escape(disk_file)}/m)
-        if uuid_match
-          system("VBoxManage closemedium disk #{uuid_match[1]} --delete 2>/dev/null")
-        end
-      end
-      vb.customize ['createhd', '--filename', disk_file, '--size', disk_size_gb * 1024]
+    # Clean up ANY stale disks in the .vagrant directory to save space in CI
+    Dir.glob(File.join(File.dirname(__FILE__), ".vagrant", "data_disk_*.vdi")).each do |old_disk|
+      File.delete(old_disk) if File.exist?(old_disk)
     end
+
+    vb.customize ['createhd', '--filename', disk_file, '--size', disk_size_gb * 1024]
     vb.customize ['storageattach', :id, '--storagectl', 'SATA Controller',
                   '--port', 1, '--device', 0, '--type', 'hdd', '--medium', disk_file]
   end
