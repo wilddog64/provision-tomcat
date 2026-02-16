@@ -48,6 +48,12 @@ Vagrant.configure("2") do |config|
   # Initialize and format D: drive (runs automatically on first boot)
   config.vm.provision "disk_setup", type: "shell" do |s|
     s.inline = <<-POWERSHELL
+      # Tune WinRM for Ansible stability
+      Write-Host "Tuning WinRM configuration..."
+      winrm set winrm/config '@{MaxEnvelopeSizekb="16384"}'
+      winrm set winrm/config/Service '@{AllowUnencrypted="true"}'
+      winrm set winrm/config/Service/Auth '@{Basic="true"}'
+      
       $disk = Get-Disk | Where-Object PartitionStyle -eq 'RAW'
       if ($disk) {
         Write-Host "Initializing and formatting D: drive..."
