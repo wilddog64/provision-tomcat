@@ -66,7 +66,7 @@ Vagrant.configure("2") do |config|
     'ansible_password'                     => 'vagrant',
     'ansible_become_method'                => 'runas',
     'ansible_become_user'                  => 'vagrant',
-    'ansible_connection'                   => 'winrm',
+    'ansible_connection'                   => 'local',
     'ansible_winrm_transport'              => 'basic',
     'ansible_winrm_server_cert_validation' => 'ignore',
     'ansible_winrm_scheme'                 => 'http',
@@ -77,7 +77,7 @@ Vagrant.configure("2") do |config|
   }
 
   # default playbook for simple testing
-  config.vm.provision :ansible do |ansible|
+  config.vm.provision :ansible_local do |ansible|
     ansible.limit = 'all'
     ansible.compatibility_mode = '2.0'
     # ansible.galaxy_role_file = 'requirements.yml' # Skip galaxy; roles are pre-checked out
@@ -86,7 +86,7 @@ Vagrant.configure("2") do |config|
   end
 
   # Upgrade step 1 (install older Java/Tomcat)
-  config.vm.provision 'ansible_upgrade_step1', type: :ansible, run: 'never' do |ansible|
+  config.vm.provision 'ansible_upgrade_step1', type: :ansible_local, run: 'never' do |ansible|
     ansible.limit = 'all'
     # ansible.galaxy_role_file = 'requirements.yml'
     ansible.playbook = 'tests/playbook-upgrade.yml'
@@ -97,7 +97,7 @@ Vagrant.configure("2") do |config|
   end
 
   # Upgrade step 2 with candidate workflow enabled (auto promote)
-  config.vm.provision 'ansible_upgrade_step2', type: :ansible, run: 'never' do |ansible|
+  config.vm.provision 'ansible_upgrade_step2', type: :ansible_local, run: 'never' do |ansible|
     ansible.limit = 'all'
     # ansible.galaxy_role_file = 'requirements.yml'
     ansible.playbook = 'tests/playbook-upgrade.yml'
@@ -110,7 +110,7 @@ Vagrant.configure("2") do |config|
   end
 
   # Upgrade step 2 (prepare only – leaves candidate running)
-  config.vm.provision 'ansible_upgrade_step2_prepare', type: :ansible, run: 'never' do |ansible|
+  config.vm.provision 'ansible_upgrade_step2_prepare', type: :ansible_local, run: 'never' do |ansible|
     ansible.limit = 'all'
     # ansible.galaxy_role_file = 'requirements.yml'
     ansible.playbook = 'tests/playbook-upgrade.yml'
@@ -124,7 +124,7 @@ Vagrant.configure("2") do |config|
   end
 
   # Upgrade step 2 finalization (promote + cleanup)
-  config.vm.provision 'ansible_upgrade_step2_finalize', type: :ansible, run: 'never' do |ansible|
+  config.vm.provision 'ansible_upgrade_step2_finalize', type: :ansible_local, run: 'never' do |ansible|
     ansible.limit = 'all'
     # ansible.galaxy_role_file = 'requirements.yml'
     ansible.playbook = 'tests/playbook-upgrade.yml'
