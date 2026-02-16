@@ -346,7 +346,8 @@ verify-$(1):
 
 .PHONY: destroy-$(1)
 destroy-$(1):
-	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) destroy '.*-$(1)'
+	@# Only destroy local vagrant platforms, avoid matching -azure suffix which requires azure driver gem
+	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) destroy '(default|upgrade|downgrade|idempotence|no-autostart|upgrade-baseline|upgrade-candidate-aws|upgrade-candidate-aws-disk)-$(1)$'
 endef
 
 $(foreach platform,$(PLATFORMS),$(eval $(call TEST_ALL_SUITES,$(platform))))
