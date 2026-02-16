@@ -306,9 +306,16 @@ jobs:
             echo "AZURE_AVAILABLE=true" >> $GITHUB_ENV
             echo "SESSION_MODE=true" >> $GITHUB_ENV
 
-            # Resolve metadata explicitly
-            SUB_ID=$(az account show --query id -o tsv)
-            RG_NAME=$(az group list --query "[?contains(name, 'sandbox')].name" -o tsv | head -n 1)
+            # Resolve metadata explicitly, favoring secrets if provided
+            SUB_ID="${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+            if [ -z "$SUB_ID" ]; then
+              SUB_ID=$(az account show --query id -o tsv)
+            fi
+            
+            RG_NAME="${{ secrets.AZURE_RESOURCE_GROUP }}"
+            if [ -z "$RG_NAME" ]; then
+              RG_NAME=$(az group list --query "[?contains(name, 'sandbox')].name" -o tsv | head -n 1)
+            fi
 
             echo "AZURE_SUBSCRIPTION_ID=$SUB_ID" >> $GITHUB_ENV
             az account set --subscription "$SUB_ID"
