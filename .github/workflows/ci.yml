@@ -393,19 +393,21 @@ jobs:
           make deps
 
       - name: Run Azure Test
+        id: azure_test
+        continue-on-error: true
         if: env.AZURE_AVAILABLE == 'true'
         run: |
           source venv/bin/activate
           make test-azure-provision-tomcat
 
       - name: Pre-download Vagrant Box
-        if: env.AZURE_AVAILABLE == 'false'
+        if: env.AZURE_AVAILABLE == 'false' || steps.azure_test.outcome == 'failure'
         run: |
           source venv/bin/activate
           ./bin/vagrant-wrapper box add --provider virtualbox --force gusztavvargadr/windows-11-22h2-pro-arm64 || true
 
       - name: Fallback to Vagrant Test
-        if: env.AZURE_AVAILABLE == 'false'
+        if: env.AZURE_AVAILABLE == 'false' || steps.azure_test.outcome == 'failure'
         env:
           OBJC_DISABLE_INITIALIZE_FORK_SAFETY: "YES"
         run: |
