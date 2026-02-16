@@ -346,7 +346,11 @@ verify-$(1):
 
 .PHONY: destroy-$(1)
 destroy-$(1):
-	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) destroy \"(default|upgrade|downgrade|idempotence|no-autostart|upgrade-baseline|upgrade-candidate-aws|upgrade-candidate-aws-disk)-$(1)\"
+	@echo "Destroying Kitchen instances for platform $(1)..."
+	@KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) list --json | jq -r '.[] | select(.platform == "$(1)") | .name' | while read -r instance; do \
+		echo "Destroying $$instance"; \
+		KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) destroy "$$instance"; \
+	done
 endef
 
 $(foreach platform,$(PLATFORMS),$(eval $(call TEST_ALL_SUITES,$(platform))))
