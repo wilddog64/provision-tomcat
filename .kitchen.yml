@@ -48,15 +48,7 @@ platforms:
   - name: win11-baseline
     driver:
       box: stromweld/windows-11-tomcat112
-  - name: win11-azure
-    driver:
-      name: azure
-    provisioner:
-      extra_vars:
-        ansible_connection: winrm
-        ansible_winrm_transport: basic
-        ansible_winrm_scheme: http
-        ansible_winrm_server_cert_validation: ignore
+
 
 suites:
   - name: default
