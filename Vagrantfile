@@ -75,6 +75,7 @@ Vagrant.configure("2") do |config|
   # default playbook for simple testing
   config.vm.provision :ansible do |ansible|
     ansible.limit = 'all'
+    ansible.compatibility_mode = '2.0'
     # ansible.galaxy_role_file = 'requirements.yml' # Skip galaxy; roles are pre-checked out
     ansible.playbook = 'tests/playbook.yml'
     ansible.extra_vars = common_env
