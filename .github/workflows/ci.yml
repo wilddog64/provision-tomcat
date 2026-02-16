@@ -396,6 +396,11 @@ jobs:
           pip install "ansible-core>=2.15.0,<2.16.0" pywinrm
           make deps
 
+      - name: Install Ruby Dependencies
+        run: |
+          bundle config set path 'vendor/bundle'
+          bundle install
+
       - name: Run Azure Test
         id: azure_test
         continue-on-error: true
