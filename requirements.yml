@@ -1,13 +1,14 @@
 roles:
-  - name: provision-java
-    src: https://github.com/wilddog64/provision-java.git
-    scm: git
-    version: main
   - name: windows-base
-    src: https://github.com/wilddog64/windows-base.git
+    src: git@github.com:wilddog64/windows-base.git
     scm: git
     version: main
   - name: provision-windows-security
-    src: https://github.com/wilddog64/provision-windows-security.git
+    src: git@github.com:wilddog64/provision-windows-security.git
     scm: git
     version: main
+
+collections:
+  - name: ansible.windows
+  - name: chocolatey.chocolatey
+  - name: community.windows

@@ -1,7 +1,7 @@
 ---
 - hosts: all
   become: yes
-  gather_facts: no
+  gather_facts: yes
   vars:
     jdk_version: 21
     # Install paths - override with -e install_drive=D: to use D: drive
@@ -23,17 +23,36 @@
         timeout: 300
       become: no
 
+    - name: Ensure WinRM stabilization
+      ansible.builtin.pause:
+        seconds: 10
+      become: no
+
     - name: Gather facts
       ansible.builtin.setup:
       become: no
 
-    # NOTE: Using weak password "Password123!" for local test accounts.
-    # This is acceptable only in isolated test environments.
-    # In production, use strong passwords or integrate with directory services.
+    - name: "Initialize and format D: drive (AWS/Vagrant)"
+      ansible.windows.win_shell: |
+        $disk = Get-Disk | Where-Object PartitionStyle -eq 'RAW'
+        if ($disk) {
+          $disk | Initialize-Disk -PartitionStyle GPT -PassThru |
+            New-Partition -DriveLetter D -UseMaximumSize |
+            Format-Volume -FileSystem NTFS -NewFileSystemLabel "Data" -Confirm:$false
+          return "D: drive initialized"
+        }
+        return "No RAW disk found or D: drive already exists"
+      when: 
+        - ansible_facts['os_family'] == 'Windows'
+        - install_drive == "D:"
+      register: disk_init_output
+      changed_when: "'initialized' in disk_init_output.stdout"
+      become: no
+
     - name: Create local test accounts
       ansible.windows.win_user:
         name: "{{ item }}"
-        password: "Password123!"
+        password: "{{ tomcat_test_password | default('Password123!') }}"
         password_never_expires: true
         state: present
         groups:
@@ -44,6 +63,7 @@
         - svcjenkins
       when: ansible_facts['os_family'] == 'Windows'
       become: no
+      no_log: true
 
   roles:
     - windows-base

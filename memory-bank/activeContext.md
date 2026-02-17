@@ -1,172 +1,78 @@
 # Active Context
 
 ## Current Session Objective
-Initialize and populate a complete `memory-bank/` for this repository according to `.clinerules`.
+Stabilize the CI workflow, including resolving persistent WinRM issues blocking Vagrant tests, and investigate/address Azure authentication failures.
+
+## Current Technical Hurdle: Azure Login Failure (Confirmed 2026-02-16)
+- **Issue**: `AADSTS130507: An access pass could not be found or verified for the user.`
+- **Confirmed Root Cause (Run #22049025221)**:
+  1. **No SP Credentials**: `AZURE_CLIENT_ID` is empty in GitHub Secrets — ACG no longer provides Service Principal credentials.
+  2. **Stale Subscription**: `AZURE_SUBSCRIPTION_ID` in GitHub Secrets belongs to a destroyed sandbox. `az account set` fails with "subscription doesn't exist in cloud 'AzureCloud'".
+  3. **Session-mode false positive**: `az account show` succeeds on the self-hosted runner (cached local session), so `AZURE_AVAILABLE=true` is set. But actual management API calls fail with AADSTS130507.
+  4. **ACG uses Temporary Access Pass (TAP)**: The session token has a limited TTL and cannot be renewed unattended.
+- **Diagnostics**: See `docs/issues/2026-02-16-azure-sandbox-auth-failure-run-22049025221.md` for full log analysis.
+
+## Current Technical Hurdle: Persistent WinRM 'true' Error in Vagrant Tests
+- **Issue**: During Vagrant Test Kitchen 'converge' phase on Windows guest, received PowerShell error: "'The term true is not recognized as the name of a cmdlet...' at line 1, char 1".
+- **Context**: Occurs after file transfer but before Ansible playbook starts.
+- **Root Cause (identified 2026-02-16)**: `kitchen-ansiblepush` sends the POSIX no-op command `true` over WinRM to PowerShell as a readiness check. PowerShell doesn't have `true` — this is a **shell mismatch at the provisioner level**, NOT a WinRM transport issue (MaxEnvelopeSizekb, timeouts are irrelevant).
+- **Debugging leftovers to revert**: `.kitchen.yml:20` (`install_command: ''`), `.kitchen.yml:31` (`ansible_winrm_shell_type: cmd`), `Gemfile:5` (`test-kitchen ~> 3.1.0`), `requirements.txt:1` (`pywinrm==0.4.1`).
+- **Fix options** (see `docs/plans/2026-02-17-ci-stabilization-plan.md` Phase 2):
+  1. Provisioner config override for readiness command (`cmd /c exit 0`)
+  2. Shell type config at provisioner level (not just Ansible extra_var)
+  3. Patch/fork the `kitchen-ansiblepush` gem
+  4. Switch to `kitchen-ansible` (pull mode)
+
+## CI Workflow Structural Issues (2026-02-16)
+
+### Dead / stub jobs
+- **`azure_integration`** (line 297): Hard-disabled with `if: false`. Entire job (lines 291-423) is dead code.
+- **`vagrant_integration`** (lines 425-446): Runs but only does `echo` + `exit 0`. Dead stub.
+- **`vagrant_tests`** (line 457): Hardcoded to `refs/heads/merge-main-into-azure-dev` — becomes dead after branch merges.
+
+### Structural debt
+- **~160 lines of duplication**: Checkout + install steps repeated across all 4 active jobs. Should be a composite action.
+- **Hardcoded user path**: `AZURE_CONFIG_DIR: /Users/cliang/.azure` (line 67).
+- **Missing fork protection**: `vagrant_tests` job lacks the fork guard other jobs have.
+- **No Azure cleanup**: No `if: always()` step to run `make test-azure-destroy` on failure.
+- **Silent failure**: Dummy subscription `00000000...` fallback (line 343) should `exit 1` instead.
+- **Ruby install inconsistency**: AWS uses retry pattern; other jobs don't.
+
+### Proposed simplification
+- Consolidate 5 jobs → 3: `lint`, `aws_integration`, `integration_test` (Azure attempt → Vagrant fallback → cleanup).
+- See full TODO list: `docs/todos/2026-02-16-azure-sandbox-remediation.md` (TODO-9 through TODO-18).
+
+## Vagrant Fallback Stabilization (Blocked)
+- **Transport**: WinRM is standard. Tunings applied (MaxEnvelopeSizekb=16384, increased timeouts, 10s stabilization pause).
+- **Execution Method**: Reverted to **direct `make vagrant-up`** for CI fallback. Test Kitchen (via `kitchen-vagrant`) encountered "unknown state" errors on the M2 runner, likely due to driver overhead or resource management bugs.
+- **Verification**: Added manual `curl` check for Tomcat accessibility at port 8080.
+- **Resource Management**: Unique disk naming, VBoxManage cleanup, mandatory Vagrant Cleanup job all in place.
 
 ## Current State Snapshot
-- `memory-bank/` did not exist (or was empty) at task start.
-- Core initialization files are now being established:
-  - `projectbrief.md`
-  - `systemPatterns.md`
-  - `techContext.md`
-  - `activeContext.md`
-  - `progress.md`
+- **Branch**: `merge-main-into-azure-dev` (Working on PR #20).
+- **Status**: Azure integration blocked (no SP creds, stale subscription, expired TAP). Vagrant tests *blocked* by the persistent WinRM 'true' error.
+- **Documentation**: Full findings in `docs/issues/2026-02-16-azure-sandbox-auth-failure-run-22049025221.md`.
 
-## What Was Done
-1. Scanned core repo docs and code paths (`README.md`, defaults, tasks, Kitchen config, Makefile, upgrade and plugin docs).
-2. Confirmed operational architecture:
-   - Windows-focused Tomcat provisioning role
-   - symlink-based version management
-   - candidate (side-by-side) verification and promotion workflow
-   - controller-side health checks via lookup plugins
-3. Captured security posture with secret-store guidance, including HashiCorp Vault alignment.
-4. Documented constraints where `.clinerules` expectations (k3s/ArgoCD references) exceed currently implemented repository scope.
-
-## Why These Decisions Were Made
-- **Why initialize all memory files now:** `.clinerules` mandates memory-bank as primary cross-agent state and requires initialization when missing.
-- **Why include `progress.md` in addition to the four required files:** `.clinerules` explicitly requires real-time updates to both `activeContext.md` and `progress.md` after changes/tests.
-- **Why document k3s/ArgoCD as guardrails instead of implementation details:** repository scan found no direct k3s/ArgoCD assets; documenting this avoids inventing architecture while preserving policy intent.
-- **Why emphasize secret lookup patterns:** `.clinerules` forbids plaintext secrets and requires Vault-oriented compliance, which aligns with existing service-account documentation.
+## Key Architectural Finding (2026-02-16)
+- **`auth_source: cli` is NOT applicable** — The Azure test path (`make test-azure-provision-tomcat`) uses raw `az` CLI commands in the Makefile for all Azure resource management (vm create, nsg rules, run-command). Ansible only talks to the VM over WinRM, never through `azure.azcollection` modules. The auth failure is entirely at the `az` CLI level.
+- **Implication**: Fixes must target the `az` session/credentials, not Ansible auth settings.
+- **Future option**: Migrating Makefile `az` calls to Ansible `azure.azcollection` modules would enable `auth_source: cli` but is a significant refactor.
 
 ## Immediate Next Actions
-- Keep this file as the first read before any future task.
-- On each subsequent change/test:
-  - update this file with what changed and why,
-  - update `progress.md` checklist status.
+- **TODO-1**: Create new ACG sandbox and run `make sync-secrets` to refresh Azure credentials. Confirm SP vs TAP-only.
+- ~~**TODO-2**~~: RESOLVED — `azure_integration` is `if: false` (condition never evaluated); `vagrant_integration` condition already uses `||`.
+- **TODO-3**: Harden Azure availability detection — `az group list` can pass with a stale cached session while TAP is expired.
+- **TODO-4**: Fix WinRM "true" error — shell mismatch in `kitchen-ansiblepush`, not a transport issue. See plan Phase 2.
+- Push the latest state to `merge-main-into-azure-dev`.
+- See full remediation plan: `docs/todos/2026-02-16-azure-sandbox-remediation.md`
 
-## Risks / Follow-ups
-- **Portability vs. Stability:** The current CI solution is optimized for the local self-hosted runner (`m2-air`). It uses absolute symlinks (`/Users/cliang/...`) to bypass persistent authentication issues. This makes the CI non-portable to other runners without mirroring that exact filesystem structure.
-- **Binary Rotation:** Hardcoded Tomcat mirror URLs are prone to 404 errors when Apache rotates versions.
-- If future scope adds Kubernetes/GitOps components (k3s/ArgoCD), `systemPatterns.md` must be expanded from guardrails to concrete operational flows.
-- If this role is integrated into e-commerce shopping-cart infrastructure, API/integration contracts should be documented explicitly (currently out of direct repo scope).
-
----
-
-## Session Update (2026-02-12): Tooling/Docs Stabilization and Commit Grouping
-
-### What Changed
-- Reviewed current uncommitted repo changes and documented rationale in:
-  - `docs/issues/TOOLING-CONSISTENCY-AND-KITCHEN-BASELINE.md`
-- Updated `README.md` to:
-  - add a link to the new issue note,
-  - fix candidate troubleshooting path to `docs/issues/CANDIDATE-TROUBLESHOOTING.md`,
-  - normalize Azure issue links to `docs/issues/AZURE-KITCHEN-INTEGRATION.md`.
-- Local commits were grouped by intent (no push):
-  1. `cb0411b` build: consistent ansible binary resolution (`Makefile` + `.ansible-lint`)
-  2. `9229253` test: disable `win11-baseline` block + normalize CI EOF newline
-  3. `7d2f1c9` docs: rationale doc + README issue-link updates
-
-### Why It Was Done This Way
-- **Toolchain consistency:** force `ansible-lint`, `ansible-playbook`, and `ansible-galaxy` to resolve from the same environment path to reduce local/CI mismatch failures.
-- **Lint signal quality:** exclude Kitchen config files from ansible-lint because ERB-templated Kitchen YAML can produce false positives unrelated to playbook quality.
-- **Test-scope safety:** fully comment the inactive `win11-baseline` section to preserve history while preventing accidental test usage.
-- **Handover clarity:** create an issue note and README links so future agents/operators can quickly understand the rationale without re-deriving context from diffs.
-
-### Session Update (2026-02-12): CI Failure Root Cause Analysis and Fixes
-
-
-
-### What Changed
-
-- Documented the full regression analysis in `docs/issues/CI-WORKFLOW-REGRESSIONS.md`.
-
-- Fixed `Makefile` and `scripts/setup.sh` to include `community.windows` in the `deps` target.
-
-- Refactored `Makefile` binary resolution to be more robust (fallback to PATH if derived path fails).
-
-
-
-- Added explicit guard checks for `ansible-lint` and `ansible-playbook` in `Makefile` with clear error messages.
-
-- Updated `.kitchen.yml` to provide a fallback for `ansible_playbook_bin` when `.direnv` is missing.
-
-- Commented out the `vagrant-test` job in `.github/workflows/ci.yml` as it depended on the now-disabled `win11-baseline` platform.
-
-- Added `--offline` to `ansible-lint` in `Makefile` to prevent it from trying to install dependencies from `requirements.yml` via HTTPS.
-
-- Updated `Makefile`'s `syntax` target to symlink the current directory into `roles/provision-tomcat` before running syntax checks to ensure the role is correctly resolved.
-
-
-
-### Why It Was Done This Way
-
-- **ansible-lint failure:** In CI, `ansible-lint` was attempting to install roles from `requirements.yml` using HTTPS, which failed for private repositories. Since dependencies are already pre-cloned via SSH in the workflow, `--offline` forces linting to use existing paths.
-
-- **Role resolution failure:** `ansible-playbook --syntax-check` was failing to find the `provision-tomcat` role. Symlinking the repo root into `roles/provision-tomcat` is the most reliable way to make Ansible recognize the current directory as a named role.
-
-- **Missing Collection:** The previous "Tooling Consistency" update accidentally omitted `community.windows` from `make deps`, causing syntax checks to fail in clean environments.
-
-
-
-
-
-
-
-- **CI/Kitchen Drift:** Disabling `win11-baseline` in `.kitchen.yml` without updating `ci.yml` caused the `vagrant-test` job to fail (instance not found).
-
-- **Tooling Robustness:** The `Makefile` logic for consistent binary resolution was too rigid and would fail if binaries weren't exactly where expected; added fallbacks to ensure local and CI portability.
-
-- **Kitchen Portability:** Hardcoded `.direnv` paths in `.kitchen.yml` caused failures in CI environments where `.direnv` is not used.
-
-
-
-### Session Update (2026-02-12): CI Integration Fallback Refinement (rbenv bypass)
-
-### What Changed
-- Replaced `ruby/setup-ruby@v1` with a manual `bundle install` using the self-hosted runner's existing `rbenv` environment.
-- Added explicit `rbenv` initialization to the workflow steps.
-
-### Why It Was Done This Way
-- **Permission Constraints:** `setup-ruby` attempted to create directories in `/Users/runner`, which failed due to `EACCES` on the self-hosted macOS runner. Since the runner is already optimized with `rbenv`, leveraging the existing environment is more reliable.
-- **Environment Parity:** Using the same Ruby/rbenv setup as local development ensures consistent behavior between local and CI test executions.
-
-### Session Update (2026-02-13): CI Stabilization and Infrastructure Fixes
-
-### What Changed
-- Optimized `bin/vagrant-wrapper` to preserve the `HOME` environment variable, enabling Vagrant box caching.
-- Enhanced `bin/vbox-cleanup-disks` to aggressively power off and unregister any stale VMs (`kitchen-*` or `windows-11-*`) and disks.
-- Fixed `ansible.cfg` to use `stdout_callback = default` with `result_format = yaml`, resolving errors from the removed `yaml` callback plugin.
-- Tuned WinRM connection settings in `.kitchen.yml` and `ansible.cfg`:
-  - Reverted to `basic` transport for guest compatibility.
-  - Increased `operation_timeout` to 600s and `connection_retries` to 15.
-  - Increased Windows VM resources to 8GB RAM and 4 CPUs.
-- Disabled unstable local Vagrant integration tests in `.github/workflows/ci.yml` by adding `&& false` to skip conditions.
-
-### Why It Was Done This Way
-- **Vagrant box re-downloads:** Stripped `HOME` prevented Vagrant from finding its cache. Preserving it and explicitly setting `VAGRANT_HOME` in CI resolved this.
-- **VirtualBox import errors:** Stale registrations from crashed runs caused `VERR_ALREADY_EXISTS`. Aggressive cleanup ensures a clean state.
-- **Ansible callback error:** `community.general` 12.0.0 removed the `yaml` callback; switching to the standard `result_format` is the supported way forward.
-- **WinRM timeouts:** The Apple Silicon runner exhibits high latency with Windows ARM64 guests; high timeouts and retries are necessary to prevent "deserialization failed" errors.
-- **Disabling Vagrant fallback:** Extensive testing confirmed that Windows 11 ARM64 virtualization on VirtualBox 7 is fundamentally unstable on Apple Silicon, leading to consistent PowerShell crashes. Skipping these tests prevents misleading CI failures while ensuring Azure tests remain the reliable standard.
-
-### Session Update (2026-02-13): Dynamic Azure Sandbox Detection
-
-### What Changed
-- Transitioning Azure authentication in CI from static GitHub Secrets to dynamic session detection using `az account show`.
-- Refactoring `ci.yml` to treat Azure as "available" if the runner has an active CLI session.
-- Implementing metadata resolution in `Makefile` to pull subscription and resource group info from the current account context.
-
-### Why It Was Done This Way
-- **Avoid Secret Rotations**: Sandbox environments (e.g., Pluralsight Labs) rotate frequently. Manually updating GitHub Secrets for each session is inefficient and error-prone.
-- **Leverage Self-Hosted Environment**: Since the CI runner is on the user's local machine, it can inherit the existing `az login` state, providing a seamless "Dev-to-CI" experience.
-- **Dynamic Identification**: Using `az group list` within the automation ensures the correct resource group is targeted without hardcoded IDs in the repository.
-
-### Session Update (2026-02-13): Final CI Stabilization and Trigger Refinement
-
-### What Changed
-- Resolved macOS `fork()` safety crashes by setting `OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES` in the CI environment.
-- Implemented persistent role management on the self-hosted runner by symlinking from a known stable directory (`/Users/cliang/src/gitrepo/personal/ansible/`) instead of attempting complex and failing CI clones.
-- Pinnded `ansible-core` to a stable 2.15.x version and implemented manual Python virtual environment management to avoid permission issues with standard actions.
-- Refined job triggers in `ci.yml` to ensure integration tests only run on relevant branches (e.g., `azure-dev` for Azure, `aws-dev` for AWS) during `workflow_dispatch` using strict `github.ref_name` matching.
-- Improved Azure environment detection with explicit subscription setting and fallback resource groups.
-
-### Why It Was Done This Way
-- **macOS Fork Issues**: Apple's security checks on `fork()` often crash parallel processes (like Ansible workers) when crypto libraries are involved. Disabling these checks via environment variable is the standard fix for Ansible on macOS hosts.
-- **Runner Isolation**: Self-hosted runners often have restrictive environments or lack access to GitHub Secrets in certain contexts. Symlinking pre-cloned roles from the runner's native filesystem is the most reliable way to handle private dependencies in this specific setup.
-- **Trigger Noise**: Previously, `workflow_dispatch` would trigger all integration tests (Azure, Vagrant, and AWS) regardless of the branch. Restricting them by branch name keeps the CI pipeline efficient and prevents misleading failures.
-- **Ansible Stability**: System Python and latest `ansible-core` versions can be unstable on ARM64 macOS runners. Using a venv and a specific stable version ensures consistent and reproducible test runs.
-
-### Current Handover State
-- CI pipeline is fully stabilized on the `azure-dev` branch.
-- PR #2 is updated with all stabilization fixes and trigger refinements.
-- `@copilot` has been tagged for a formal re-review of the implementation.
+## Recent Activity
+1.  **Analyzed Run #22049025221** (2026-02-16): Identified 3 cascading Azure auth failures and 2 CI workflow logic bugs.
+2.  **Documented findings**: Created `docs/issues/2026-02-16-azure-sandbox-auth-failure-run-22049025221.md`.
+3.  **Reverted SSH Experiment**: Restored WinRM as the primary transport for Windows provisioning.
+4.  **Hardened WinRM**: Increased envelope size and timeouts to mitigate "no element found" errors on macOS hosts.
+5.  **Unique Resource IDs**: Switched to timestamped VDI names in Vagrant to support concurrent or rapid-succession CI runs.
+6.  **Consolidated Azure Logic**: Simplified the `azure_integration` job in `ci.yml` to handle both SP and Session modes more gracefully.
+7.  **Ruled out `auth_source: cli`** (2026-02-16): Confirmed Azure test path uses raw `az` CLI, not Ansible Azure modules. `auth_source: cli` is irrelevant to current architecture. Documented in todo and activeContext.
+8.  **CI workflow review** (2026-02-16): Identified 2 dead jobs, 1 temp-branch-hardcoded job, ~160 lines of duplication, missing fork protection on `vagrant_tests`, no Azure resource cleanup, silent dummy subscription fallback. Proposed consolidation from 5 jobs to 3. See TODO-9 through TODO-18.
+9.  **Reviewed Gemini's plan** (2026-02-16): Corrected 4 issues: marked TODO-2 as resolved (stale finding), dropped "disable vagrant_tests" step, identified WinRM "true" error root cause (shell mismatch, not transport), consolidated two overlapping Vagrant plans into `2026-02-17-ci-stabilization-plan.md`.

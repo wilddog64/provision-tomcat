@@ -17,7 +17,15 @@
 - `lookup_plugins/`: controller-side network/http checks
 - `tests/`: playbooks for default, upgrade, downgrade scenarios
 - `docs/`: setup, troubleshooting, candidate strategy, service-account guidance
+- `docs/todos/`: tracked remediation items (e.g., Azure sandbox auth)
 - `Makefile`: operator interface for validation, kitchen flows, Azure provisioning/testing
+
+## Azure Test Architecture (Important)
+The Azure test path (`make test-azure-provision-tomcat`) has a **split architecture**:
+- **Azure resource management**: Raw `az` CLI commands in Makefile (vm create, nsg rules, run-command, vm show). Auth depends on `az login` session.
+- **Tomcat provisioning**: Ansible over WinRM to the provisioned VM. No `azure.azcollection` modules used.
+- **Implication**: Ansible-level auth settings like `auth_source: cli` do NOT apply. Auth fixes must target the `az` CLI session/credentials layer.
+- **ACG sandbox model (2026-02)**: Shifted from Service Principal to Temporary Access Pass (TAP). TAP has limited TTL, cannot be renewed unattended.
 
 ## Runtime Variables (Selected)
 - Version/paths:
@@ -40,6 +48,17 @@
 - Expected secret injection via lookup plugins and external secret stores.
 - HashiCorp Vault pattern is documented and should be preferred to satisfy `.clinerules`.
 - No plaintext service credentials should be committed.
+
+## Security Audit Status (2026-02-14)
+- Full red-team audit completed: `docs/SECURITY-AUDIT.md`.
+- **Phase 1 & 2 Remediated**:
+    - [x] **Supply Chain**: Mandatory SHA-512 checksum verification for all binary downloads.
+    - [x] **Runner Security**: Missing fork protection guards implemented in CI.
+    - [x] **Network Hardening**: AWS SG ingress restricted to CI runner IP during execution.
+    - [x] **Log Security**: `no_log: true` implemented for all credential-handling tasks.
+    - [x] **Service Security**: Tomcat shutdown port bound to `127.0.0.1`.
+- **Remaining Items (Phase 3)**: CredSSP restriction, safer CI parsing (`eval` removal), GH_PAT migration.
+- **Positive observations**: No production secrets in repo, SSH deploy keys used for private roles, aggressive cleanup patterns.
 
 ## Known Gaps / Guardrails
 - `.clinerules` references k3s and ArgoCD architecture alignment, but this repo currently centers on Ansible role execution and Windows host provisioning.

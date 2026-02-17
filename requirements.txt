@@ -1,3 +1,5 @@
 pywinrm
+requests-ntlm
+urllib3<2
 ansible
 ansible-lint

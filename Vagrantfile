@@ -26,21 +26,21 @@ Vagrant.configure("2") do |config|
   # Add secondary disk for D: drive (default 50GB, override with VAGRANT_DISK_SIZE_GB)
   disk_size_gb = ENV.fetch('VAGRANT_DISK_SIZE_GB', '50').to_i
   config.vm.provider "virtualbox" do |vb|
-    disk_file = File.join(File.dirname(__FILE__), ".vagrant", "data_disk.vdi")
+    # Generate unique disk filename to avoid collisions
+    timestamp = Time.now.to_i
+    disk_file = File.join(File.dirname(__FILE__), ".vagrant", "data_disk_#{timestamp}.vdi")
 
-    # Clean up stale VirtualBox registration if file doesn't exist but is still registered
-    unless File.exist?(disk_file)
-      # Check if disk is registered in VirtualBox and remove stale entry
-      vbox_list = `VBoxManage list hdds 2>/dev/null`
-      if vbox_list.include?(disk_file)
-        # Extract UUID and close the medium
-        uuid_match = vbox_list.match(/UUID:\s+([a-f0-9-]+).*?Location:\s+#{Regexp.escape(disk_file)}/m)
-        if uuid_match
-          system("VBoxManage closemedium disk #{uuid_match[1]} --delete 2>/dev/null")
-        end
+    # Clean up ANY stale disks in the .vagrant directory to save space in CI
+    # We use system call to VBoxManage to ensure they are unregistered first
+    Dir.glob(File.join(File.dirname(__FILE__), ".vagrant", "data_disk_*.vdi")).each do |old_disk|
+      if File.exist?(old_disk)
+        # Attempt to unregister if it's still in the DB
+        system("VBoxManage closemedium disk \"#{old_disk}\" --delete 2>/dev/null")
+        File.delete(old_disk) if File.exist?(old_disk)
       end
-      vb.customize ['createhd', '--filename', disk_file, '--size', disk_size_gb * 1024]
     end
+
+    vb.customize ['createhd', '--filename', disk_file, '--size', disk_size_gb * 1024]
     vb.customize ['storageattach', :id, '--storagectl', 'SATA Controller',
                   '--port', 1, '--device', 0, '--type', 'hdd', '--medium', disk_file]
   end
@@ -48,6 +48,19 @@ Vagrant.configure("2") do |config|
   # Initialize and format D: drive (runs automatically on first boot)
   config.vm.provision "disk_setup", type: "shell" do |s|
     s.inline = <<-POWERSHELL
+      # Port forwarding
+      config.vm.network "forwarded_port", guest: 8080, host: 8080, auto_correct: true
+      config.vm.network "forwarded_port", guest: 9080, host: 9080, auto_correct: true
+      # WinRM port is usually automatically handled, but we can be explicit
+      config.vm.network "forwarded_port", guest: 5985, host: 55985, auto_correct: true
+
+      # Tune WinRM for Ansible stability
+      Write-Host "Tuning WinRM configuration..."
+      winrm set winrm/config '@{MaxEnvelopeSizekb="16384"}'
+      winrm set winrm/config/Winrs '@{MaxMemoryPerShellMB="2048";MaxConcurrentUsers="100"}'
+      winrm set winrm/config/Service '@{AllowUnencrypted="true";MaxConcurrentOperationsPerUser="1500"}'
+      winrm set winrm/config/Service/Auth '@{Basic="true";Negotiate="false";Kerberos="false"}'
+      
       $disk = Get-Disk | Where-Object PartitionStyle -eq 'RAW'
       if ($disk) {
         Write-Host "Initializing and formatting D: drive..."
@@ -62,10 +75,16 @@ Vagrant.configure("2") do |config|
   end
 
   common_env = {
+    'ansible_user'                         => 'vagrant',
+    'ansible_password'                     => 'vagrant',
+    'ansible_become_method'                => 'runas',
+    'ansible_become_user'                  => 'vagrant',
     'ansible_connection'                   => 'winrm',
     'ansible_winrm_transport'              => 'basic',
     'ansible_winrm_server_cert_validation' => 'ignore',
     'ansible_winrm_scheme'                 => 'http',
+    'ansible_winrm_read_timeout_sec'       => 600,
+    'ansible_winrm_operation_timeout_sec'  => 540,
     'install_drive'                        => 'D:',
     'ado_pat_token'                        => ENV.fetch('ADO_PAT_TOKEN', 'placeholder'),
   }
@@ -73,7 +92,8 @@ Vagrant.configure("2") do |config|
   # default playbook for simple testing
   config.vm.provision :ansible do |ansible|
     ansible.limit = 'all'
-    ansible.galaxy_role_file = 'requirements.yml'
+    ansible.compatibility_mode = '2.0'
+    # ansible.galaxy_role_file = 'requirements.yml' # Skip galaxy; roles are pre-checked out
     ansible.playbook = 'tests/playbook.yml'
     ansible.extra_vars = common_env
   end
@@ -81,7 +101,7 @@ Vagrant.configure("2") do |config|
   # Upgrade step 1 (install older Java/Tomcat)
   config.vm.provision 'ansible_upgrade_step1', type: :ansible, run: 'never' do |ansible|
     ansible.limit = 'all'
-    ansible.galaxy_role_file = 'requirements.yml'
+    # ansible.galaxy_role_file = 'requirements.yml'
     ansible.playbook = 'tests/playbook-upgrade.yml'
     ansible.extra_vars = common_env.merge(
       'upgrade_step' => 1,
@@ -92,7 +112,7 @@ Vagrant.configure("2") do |config|
   # Upgrade step 2 with candidate workflow enabled (auto promote)
   config.vm.provision 'ansible_upgrade_step2', type: :ansible, run: 'never' do |ansible|
     ansible.limit = 'all'
-    ansible.galaxy_role_file = 'requirements.yml'
+    # ansible.galaxy_role_file = 'requirements.yml'
     ansible.playbook = 'tests/playbook-upgrade.yml'
     ansible.extra_vars = common_env.merge(
       'upgrade_step' => 2,
@@ -105,7 +125,7 @@ Vagrant.configure("2") do |config|
   # Upgrade step 2 (prepare only – leaves candidate running)
   config.vm.provision 'ansible_upgrade_step2_prepare', type: :ansible, run: 'never' do |ansible|
     ansible.limit = 'all'
-    ansible.galaxy_role_file = 'requirements.yml'
+    # ansible.galaxy_role_file = 'requirements.yml'
     ansible.playbook = 'tests/playbook-upgrade.yml'
     ansible.extra_vars = common_env.merge(
       'upgrade_step' => 2,
@@ -119,7 +139,7 @@ Vagrant.configure("2") do |config|
   # Upgrade step 2 finalization (promote + cleanup)
   config.vm.provision 'ansible_upgrade_step2_finalize', type: :ansible, run: 'never' do |ansible|
     ansible.limit = 'all'
-    ansible.galaxy_role_file = 'requirements.yml'
+    # ansible.galaxy_role_file = 'requirements.yml'
     ansible.playbook = 'tests/playbook-upgrade.yml'
     ansible.extra_vars = common_env.merge(
       'upgrade_step' => 2,
@@ -137,8 +157,8 @@ Vagrant.configure("2") do |config|
   # Create a forwarded port mapping which allows access to a specific port
   # within the machine from a port on the host machine. In the example below,
   # accessing "localhost:8080" will access port 80 on the guest machine.
-  config.vm.network "forwarded_port", guest: 8080, host: 8080
-  config.vm.network "forwarded_port", guest: 9080, host: 9080
+  config.vm.network "forwarded_port", guest: 8080, host: 8080, auto_correct: true
+  config.vm.network "forwarded_port", guest: 9080, host: 9080, auto_correct: true
 
   # Create a private network, which allows host-only access to the machine
   # using a specific IP.

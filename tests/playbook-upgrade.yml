@@ -30,7 +30,7 @@
     - name: Create local test accounts
       ansible.windows.win_user:
         name: "{{ item }}"
-        password: "Password123!"
+        password: "{{ tomcat_test_password | default('Password123!') }}"
         password_never_expires: true
         state: present
         groups:
@@ -42,6 +42,7 @@
       when: ansible_facts['os_family'] == 'Windows'
       tags:
         - always
+      no_log: true
 
     - name: Debug install_drive value
       debug:

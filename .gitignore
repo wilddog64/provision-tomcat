@@ -23,3 +23,5 @@ boxes/
 __pycache__/
 scratch/
 tests/roles/
+roles/
+venv/
