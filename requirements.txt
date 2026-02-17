@@ -1,4 +1,4 @@
-pywinrm
+pywinrm==0.4.1
 requests-ntlm
 urllib3<2
 ansible
