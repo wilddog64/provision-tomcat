@@ -35,6 +35,7 @@ This was caused by truncated WinRM responses or communication timeouts when the 
 5.  **Standardized Transport**: Reverted an experimental switch to SSH, standardizing on **WinRM** but with the above stability tunings applied.
 
 ## Related Documents
+- `docs/issues/2026-02-16-azure-sandbox-auth-failure-run-22049025221.md` — Detailed log analysis of Run #22049025221 confirming ACG auth chain: empty SP creds → stale subscription → AADSTS130507
 - `memory-bank/activeContext.md`
 - `Vagrantfile`
 - `ansible.cfg`

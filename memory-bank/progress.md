@@ -64,8 +64,29 @@
 ## In Progress
 - [ ] Finalize merge of `merge-main-into-azure-dev` to `azure-dev` (PR #20).
 - [ ] Finalize merge of `aws-dev` to `main` (PR #6).
+- [ ] **[AZURE-AUTH] Resolve Azure auth failure** (see `docs/todos/2026-02-16-azure-sandbox-remediation.md`):
+    - [ ] TODO-1: Refresh ACG sandbox credentials and push to GitHub Secrets.
+    - [ ] TODO-2: Fix dead-code `&&` bug in `azure_integration` (ci.yml:294) and `vagrant_integration` (ci.yml:427).
+    - [ ] TODO-3: Harden Azure availability detection (stale session false-positive).
+- [ ] TODO-4: Investigate `windows-base` WinRM ParseError on Vagrant fallback (CI runner m2-air).
+- [x] Ruled out `auth_source: cli` as fix — Azure tests use raw `az` CLI, not Ansible Azure modules.
+- [ ] **[CI-CLEANUP] Workflow structural debt** (see `docs/todos/2026-02-16-azure-sandbox-remediation.md` TODO-9–18):
+    - [ ] TODO-9: Remove or revive dead `azure_integration` job (`if: false`).
+    - [ ] TODO-10: Remove or revive dead `vagrant_integration` job (`exit 0` stub).
+    - [ ] TODO-11: Generalize `vagrant_tests` job (hardcoded to temp branch).
+    - [ ] TODO-12: Extract shared setup into composite action (~160 lines duplication).
+    - [ ] TODO-13: Replace hardcoded `AZURE_CONFIG_DIR` (`/Users/cliang/.azure`).
+    - [ ] TODO-14: Add fork protection to `vagrant_tests` job (security gap).
+    - [ ] TODO-15: Add Azure resource cleanup step (`if: always()`).
+    - [ ] TODO-16: Fail fast on dummy subscription fallback instead of silent continue.
+    - [ ] TODO-17: Standardize Ruby install across jobs.
+    - [ ] TODO-18: Consolidate 5 jobs → 3 (`lint`, `aws_integration`, `integration_test`).
 
 ## Future / Pending
+- [ ] TODO-5: Document TAP TTL constraints for ACG sandbox CI window.
+- [ ] TODO-6: Migrate Makefile `az` CLI calls to Ansible `azure.azcollection` modules (enables `auth_source: cli`).
+- [ ] TODO-7: Explore Workload Identity Federation (GitHub OIDC → Azure, bypasses SP/TAP).
+- [ ] TODO-8: Evaluate `kitchen-azure` replacement (current gem is v0.1.0, ancient).
 - [ ] Expand `systemPatterns.md` if k3s/ArgoCD scope is added.
 - [ ] Document Shopping Cart microservice API contracts if integration expands.
 - [x] Audit CredSSP wildcard delegation in `windows-base` role (MED-1). (Note: Documented in SECURITY-AUDIT.md, remediation belongs to windows-base repo)
