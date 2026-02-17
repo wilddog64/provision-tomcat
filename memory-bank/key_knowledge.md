@@ -1,9 +1,32 @@
-- **Azure Authentication Blockage**: AADSTS130507 error confirms an ACG platform shift to a TAP/User Account model, blocking Service Principal creation due to "Insufficient privileges". This renders traditional automated Azure integration testing (e.g., via `kitchen-azure`) infeasible for CI, requiring significant re-evaluation of authentication strategies or tools.
-- **WinRM Stability**: ParseError (XML truncation) consistently triggered by windows-base role. Requires MaxEnvelopeSizekb: 16384, ansible_winrm_read_timeout_sec: 600, pipelining: False. Further stabilization required increasing MaxMemoryPerShellMB: 2048 and MaxConcurrentOperationsPerUser: 100.
-- **VDI Management**: Unique disk naming (data_disk_#{timestamp}.vdi) and VBoxManage closemedium are required to prevent VirtualBox VERR_ALREADY_EXISTS errors. Hung VBoxHeadless processes and aborted/stopping VMs can cause runner hangs; automatic cleanup is crucial.
-- **Kitchen Hardening**: .kitchen.yml must use ENV[...] or ENV.fetch with defaults to avoid KeyError when cloud secrets are missing during local runs.
-- **Copilot Firewall**: Agent is blocked by azcliprod.blob.core.windows.net, management.azure.com, login.microsoftonline.com, and graph.microsoft.com.
-- **Test Kitchen as Fallback**: vagrant-dev branch shows more robust Test Kitchen usage is key for stable local CI.
-- **Runner Name Discrepancy**: GitHub API refers to the runner as 'm2-air' (id: 21), despite the physical machine reporting as 'm4-air.local'.
-- **Ruby Environment**: Self-hosted runner's Ruby 4.0.0 has compatibility issues with older test-kitchen 1.x and its dependencies (thor, benchmark). ruby/setup-ruby@v1 has permission issues on this specific runner. Manual rbenv setup in non-interactive shell is complex. Loosening Gemfile Ruby version constraint to '>= 3.3.0', '< 5.0' and simplifying bundle install is the current working solution for linting.
-- **Persistent WinRM 'true' Error**: During Vagrant Test Kitchen 'converge' phase on Windows guest, received 'The term true is not recognized as the name of a cmdlet...' at line 1, char 1. This error occurs after file transfer but before Ansible playbook execution. Troubleshooting attempts (disabling `require_windows_support`, `setup_yml`, setting `install_command: ''`, `ansible_winrm_shell_type: cmd`, pinning `test-kitchen` to `~>3.1.0`, and pinning `pywinrm` to `0.4.1`) have been unsuccessful. This points to a deep-seated incompatibility or bug within Test Kitchen's WinRM initial command execution or `pywinrm` itself, likely due to a hardcoded script expecting a Bash `true` command in a PowerShell context or a fundamental issue in how WinRM communication is initialized or interpreted at a very low level.
+# Key Knowledge
+
+## Branch Recovery & Hygiene (2026-02-17)
+
+### Post-Mortem Findings: `azure-dev` Failure
+The `azure-dev` branch accumulated significant technical debt that led to a cascading failure:
+1. **Shotgun Debugging**: Rapid-fire commits of individual debug attempts without reverting failed ones left residue and corrupted the branch.
+2. **Ruby 4.0 Dependency Spiral**: The M2 runner's Ruby 4.0 triggered a chain of incompatible gem updates (`thor`, `benchmark`, `kitchen-azure`), causing CI failures that were misdiagnosed.
+3. **AWS Logic Pollution**: Merging `main` into `azure-dev` introduced AWS-specific CI jobs and redundancies, complicating the pipeline.
+4. **ACG Platform Shift**: The move from Service Principal to TAP-only auth invalidated the existing Azure CI approach.
+
+### Key Lesson Learned
+**Debug locally, commit once, push verified.** Automated CI should not be used for trial-and-error debugging.
+
+## Technical Stabilizations
+
+### WinRM 'true' Error - Root Cause
+The error `"The term 'true' is not recognized as the name of a cmdlet"` is a **shell mismatch**, not a transport issue.
+- **Problem**: `kitchen-ansiblepush` sends the POSIX `true` command as a readiness check to a PowerShell target.
+- **Fix**: Override the readiness command in `.kitchen.yml` with `cmd /c exit 0`.
+
+### Ruby Environment Management
+- **M2 Runner Constraint**: Ruby 4.0.0 defaults can cause cascading dependency issues with `test-kitchen`.
+- **Solution**: Pin CI jobs to Ruby 3.3.x using `rbenv` or the `setup-ruby` action.
+
+### Vagrant & VirtualBox Resilience
+- **VDI Management**: Unique disk naming (`data_disk_#{timestamp}.vdi`) and `VBoxManage closemedium` are essential to prevent `VERR_ALREADY_EXISTS` collisions on self-hosted runners.
+- **Resource Contention**: Parallel Vagrant runs on the same runner can lead to WinRM `ParseError` (XML truncation). Linearized CI jobs are required for stability.
+
+## Infrastructure Constraints
+- **Copilot Firewall**: The agent is blocked by several Azure-related domains (`management.azure.com`, `login.microsoftonline.com`).
+- **ACG TAP Auth**: Temporary Access Pass (TAP) has limited TTL and doesn't support unattended renewal. Azure CI is currently deferred until the credential model stabilizes.
