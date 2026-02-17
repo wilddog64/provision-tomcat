@@ -294,7 +294,12 @@ jobs:
       contents: read
     runs-on: [self-hosted, macOS, ARM64]
     needs: lint
-    if: false
+    if: |
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository) && (
+        (github.event_name == 'push' && (github.ref_name == 'azure-dev' || github.ref_name == 'main')) ||
+        (github.event_name == 'pull_request' && (github.base_ref == 'main' || github.base_ref == 'azure-dev')) ||
+        (github.event_name == 'workflow_dispatch' && (inputs.environment == 'azure' || inputs.environment == 'auto'))
+      )
     steps:
       - name: Checkout provision-tomcat
         uses: actions/checkout@v4
@@ -307,7 +312,7 @@ jobs:
             echo "AZURE_AVAILABLE=true" >> $GITHUB_ENV
             echo "SESSION_MODE=false" >> $GITHUB_ENV
             echo "Azure Service Principal credentials detected."
-          elif az group list --output none 2>/dev/null; then
+          elif az account get-access-token --query accessToken --output none 2>/dev/null; then
             echo "AZURE_AVAILABLE=true" >> $GITHUB_ENV
             echo "SESSION_MODE=true" >> $GITHUB_ENV
             echo "Active and valid Azure session detected."
@@ -452,9 +457,12 @@ jobs:
     runs-on: [self-hosted, macOS, ARM64]
     needs: lint
     if: |
-      always() &&
-      needs.lint.result == 'success' &&
-      github.ref == 'refs/heads/merge-main-into-azure-dev'
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository) && 
+      needs.lint.result == 'success' && (
+        github.ref_name == 'merge-main-into-azure-dev' || 
+        github.ref_name == 'azure-dev' || 
+        github.ref_name == 'vagrant-dev'
+      )
     steps:
       - name: Checkout provision-tomcat
         uses: actions/checkout@v4
