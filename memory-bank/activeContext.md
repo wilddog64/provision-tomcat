@@ -1,7 +1,7 @@
 # Active Context
 
 ## Current Session Objective
-Investigate and resolve Azure authentication failures in CI, suspected to be caused by ACG sandbox permission changes. Stabilize the Vagrant fallback mechanism for integration testing.
+Stabilize the CI workflow, including resolving persistent WinRM issues blocking Vagrant tests, and investigate/address Azure authentication failures.
 
 ## Current Technical Hurdle: Azure Login Failure (Confirmed 2026-02-16)
 - **Issue**: `AADSTS130507: An access pass could not be found or verified for the user.`
@@ -11,6 +11,18 @@ Investigate and resolve Azure authentication failures in CI, suspected to be cau
   3. **Session-mode false positive**: `az account show` succeeds on the self-hosted runner (cached local session), so `AZURE_AVAILABLE=true` is set. But actual management API calls fail with AADSTS130507.
   4. **ACG uses Temporary Access Pass (TAP)**: The session token has a limited TTL and cannot be renewed unattended.
 - **Diagnostics**: See `docs/issues/2026-02-16-azure-sandbox-auth-failure-run-22049025221.md` for full log analysis.
+
+## Current Technical Hurdle: Persistent WinRM 'true' Error in Vagrant Tests
+- **Issue**: During Vagrant Test Kitchen 'converge' phase on Windows guest, received PowerShell error: "'The term true is not recognized as the name of a cmdlet...' at line 1, char 1".
+- **Context**: Occurs after file transfer but before Ansible playbook starts.
+- **Troubleshooting Steps (Unsuccessful)**:
+  - Disabling `require_windows_support` in `.kitchen.yml`.
+  - Disabling `setup_yml` in `.kitchen.yml`.
+  - Setting `install_command: ''` in `.kitchen.yml`.
+  - Forcing `ansible_winrm_shell_type: cmd` in `.kitchen.yml`.
+  - Pinning `test-kitchen` to `~>3.1.0` in `Gemfile`.
+  - Pinning `pywinrm` to `0.4.1` in `requirements.txt`.
+- **Hypothesis**: The issue is deep-seated, likely within `kitchen-ansible`'s or `pywinrm`'s internal WinRM initial command execution, or a fundamental incompatibility with the current Ruby/gem versions.
 
 ## CI Workflow Structural Issues (2026-02-16)
 
@@ -31,7 +43,7 @@ Investigate and resolve Azure authentication failures in CI, suspected to be cau
 - Consolidate 5 jobs → 3: `lint`, `aws_integration`, `integration_test` (Azure attempt → Vagrant fallback → cleanup).
 - See full TODO list: `docs/todos/2026-02-16-azure-sandbox-remediation.md` (TODO-9 through TODO-18).
 
-## Vagrant Fallback Stabilization (Partially Working)
+## Vagrant Fallback Stabilization (Blocked)
 - **Transport**: WinRM is standard. Tunings applied (MaxEnvelopeSizekb=16384, increased timeouts, 10s stabilization pause).
 - **Execution Method**: Reverted to **direct `make vagrant-up`** for CI fallback. Test Kitchen (via `kitchen-vagrant`) encountered "unknown state" errors on the M2 runner, likely due to driver overhead or resource management bugs.
 - **Verification**: Added manual `curl` check for Tomcat accessibility at port 8080.
@@ -39,7 +51,7 @@ Investigate and resolve Azure authentication failures in CI, suspected to be cau
 
 ## Current State Snapshot
 - **Branch**: `merge-main-into-azure-dev` (Working on PR #20).
-- **Status**: Azure integration blocked (no SP creds, stale subscription, expired TAP). Vagrant fallback partially working but WinRM ParseError in `windows-base` blocks full provisioning.
+- **Status**: Azure integration blocked (no SP creds, stale subscription, expired TAP). Vagrant tests *blocked* by the persistent WinRM 'true' error.
 - **Documentation**: Full findings in `docs/issues/2026-02-16-azure-sandbox-auth-failure-run-22049025221.md`.
 
 ## Key Architectural Finding (2026-02-16)
