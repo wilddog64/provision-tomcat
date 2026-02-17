@@ -17,7 +17,15 @@
 - `lookup_plugins/`: controller-side network/http checks
 - `tests/`: playbooks for default, upgrade, downgrade scenarios
 - `docs/`: setup, troubleshooting, candidate strategy, service-account guidance
+- `docs/todos/`: tracked remediation items (e.g., Azure sandbox auth)
 - `Makefile`: operator interface for validation, kitchen flows, Azure provisioning/testing
+
+## Azure Test Architecture (Important)
+The Azure test path (`make test-azure-provision-tomcat`) has a **split architecture**:
+- **Azure resource management**: Raw `az` CLI commands in Makefile (vm create, nsg rules, run-command, vm show). Auth depends on `az login` session.
+- **Tomcat provisioning**: Ansible over WinRM to the provisioned VM. No `azure.azcollection` modules used.
+- **Implication**: Ansible-level auth settings like `auth_source: cli` do NOT apply. Auth fixes must target the `az` CLI session/credentials layer.
+- **ACG sandbox model (2026-02)**: Shifted from Service Principal to Temporary Access Pass (TAP). TAP has limited TTL, cannot be renewed unattended.
 
 ## Runtime Variables (Selected)
 - Version/paths:

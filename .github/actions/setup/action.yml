@@ -1,0 +1,81 @@
+name: 'Setup Environment'
+description: 'Checkout repository, roles, and install Python/Ruby dependencies'
+inputs:
+  checkout_roles:
+    description: 'Whether to checkout additional roles'
+    required: false
+    default: 'true'
+  github_token:
+    description: 'GitHub token for role checkouts'
+    required: false
+    default: ${{ github.token }}
+  windows_base_deploy_key:
+    description: 'Deploy key for windows-base role'
+    required: false
+  provision_windows_security_deploy_key:
+    description: 'Deploy key for provision-windows-security role'
+    required: false
+
+runs:
+  using: "composite"
+  steps:
+    - name: Debug Runner Environment
+      shell: bash
+      run: |
+        whoami
+        pwd
+
+    - name: Checkout provision-tomcat
+      uses: actions/checkout@v4
+
+    - name: Checkout provision-java
+      if: inputs.checkout_roles == 'true'
+      uses: actions/checkout@v4
+      with:
+        repository: wilddog64/provision-java
+        path: roles/provision-java
+        token: ${{ inputs.github_token }}
+
+    - name: Checkout windows-base
+      if: inputs.checkout_roles == 'true' && inputs.windows_base_deploy_key != ''
+      uses: actions/checkout@v4
+      with:
+        repository: wilddog64/windows-base
+        path: roles/windows-base
+        ssh-key: ${{ inputs.windows_base_deploy_key }}
+
+    - name: Checkout provision-windows-security
+      if: inputs.checkout_roles == 'true' && inputs.provision_windows_security_deploy_key != ''
+      uses: actions/checkout@v4
+      with:
+        repository: wilddog64/provision-windows-security
+        path: roles/provision-windows-security
+        ssh-key: ${{ inputs.provision_windows_security_deploy_key }}
+
+    - name: Symlink self as role
+      shell: bash
+      run: |
+        mkdir -p roles
+        ln -sfn "$PWD" roles/provision-tomcat
+
+    - name: Install Python Dependencies
+      shell: bash
+      run: |
+        python3 -m venv venv
+        source venv/bin/activate
+        python3 -m pip install --upgrade pip
+        python3 -m pip install "ansible-core>=2.15.0,<2.16.0" pywinrm
+        if [ -f requirements.txt ]; then python3 -m pip install -r requirements.txt; fi
+        python3 -m pip install ansible-lint
+
+    - name: Install Ruby Dependencies
+      shell: bash
+      run: |
+        bundle config set path 'vendor/bundle'
+        bundle install || gem install bundler && bundle install
+
+    - name: Install Ansible collections
+      shell: bash
+      run: |
+        source venv/bin/activate
+        make deps
