@@ -10,6 +10,13 @@ Following a post-mortem of the "messed up" merge attempt, we have adopted a "Vag
 3.  **Vagrant-Only CI**: Establishing a linear 2-job pipeline (`lint` -> `integration`). Azure tests are "parked" with `if: false` until the ACG TAP-shift model is stabilized locally.
 4.  **Local Validation Protocol**: All technical fixes (WinRM "true" override, VDI naming) must be verified locally before a single clean commit is pushed.
 
+## Operational Protocols (Anti-Regressive)
+To prevent falling back into "shotgun debugging," the following protocols are active:
+- **Local-First Mandate**: No "push-to-test" on GitHub. Every change must pass `kitchen converge` or `make check` locally first.
+- **Single-Commit Delivery**: Technical fixes are committed as atomic units once verified, keeping the branch history clean and auditable.
+- **Defensive Configuration**: Using `ENV.fetch` in `.kitchen.yml` to prevent crashes when cloud secrets are missing during local development.
+- **Linearized Pipeline**: Building a simple `lint` -> `integration` flow using the `setup` composite action from `main`.
+
 ## Current Technical Hurdle: WinRM 'true' Error
 - **Issue**: `kitchen-ansiblepush` sends POSIX `true` to Windows guests as a readiness check, causing PowerShell crashes.
 - **Remediation**: Overriding the readiness command in `.kitchen.yml` with `cmd /c exit 0`.
@@ -19,6 +26,5 @@ Following a post-mortem of the "messed up" merge attempt, we have adopted a "Vag
 - **Remediation**: Pinning CI jobs to Ruby 3.3.x via `rbenv` or the setup-ruby action.
 
 ## Recent Activity
-- **Phase 1 Complete**: Backed up knowledge and reset `azure-dev` branch from `main`.
-- **Phase 2 Complete**: Integrated Claude's post-mortem analysis and finalized the recovery plan in `docs/plans/2026-02-17-azure-dev-recovery.md`.
-- **Phase 2 Complete**: Updated memory bank with the refined "Vagrant-First" strategy.
+- **Phase 1 & 2 Complete**: Branch reset, knowledge preservation, and strategic planning (including Claude's post-mortem) are finalized and committed.
+- **Operational Protocols established**: Formalized "Local-First" and "Defensive Configuration" mandates.
