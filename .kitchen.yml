@@ -17,6 +17,7 @@ provisioner:
   idempotency_test: false
   ansible_verbosity: 2
   require_windows_support: false
+  setup_yml: false
   extra_vars:
     ansible_connection: winrm
     ansible_winrm_transport: basic
