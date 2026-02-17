@@ -93,6 +93,26 @@ To manage CI runs during discussion, documentation, or minor non-code changes:
 - **Path Filtering**: Workflows are configured with `paths:` filters to only trigger for changes in relevant code/config files. Critical manifests (e.g., `requirements.txt`, `Gemfile`, `Vagrantfile`) are explicitly included to prevent dependency regressions. Documentation (`docs/`) or memory bank (`memory-bank/`) changes do not trigger CI if they are the only files modified.
 - **Draft Pull Requests**: Utilize Draft PRs to signal that a PR is not yet ready for full integration testing. High-resource integration jobs are gated by `ready_for_review` and `draft: false` conditions.
 
+## 10) Operational & Stabilization Patterns (2026-02-17)
+
+### Local-First Verification Mandate
+To prevent CI "shotgun debugging" and branch corruption, all technical fixes must follow the atomic verification loop:
+1. **Implement**: Apply a single targeted fix (e.g., a timeout or override).
+2. **Local Verify**: Run the specific test command (e.g., `bundle exec kitchen converge`).
+3. **Full Verify**: Run the broader target (e.g., `make test-win11`).
+4. **Commit Once**: Stage and commit only after the full local verification passes.
+
+### Defensive Configuration (ENV.fetch)
+Configurations that depend on cloud secrets (like `.kitchen.yml` for Azure or AWS) must use `ENV.fetch` with safe defaults:
+- **Pattern**: `subscription_id: <%= ENV.fetch('AZURE_SUBSCRIPTION_ID', 'dummy') %>`
+- **Result**: Prevents `KeyError` during local Vagrant tests where cloud secrets are absent, enabling "cross-platform" configuration files.
+
+### Linearized CI Pipeline
+Adopted a simple, linear flow for integration branches:
+- **Lint**: Setup action + Ruby 3.3.x pinning + syntax/lint checks.
+- **Integration**: Single coordinated job (Azure w/ Vagrant fallback) with `if: always()` cleanup.
+- **Why**: Eliminates resource contention and redundant job overlaps on self-hosted runners.
+
 ## 11) Security Implementation Patterns
 
 
