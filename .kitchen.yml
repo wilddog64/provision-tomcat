@@ -13,12 +13,11 @@ provisioner:
   roles_path: roles
   ansible_version: latest
   ansible_host_key_checking: false
+  ansible_connection: winrm
   ansible_galaxy_role_file: requirements.yml
   idempotency_test: false
   ansible_verbosity: 2
   require_windows_support: true
-  install_command: ''
-
   extra_vars:
     ansible_connection: winrm
     ansible_winrm_transport: basic
@@ -28,7 +27,6 @@ provisioner:
     ansible_password: vagrant
     ansible_host: 127.0.0.1
     ansible_port: 55985
-    ansible_winrm_shell_type: cmd
 
 platforms:
   - name: win11
@@ -39,14 +37,6 @@ platforms:
       box: stromweld/windows-11
     provisioner:
       extra_vars:
-        ansible_connection: winrm
-        ansible_winrm_transport: basic
-        ansible_winrm_scheme: http
-        ansible_winrm_server_cert_validation: ignore
-        ansible_user: vagrant
-        ansible_password: vagrant
-        ansible_host: 127.0.0.1
-        ansible_port: 55985
         install_drive: 'D:'
   - name: win11-baseline
     driver:
