@@ -5,24 +5,29 @@
 2.  Resolving the persistent "true" error currently blocking Vagrant Test Kitchen runs.
 3.  Improving the overall structure, efficiency, and security of the CI workflow.
 
+**Supersedes:** `docs/plans/2026-02-16-stabilize-vagrant-tests.md` (that plan's Step 1 — creating the `vagrant_tests` job — is already implemented in `ci.yml`).
+
 ---
 
 **Phase 1: Immediate CI Unblocking & Azure Re-evaluation**
 
 **Objective:** Unblock current CI failures and gather necessary information to proceed with Azure integration.
 
-*   **Step 1.1: Address Claude's TODO-2: Fix dead-code `&&` in CI job conditions.**
-    *   **Reasoning:** Claude identified a logical error (`&&` used instead of `||` or split conditions) in the `if:` clauses of the `azure_integration` and `vagrant_integration` jobs (lines 294 and 427 in `ci.yml`). This prevents them from executing correctly even when intended. Fixing this is a fundamental structural correction.
-    *   **Proposed Action:** Modify `ci.yml` to ensure these conditions accurately reflect the desired job triggering logic. This might involve replacing `&&` with `||` or breaking complex conditions into simpler ones.
-*   **Step 1.2: Temporarily Disable `vagrant_tests` job.**
-    *   **Reasoning:** The persistent "true" error is a complete blocker for this job, leading to repeated CI failures. Temporarily disabling it will unblock the overall CI pipeline, allowing other jobs (like `lint`) to pass cleanly while we investigate the root cause of the "true" error without constant re-running of a failing job.
-    *   **Proposed Action:** Modify `ci.yml` to set the `if:` condition of the `vagrant_tests` job to `if: false`.
-*   **Step 1.3: User Action: Refresh ACG Sandbox Credentials (Claude's TODO-1).**
-    *   **Reasoning:** Claude's analysis confirmed the Azure integration is blocked by expired/unavailable credentials due to ACG's shift to a TAP-only model. Fresh credentials are prerequisite for any further Azure debugging.
-    *   **Proposed Action:** I will instruct you on how to perform the `make sync-secrets` command after refreshing the ACG sandbox, or if ACG no longer offers SP credentials, how to proceed with a TAP.
-*   **Step 1.4: Harden Azure Availability Detection (Claude's TODO-3).**
+*   **Step 1.1: User Action: Refresh ACG Sandbox Credentials (TODO-1).**
+    *   **Reasoning:** The Azure integration is blocked by expired/unavailable credentials due to ACG's shift to a TAP-only model. Fresh credentials are prerequisite for any further Azure debugging.
+    *   **Proposed Action:** Create a new ACG sandbox and run `make sync-secrets` to push fresh `AZURE_SUBSCRIPTION_ID`, `AZURE_TENANT_ID`, and credentials to GitHub Secrets. Confirm whether ACG still offers SP credentials or TAP-only.
+*   **Step 1.2: Harden Azure Availability Detection (TODO-3).**
     *   **Reasoning:** The current `az group list` check for Azure availability can give a false positive with stale cached sessions, leading to misleading CI behavior.
     *   **Proposed Action:** Modify `ci.yml` within the `azure_integration` job (once re-enabled) to replace or supplement the `az group list` check with a more robust management API probe that fails fast if the TAP is expired or invalid, possibly by targeting a specific subscription with a shorter timeout.
+
+*   ~~**Step 1.1 (original): Fix dead-code `&&` in CI job conditions (TODO-2).**~~
+    **RESOLVED (2026-02-16):** Review of current `ci.yml` confirmed:
+    - `azure_integration` (line 297): `if: false` — the original `&&` condition is never evaluated (dead code).
+    - `vagrant_integration` (line 436): condition was already rewritten to use `||` correctly.
+    TODO-2 is no longer applicable to the current file state.
+
+*   ~~**Step 1.2 (original): Temporarily Disable `vagrant_tests` job.**~~
+    **DROPPED:** Adding another `if: false` job increases dead code. The job already only runs on `merge-main-into-azure-dev`. The correct approach is to fix the underlying "true" error (Phase 2), not suppress it.
 
 ---
 
@@ -30,24 +35,47 @@
 
 **Objective:** Diagnose and fix the "The term 'true' is not recognized" error that is blocking `kitchen test default-win11`.
 
-*   **Step 2.1: Revert Debugging Changes for WinRM Issue.**
-    *   **Reasoning:** Previous attempts to fix the "true" error by changing `install_command`, `ansible_winrm_shell_type`, and pinning `test-kitchen`/`pywinrm` versions were unsuccessful. To maintain a clean state and avoid introducing new variables, these debugging changes should be reverted before a deeper investigation.
-    *   **Proposed Action:** Revert modifications to `Gemfile` (unpin `test-kitchen`), `requirements.txt` (unpin `pywinrm`), and `.kitchen.yml` (remove `install_command` and `ansible_winrm_shell_type: cmd`). Run `bundle install` and `pip install` to ensure dependencies are reset.
-*   **Step 2.2: Detailed Log Analysis.**
-    *   **Reasoning:** The error occurs at a very low level, deep within the WinRM communication stack. The `.kitchen/logs/default-win11.log` and `kitchen.log` files are critical to pinpointing the exact command or script that is failing.
-    *   **Proposed Action:** I will request that you provide the content of these log files from a local failed `kitchen test default-win11` run. This is crucial for pinpointing the exact command causing the error.
-*   **Step 2.3: Investigate `kitchen-ansible` / `pywinrm` Interaction (Claude's TODO-4, adapted).**
-    *   **Reasoning:** The persistent "true" error, despite extensive configuration changes, indicates a fundamental issue with how `kitchen-ansible` or its underlying `pywinrm` library initiates command execution on the Windows guest via WinRM. Claude's TODO-4 mentions "WinRM ParseError," which aligns with general WinRM communication issues.
+**Root Cause Analysis:**
+
+The error `"The term 'true' is not recognized as the name of a cmdlet"` occurs because `kitchen-ansible` (or `kitchen-ansiblepush`) sends the POSIX shell no-op command `true` over WinRM to PowerShell as a readiness/health check. PowerShell does not have a `true` command — the equivalent is `$true` (a boolean literal, not a command) or `cmd /c exit 0`.
+
+This is NOT a WinRM transport issue (MaxEnvelopeSizekb, timeouts, etc.) — it's a **shell mismatch** at the provisioner level. The provisioner assumes a Unix-like shell but the target is PowerShell.
+
+**Debugging leftovers still in the codebase:**
+- `.kitchen.yml:20`: `install_command: ''` (debugging attempt, still present)
+- `.kitchen.yml:31`: `ansible_winrm_shell_type: cmd` (debugging attempt, still present)
+- `Gemfile:5`: `test-kitchen` pinned to `~> 3.1.0` (debugging pin, still present)
+- `requirements.txt:1`: `pywinrm==0.4.1` (debugging pin, still present)
+
+*   **Step 2.1: Revert Debugging Changes.**
+    *   **Proposed Action:** Revert the 4 debugging changes listed above to restore a clean baseline:
+        - `.kitchen.yml`: Remove `install_command: ''` and `ansible_winrm_shell_type: cmd`
+        - `Gemfile`: Unpin `test-kitchen` (remove version constraint or use `>= 3.0`)
+        - `requirements.txt`: Unpin `pywinrm` (remove `==0.4.1`)
+    *   Run `bundle install` and `pip install -r requirements.txt` to reset dependencies.
+
+*   **Step 2.2: Investigate the provisioner's shell command.**
     *   **Proposed Action:**
-        *   **Increase `MaxEnvelopeSizekb`:** If logs suggest truncation, increasing `MaxEnvelopeSizekb` further (e.g., to 32768) might help if the error is a symptom of incomplete data.
-        *   **Source Code Review:** If logs are inconclusive, I will need to inspect the source code of the `kitchen-ansible` gem to understand its internal WinRM client setup for Windows hosts, specifically looking for any hardcoded initial commands or scripts that might be sending a bare `true` to the shell. This may require setting up a local Ruby debugging environment.
-        *   **Targeted `pywinrm` Debugging:** Explore `pywinrm`'s documentation or known issues for similar "command not recognized" errors during initial connection.
+        - Inspect `kitchen-ansible` / `kitchen-ansiblepush` gem source code for the specific method that sends the initial readiness command. Look for bare `true`, `test`, or similar Unix-isms sent before playbook execution.
+        - Check if the provisioner has a config option to override the readiness command or specify a Windows-compatible alternative.
+        - Review `.kitchen/logs/default-win11.log` from a local failed run to confirm the exact command being sent.
+
+*   **Step 2.3: Apply targeted fix.**
+    *   **Likely fixes (in order of preference):**
+        1. **Provisioner config**: If `kitchen-ansiblepush` has a `ready_command` or similar option, set it to `cmd /c exit 0` or `powershell -Command "exit 0"`.
+        2. **Shell type config**: Ensure the provisioner is told the target is `cmd` or `powershell`, not `sh`/`bash`. The `ansible_winrm_shell_type: cmd` extra_var tells Ansible but may not affect the provisioner's own pre-playbook commands.
+        3. **Patch/fork the gem**: If no config option exists, a targeted monkey-patch or fork of the provisioner gem may be needed to replace the `true` command.
+        4. **Switch provisioner**: If `kitchen-ansiblepush` is unmaintained, consider switching to `kitchen-ansible` (pull mode) which may handle Windows differently.
+
+*   **Step 2.4: Validate fix.**
+    *   Run `bundle exec kitchen converge default-win11` locally to confirm the "true" error is resolved.
+    *   Run full `make test-win11` and `make test-upgrade-win11` to confirm end-to-end pass.
 
 ---
 
-**Phase 3: Broader CI Workflow Improvements (Claude's Remaining TODOs)**
+**Phase 3: Broader CI Workflow Improvements (TODO-9 through TODO-18)**
 
-**Objective:** Enhance CI robustness, maintainability, and security. (These will be prioritized and tackled after Phase 1 and 2 blockers are addressed).
+**Objective:** Enhance CI robustness, maintainability, and security. (Prioritized after Phase 1 and 2 blockers are addressed).
 
 *   **Cleanup Dead/Stub Jobs:** Remove or revive `azure_integration` (TODO-9), `vagrant_integration` (TODO-10), and generalize `vagrant_tests` (TODO-11).
 *   **DRY Principle:** Extract shared setup into a composite action to reduce duplication (TODO-12).
@@ -58,3 +86,5 @@
     *   Implement fail-fast on dummy subscription fallback (TODO-16).
     *   Standardize Ruby install across jobs (TODO-17).
 *   **Consolidation:** Consolidate to 3 jobs (`lint`, `aws_integration`, `integration_test`) (TODO-18).
+
+See full TODO details: `docs/todos/2026-02-16-azure-sandbox-remediation.md`

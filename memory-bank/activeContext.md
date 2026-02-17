@@ -15,14 +15,13 @@ Stabilize the CI workflow, including resolving persistent WinRM issues blocking 
 ## Current Technical Hurdle: Persistent WinRM 'true' Error in Vagrant Tests
 - **Issue**: During Vagrant Test Kitchen 'converge' phase on Windows guest, received PowerShell error: "'The term true is not recognized as the name of a cmdlet...' at line 1, char 1".
 - **Context**: Occurs after file transfer but before Ansible playbook starts.
-- **Troubleshooting Steps (Unsuccessful)**:
-  - Disabling `require_windows_support` in `.kitchen.yml`.
-  - Disabling `setup_yml` in `.kitchen.yml`.
-  - Setting `install_command: ''` in `.kitchen.yml`.
-  - Forcing `ansible_winrm_shell_type: cmd` in `.kitchen.yml`.
-  - Pinning `test-kitchen` to `~>3.1.0` in `Gemfile`.
-  - Pinning `pywinrm` to `0.4.1` in `requirements.txt`.
-- **Hypothesis**: The issue is deep-seated, likely within `kitchen-ansible`'s or `pywinrm`'s internal WinRM initial command execution, or a fundamental incompatibility with the current Ruby/gem versions.
+- **Root Cause (identified 2026-02-16)**: `kitchen-ansiblepush` sends the POSIX no-op command `true` over WinRM to PowerShell as a readiness check. PowerShell doesn't have `true` — this is a **shell mismatch at the provisioner level**, NOT a WinRM transport issue (MaxEnvelopeSizekb, timeouts are irrelevant).
+- **Debugging leftovers to revert**: `.kitchen.yml:20` (`install_command: ''`), `.kitchen.yml:31` (`ansible_winrm_shell_type: cmd`), `Gemfile:5` (`test-kitchen ~> 3.1.0`), `requirements.txt:1` (`pywinrm==0.4.1`).
+- **Fix options** (see `docs/plans/2026-02-17-ci-stabilization-plan.md` Phase 2):
+  1. Provisioner config override for readiness command (`cmd /c exit 0`)
+  2. Shell type config at provisioner level (not just Ansible extra_var)
+  3. Patch/fork the `kitchen-ansiblepush` gem
+  4. Switch to `kitchen-ansible` (pull mode)
 
 ## CI Workflow Structural Issues (2026-02-16)
 
@@ -61,9 +60,9 @@ Stabilize the CI workflow, including resolving persistent WinRM issues blocking 
 
 ## Immediate Next Actions
 - **TODO-1**: Create new ACG sandbox and run `make sync-secrets` to refresh Azure credentials. Confirm SP vs TAP-only.
-- **TODO-2**: Fix dead-code `&&` bugs in `azure_integration` (ci.yml:294) and `vagrant_integration` (ci.yml:427) job conditions.
+- ~~**TODO-2**~~: RESOLVED — `azure_integration` is `if: false` (condition never evaluated); `vagrant_integration` condition already uses `||`.
 - **TODO-3**: Harden Azure availability detection — `az group list` can pass with a stale cached session while TAP is expired.
-- **TODO-4**: Investigate `windows-base` WinRM ParseError — add retries or increase envelope size.
+- **TODO-4**: Fix WinRM "true" error — shell mismatch in `kitchen-ansiblepush`, not a transport issue. See plan Phase 2.
 - Push the latest state to `merge-main-into-azure-dev`.
 - See full remediation plan: `docs/todos/2026-02-16-azure-sandbox-remediation.md`
 
@@ -76,3 +75,4 @@ Stabilize the CI workflow, including resolving persistent WinRM issues blocking 
 6.  **Consolidated Azure Logic**: Simplified the `azure_integration` job in `ci.yml` to handle both SP and Session modes more gracefully.
 7.  **Ruled out `auth_source: cli`** (2026-02-16): Confirmed Azure test path uses raw `az` CLI, not Ansible Azure modules. `auth_source: cli` is irrelevant to current architecture. Documented in todo and activeContext.
 8.  **CI workflow review** (2026-02-16): Identified 2 dead jobs, 1 temp-branch-hardcoded job, ~160 lines of duplication, missing fork protection on `vagrant_tests`, no Azure resource cleanup, silent dummy subscription fallback. Proposed consolidation from 5 jobs to 3. See TODO-9 through TODO-18.
+9.  **Reviewed Gemini's plan** (2026-02-16): Corrected 4 issues: marked TODO-2 as resolved (stale finding), dropped "disable vagrant_tests" step, identified WinRM "true" error root cause (shell mismatch, not transport), consolidated two overlapping Vagrant plans into `2026-02-17-ci-stabilization-plan.md`.

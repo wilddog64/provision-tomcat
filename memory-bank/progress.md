@@ -66,18 +66,12 @@
 - [ ] Finalize merge of `aws-dev` to `main` (PR #6).
 - [ ] **[AZURE-AUTH] Resolve Azure auth failure** (see `docs/todos/2026-02-16-azure-sandbox-remediation.md`):
     - [ ] TODO-1: Refresh ACG sandbox credentials and push to GitHub Secrets.
-    - [ ] TODO-2: Fix dead-code `&&` bug in `azure_integration` (ci.yml:294) and `vagrant_integration` (ci.yml:427).
+    - [x] TODO-2: ~~Fix dead-code `&&` bug~~ — RESOLVED (stale finding; `azure_integration` is `if: false`, `vagrant_integration` already uses `||`).
     - [ ] TODO-3: Harden Azure availability detection (stale session false-positive).
-- [ ] **[WINRM-ERROR] Investigate `windows-base` WinRM 'true' Error on Vagrant fallback** (CI runner m2-air).
-    - **Status**: Encountering persistent PowerShell error "'The term true is not recognized...' at line 1, char 1" during 'Converging' phase (after file transfer, before Ansible playbook execution).
-    - **Troubleshooting attempted (unsuccessful)**:
-        - Disabled `require_windows_support` in `.kitchen.yml`.
-        - Disabled `setup_yml` in `.kitchen.yml`.
-        - Set `install_command: ''` in `.kitchen.yml`.
-        - Forced `ansible_winrm_shell_type: cmd` in `.kitchen.yml`.
-        - Pinned `test-kitchen` to `~>3.1.0` in `Gemfile`.
-        - Pinned `pywinrm` to `0.4.1` in `requirements.txt`.
-    - **Hypothesis**: The issue is deep-seated, likely within `kitchen-ansible`/`pywinrm`'s internal WinRM initial command execution, or a fundamental incompatibility with current Ruby/gem versions.
+- [ ] **[WINRM-ERROR] Fix WinRM 'true' error in Vagrant tests** (CI runner m2-air).
+    - **Root Cause (identified)**: `kitchen-ansiblepush` sends POSIX `true` command over WinRM to PowerShell as a readiness check. Shell mismatch at provisioner level, NOT a transport issue.
+    - **Next steps**: Revert 4 debugging leftovers (`.kitchen.yml`, `Gemfile`, `requirements.txt`), then investigate provisioner config or gem source for readiness command override.
+    - **Plan**: `docs/plans/2026-02-17-ci-stabilization-plan.md` Phase 2.
 - [x] Ruled out `auth_source: cli` as fix — Azure tests use raw `az` CLI, not Ansible Azure modules.
 - [ ] **[CI-CLEANUP] Workflow structural debt** (see `docs/todos/2026-02-16-azure-sandbox-remediation.md` TODO-9–18):
     - [ ] TODO-9: Remove or revive dead `azure_integration` job (`if: false`).

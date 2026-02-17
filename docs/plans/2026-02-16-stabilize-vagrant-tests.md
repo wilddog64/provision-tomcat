@@ -1,5 +1,9 @@
 # Plan: Stabilize Vagrant Test Kitchen Tests
 
+> **SUPERSEDED** by `docs/plans/2026-02-17-ci-stabilization-plan.md` (Phase 2).
+> This plan's Step 1 (creating the `vagrant_tests` CI job) has been implemented.
+> The remaining work (debugging the WinRM "true" error) is now tracked in the consolidated plan.
+
 **Objective:** To ensure the Vagrant-based Test Kitchen tests (`make test-win11`, `make test-upgrade-win11`) consistently pass in the CI pipeline, providing reliable local integration test coverage for the Ansible roles.
 
 **Background:**
@@ -7,7 +11,7 @@ The Azure integration tests (`azure_integration` job) have been temporarily disa
 
 **Proposed Steps:**
 
-1.  **Create a Dedicated `vagrant_tests` CI Job:**
+1.  **Create a Dedicated `vagrant_tests` CI Job:** **(DONE — implemented in `ci.yml`)**
     *   This new job will be added to `.github/workflows/ci.yml`.
     *   It will depend on the `lint` job.
     *   It will explicitly perform the necessary checkout operations (main repo, provision-java, windows-base, provision-windows-security).
@@ -16,7 +20,7 @@ The Azure integration tests (`azure_integration` job) have been temporarily disa
     *   It will then execute `make test-win11` and `make test-upgrade-win11`.
     *   The `if` condition for this job will be set to run on pushes to `merge-main-into-azure-dev` (and potentially `main` or other relevant branches in the future), allowing for direct iteration and debugging.
 
-2.  **Iterate and Debug Vagrant Test Failures:**
+2.  **Iterate and Debug Vagrant Test Failures:** **(IN PROGRESS — see 2026-02-17 plan Phase 2)**
     *   Monitor the new `vagrant_tests` CI job.
     *   Address any failures related to Vagrant, VirtualBox, WinRM connectivity, Ansible execution, or Test Kitchen itself. This might involve:
         *   Reviewing `Vagrantfile` parameters (memory, CPU, network settings, WinRM tuning).

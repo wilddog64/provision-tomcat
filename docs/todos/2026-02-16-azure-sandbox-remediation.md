@@ -28,11 +28,11 @@ The Azure test path (`make test-azure-provision-tomcat`) does **not** use Ansibl
 
 ### Immediate (unblock CI now)
 - [ ] **TODO-1: Refresh ACG sandbox + sync secrets** — Create new ACG sandbox, run `make sync-secrets` to push fresh `AZURE_SUBSCRIPTION_ID`, `AZURE_TENANT_ID`, and credentials to GitHub Secrets. Confirm whether ACG still offers SP credentials or TAP-only.
-- [ ] **TODO-2: Fix dead-code `&&` in CI job conditions** — `ci.yml:294` (`azure_integration`) and `ci.yml:427` (`vagrant_integration`) have impossible `event_name == 'pull_request' && event_name == 'workflow_dispatch'`. Change to `||` or split into separate sub-conditions.
+- [x] **TODO-2: Fix dead-code `&&` in CI job conditions** — **RESOLVED (stale finding).** `azure_integration` is `if: false` (condition never evaluated); `vagrant_integration` condition was already rewritten to use `||`. No action needed.
 - [ ] **TODO-3: Harden Azure availability detection** — Replace or supplement the `az group list` check with a lightweight management API probe that fails fast when TAP is expired (e.g., add `--subscription` targeting or a tighter timeout).
 
 ### Short-term (resilience)
-- [ ] **TODO-4: Strengthen Vagrant fallback** — WinRM `ParseError` in `windows-base` blocks the fallback path. Options: add `retries: 3` / `delay: 10` to failing tasks, increase `MaxEnvelopeSizekb` further (32768), or investigate the specific PowerShell operations that produce oversized responses.
+- [ ] **TODO-4: Fix WinRM "true" error in Vagrant tests** — The `kitchen-ansiblepush` provisioner sends POSIX `true` command over WinRM to PowerShell as a readiness check. PowerShell doesn't have `true` — this is a shell mismatch, NOT a transport issue. See `docs/plans/2026-02-17-ci-stabilization-plan.md` Phase 2 for detailed root cause analysis and fix options. Debugging leftovers to revert: `.kitchen.yml` (`install_command`, `ansible_winrm_shell_type`), `Gemfile` (`test-kitchen` pin), `requirements.txt` (`pywinrm` pin).
 - [ ] **TODO-5: Document TAP TTL constraints** — If ACG is TAP-only, document the window between sandbox creation and CI trigger. Consider adding a `workflow_dispatch` input for manual token pass-through.
 
 ### Future (strategic)
