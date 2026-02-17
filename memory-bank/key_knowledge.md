@@ -27,6 +27,22 @@ The error `"The term 'true' is not recognized as the name of a cmdlet"` is a **s
 - **VDI Management**: Unique disk naming (`data_disk_#{timestamp}.vdi`) and `VBoxManage closemedium` are essential to prevent `VERR_ALREADY_EXISTS` collisions on self-hosted runners.
 - **Resource Contention**: Parallel Vagrant runs on the same runner can lead to WinRM `ParseError` (XML truncation). Linearized CI jobs are required for stability.
 
+## Operational Reference Values
+
+### WinRM Transport Tuning (Hard-Won)
+These values are required to prevent `ParseError` (XML truncation) triggered by the `windows-base` role:
+- `MaxEnvelopeSizekb: 16384`
+- `ansible_winrm_read_timeout_sec: 600`
+- `pipelining: False`
+- `MaxMemoryPerShellMB: 2048`
+- `MaxConcurrentOperationsPerUser: 100`
+
+### Kitchen ENV Hardening
+`.kitchen.yml` must use `ENV[...]` or `ENV.fetch` with defaults to avoid `KeyError` when cloud secrets are missing during local runs.
+
+### Runner Name Discrepancy
+GitHub API refers to the self-hosted runner as `m2-air` (id: 21), despite the physical machine reporting as `m4-air.local`. This affects any runner-targeting logic or debugging.
+
 ## Infrastructure Constraints
 - **Copilot Firewall**: The agent is blocked by several Azure-related domains (`management.azure.com`, `login.microsoftonline.com`).
 - **ACG TAP Auth**: Temporary Access Pass (TAP) has limited TTL and doesn't support unattended renewal. Azure CI is currently deferred until the credential model stabilizes.
