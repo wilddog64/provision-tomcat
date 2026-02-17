@@ -28,6 +28,7 @@ provisioner:
     ansible_password: vagrant
     ansible_host: 127.0.0.1
     ansible_port: 55985
+    ansible_winrm_shell_type: cmd
 
 platforms:
   - name: win11
