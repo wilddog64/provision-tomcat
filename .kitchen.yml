@@ -396,7 +396,7 @@ suites:
         tomcat_candidate_delegate_host: 127.0.0.1
         tomcat_candidate_delegate_port: 19080
         tomcat_candidate_manual_control: true
-        install_drive: "D:"
+        install_drive: "C:"
     verifier:
       name: shell
       command: |

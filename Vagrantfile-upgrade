@@ -58,7 +58,6 @@ Vagrant.configure("2") do |config|
 
   config.vm.provision 'ansible_upgrade_step2_prepare', type: :ansible, run: 'never' do |ansible|
     ansible.limit = 'all'
-    ansible.galaxy_role_file = 'requirements.yml'
     ansible.playbook = 'tests/playbook-upgrade.yml'
     ansible.extra_vars = common_env.merge(
       'upgrade_step' => 2,
@@ -71,7 +70,6 @@ Vagrant.configure("2") do |config|
 
   config.vm.provision 'ansible_upgrade_step2_finalize', type: :ansible, run: 'never' do |ansible|
     ansible.limit = 'all'
-    ansible.galaxy_role_file = 'requirements.yml'
     ansible.playbook = 'tests/playbook-upgrade.yml'
     ansible.extra_vars = common_env.merge(
       'upgrade_step' => 2,
