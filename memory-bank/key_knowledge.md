@@ -27,6 +27,27 @@ The error `"The term 'true' is not recognized as the name of a cmdlet"` is a **s
 - **VDI Management**: Unique disk naming (`data_disk_#{timestamp}.vdi`) and `VBoxManage closemedium` are essential to prevent `VERR_ALREADY_EXISTS` collisions on self-hosted runners.
 - **Resource Contention**: Parallel Vagrant runs on the same runner can lead to WinRM `ParseError` (XML truncation). Linearized CI jobs are required for stability.
 
+## Tomcat Version Lifecycle (Apache CDN)
+
+Apache's CDN (`dlcdn.apache.org`) only hosts the **current** patch release per minor line.
+Older patch versions (e.g. 9.0.113) are removed when superseded. Any hardcoded version
+string in test playbooks (`playbook-upgrade.yml`) must be kept in sync with the latest
+available release; stale versions produce 404 errors.
+
+**Current known-good versions (2026-02-17):**
+- Step 1 (baseline): `9.0.112` (pre-baked in `windows11-tomcat112` Vagrant box)
+- Step 2 (upgrade target): `9.0.115` (checksum in `defaults/main.yml` ✓)
+
+## install_drive Precedence Trap
+
+`tests/playbook-upgrade.yml` declares `install_drive: "C:"` in its `vars:` block.
+Ansible playbook vars outrank role `defaults/`, so this silently overrides
+`defaults/main.yml`'s `install_drive: "D:"`. Any suite that needs D: must pass
+`install_drive: "D:"` as an `extra_var` in `.kitchen.yml` to override the playbook var.
+
+Platforms without an attached second disk (`win11`, `win11-baseline`) cannot use D:
+unless the box was built with a D: partition pre-configured.
+
 ## Operational Reference Values
 
 ### WinRM Transport Tuning (Hard-Won)

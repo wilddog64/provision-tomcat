@@ -22,3 +22,7 @@ Focus: Stabilizing `azure-dev` branch via local-first validation and technical f
 - [x] WinRM "true" error (Fix implemented, pending verification).
 - [x] Ruby 4.0 dependency spiral (Fix implemented via pinning).
 - [ ] Azure TAP model (Deferred to local stabilization first).
+- [ ] **upgrade-baseline-win11 — 404 + drive mismatch** (see docs/issues/2026-02-17-upgrade-baseline-404-and-drive-mismatch.md):
+    - Fix 1: update 9.0.113 → 9.0.115 in `tests/playbook-upgrade.yml` line 88
+    - Fix 2: resolve `install_drive: "C:"` playbook default vs D: role default
+    - Prerequisite: confirm `windows11-tomcat112` box drive before fixing drive issue

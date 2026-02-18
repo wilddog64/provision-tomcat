@@ -25,6 +25,22 @@ To prevent falling back into "shotgun debugging," the following protocols are ac
 - **Issue**: The M2 runner's default Ruby 4.0.0 triggers cascading gem compatibility issues.
 - **Remediation**: Pinning CI jobs to Ruby 3.3.x via `rbenv` or the setup-ruby action.
 
+## Active Blocker: upgrade-baseline-win11 Failures (2026-02-17)
+
+Two bugs in `tests/playbook-upgrade.yml` cause `make test-upgrade-baseline-win11` to fail:
+
+1. **404 on Tomcat download**: Line 88 targets `9.0.113` (removed from Apache CDN).
+   Must be updated to `9.0.115`. See `docs/issues/2026-02-17-upgrade-baseline-404-and-drive-mismatch.md`.
+
+2. **C: drive instead of D:**: Playbook `vars` section hardcodes `install_drive: "C:"`
+   (lines 11-15), overriding `defaults/main.yml`'s `install_drive: "D:"`. The
+   `upgrade-baseline` suite in `.kitchen.yml` never passes `install_drive: "D:"` as
+   extra_var, so the whole run uses C:.
+
+**Pending before fixing drive issue**: Confirm whether `windows11-tomcat112` baseline box
+was built with C: or D: drive. If C:, the box needs rebuilding before switching to D:.
+
 ## Recent Activity
 - **Phase 1 & 2 Complete**: Branch reset, knowledge preservation, and strategic planning (including Claude's post-mortem) are finalized and committed.
 - **Operational Protocols established**: Formalized "Local-First" and "Defensive Configuration" mandates.
+- **upgrade-baseline bugs identified**: 404 (stale version) + C:/D: drive mismatch documented in `docs/issues/`.
