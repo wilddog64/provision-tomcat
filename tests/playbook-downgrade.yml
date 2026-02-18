@@ -11,7 +11,7 @@
       set_fact:
         # First converge (if downgrade_step not defined): install new version
         # Second converge (downgrade_step=2): install old version (downgrade)
-        tomcat_version: "{{ '9.0.113' if (downgrade_step | default(1) | int) == 1 else '9.0.112' }}"
+        tomcat_version: "{{ '9.0.115' if (downgrade_step | default(1) | int) == 1 else '9.0.112' }}"
         jdk_version: "{{ '21' if (downgrade_step | default(1) | int) == 1 else '17' }}"
       tags:
         - always

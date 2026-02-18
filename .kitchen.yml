@@ -332,6 +332,7 @@ suites:
       extra_vars:
         upgrade_step: 1
         tomcat_auto_start: true
+        install_drive: "C:"
     verifier:
       name: shell
       command: |
@@ -347,6 +348,7 @@ suites:
       extra_vars:
         downgrade_step: 1
         tomcat_auto_start: true
+        install_drive: "C:"
     verifier:
       name: shell
       command: |
@@ -394,6 +396,7 @@ suites:
         tomcat_candidate_delegate_host: 127.0.0.1
         tomcat_candidate_delegate_port: 19080
         tomcat_candidate_manual_control: true
+        install_drive: "D:"
     verifier:
       name: shell
       command: |

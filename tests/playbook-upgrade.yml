@@ -8,7 +8,7 @@
 
   vars:
     # Install paths - override with -e install_drive=D: to use D: drive
-    install_drive: "C:"
+    install_drive: "D:"
     java_install_base_dir: "{{ install_drive }}/java"
     tomcat_install_dir: "{{ install_drive }}/Tomcat"
     java_temp_dir: "{{ install_drive }}/temp"
@@ -85,7 +85,7 @@
       set_fact:
         # First converge (if upgrade_step not defined): install old version
         # Second converge (upgrade_step=2): install new version
-        tomcat_version: "{{ '9.0.112' if (upgrade_step | default(1) | int) == 1 else '9.0.113' }}"
+        tomcat_version: "{{ '9.0.112' if (upgrade_step | default(1) | int) == 1 else '9.0.115' }}"
         jdk_version: "{{ '17' if (upgrade_step | default(1) | int) == 1 else '21' }}"
       tags:
         - always
