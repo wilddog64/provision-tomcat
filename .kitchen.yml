@@ -309,17 +309,18 @@ suites:
     verifier:
       name: shell
       command: |
-        # Get hostname from Kitchen state for the specific instance
-        INSTANCE_FILENAME=".kitchen/${KITCHEN_INSTANCE}.yml"
-        if [ -f "$INSTANCE_FILENAME" ]; then
-          INSTANCE_HOSTNAME=$(yq .hostname "$INSTANCE_FILENAME")
+        # Use localhost for Vagrant, or extract hostname from state for other drivers
+        if [[ "${KITCHEN_INSTANCE}" == *"win11"* ]]; then
+          INSTANCE_HOSTNAME="localhost"
         else
-          INSTANCE_HOSTNAME="localhost"
+          INSTANCE_HOSTNAME=$(yq '.hostname' ".kitchen/${KITCHEN_INSTANCE}.yml" 2>/dev/null || echo "localhost")
         fi
-        if [ "$INSTANCE_HOSTNAME" = "null" ] || [ -z "$INSTANCE_HOSTNAME" ]; then
-          INSTANCE_HOSTNAME="localhost"
-        fi
-        echo "Verifying Tomcat on http://${INSTANCE_HOSTNAME}:8080"
+        
+        # Clean up hostname
+        INSTANCE_HOSTNAME=$(echo "${INSTANCE_HOSTNAME}" | tr -d '" ' | head -n 1)
+        if [ "${INSTANCE_HOSTNAME}" = "null" ] || [ -z "${INSTANCE_HOSTNAME}" ]; then INSTANCE_HOSTNAME="localhost"; fi
+        
+        echo "Verifying Tomcat reachability on http://${INSTANCE_HOSTNAME}:8080"
         curl --connect-timeout 5 --max-time 10 -f "http://${INSTANCE_HOSTNAME}:8080" || curl --connect-timeout 5 --max-time 10 "http://${INSTANCE_HOSTNAME}:8080" | grep -q "404"
 
   - name: upgrade
