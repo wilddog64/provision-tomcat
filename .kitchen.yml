@@ -400,7 +400,11 @@ suites:
     verifier:
       name: shell
       command: |
-        set -euo pipefail
+        set -eu
+        # pipefail is bash-specific; enable only if supported
+        (set -o pipefail) 2>/dev/null && set -o pipefail || true
+
+        echo "[verify] Script started at $(date), PWD=$(pwd)"
 
         sleep 20
 
@@ -428,17 +432,26 @@ suites:
 
         candidate_host_port=19080
         primary_host_port=18080
-        ansible_cmd="${KITCHEN_ANSIBLE_PLAYBOOK_BIN:-$(command -v ansible-playbook)}"
-        if [ ! -x "$ansible_cmd" ]; then
-          echo "ERROR: ansible-playbook binary not found" >&2
+
+        # Resolve ansible-playbook: explicit venv path takes priority over PATH
+        if [ -n "${KITCHEN_ANSIBLE_PLAYBOOK_BIN:-}" ] && [ -x "$KITCHEN_ANSIBLE_PLAYBOOK_BIN" ]; then
+          ansible_cmd="$KITCHEN_ANSIBLE_PLAYBOOK_BIN"
+        elif [ -x "$(pwd)/venv/bin/ansible-playbook" ]; then
+          ansible_cmd="$(pwd)/venv/bin/ansible-playbook"
+        elif command -v ansible-playbook >/dev/null 2>&1; then
+          ansible_cmd="$(command -v ansible-playbook)"
+        else
+          echo "ERROR: ansible-playbook not found in KITCHEN_ANSIBLE_PLAYBOOK_BIN, venv, or PATH" >&2
           exit 1
         fi
+        echo "[verify] ansible-playbook: $ansible_cmd"
+
         temp_inventory="$(mktemp)"
-        cat <<'EOF' > "$temp_inventory"
+        cat <<'INVENTORY' > "$temp_inventory"
         [baseline-win11-baseline]
         baseline-win11 ansible_connection=winrm ansible_host=127.0.0.1 ansible_user=vagrant ansible_password=vagrant ansible_port=55985 ansible_winrm_transport=basic ansible_winrm_scheme=http ansible_winrm_server_cert_validation=ignore
-        EOF
-        promotion_extra_vars="env=stage2 extract_build_number=16 extract_debug=False skip_migration=true upgrade_step=2 tomcat_auto_start=true tomcat_candidate_enabled=true tomcat_candidate_delegate=localhost tomcat_candidate_delegate_host=127.0.0.1 tomcat_candidate_delegate_port=${candidate_host_port}"
+        INVENTORY
+        promotion_extra_vars="env=stage2 extract_build_number=16 extract_debug=False skip_migration=true upgrade_step=2 tomcat_auto_start=true tomcat_candidate_enabled=true tomcat_candidate_delegate=localhost tomcat_candidate_delegate_host=127.0.0.1 tomcat_candidate_delegate_port=${candidate_host_port} install_drive=C:"
 
         echo "Checking candidate Tomcat on port ${candidate_host_port} before promotion..."
         check_port "${candidate_host_port}" 20 10
