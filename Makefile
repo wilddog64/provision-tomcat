@@ -362,7 +362,7 @@ help:
 	@echo "  vagrant-disk-setup      # Initialize and format D: drive"
 	@echo "  vagrant-provision       # Provision Tomcat + Java (default playbook)"
 	@echo "  vagrant-provision-step1 # Provision older Tomcat 9.0.112 + Java 17"
-	@echo "  vagrant-provision-step2 # Provision newer Tomcat 9.0.113 + Java 21"
+	@echo "  vagrant-provision-step2 # Provision newer Tomcat 9.0.115 + Java 21"
 	@echo "  vagrant-build-baseline  # Build baseline box with D: drive + Tomcat + Java"
 	@echo "  vagrant-build-baseline-minimal # Build minimal box with D: drive only"
 	@echo "  vagrant-update-baseline # Rebuild baseline Win11 + Tomcat 9.0.112 box"
@@ -376,12 +376,12 @@ help:
 	@$(foreach p,$(PLATFORMS),echo "  test-$(p)           # kitchen test default-$(p)" &&) true
 	@echo ""
 	@echo "Upgrade/Downgrade Testing:"
-	@echo "  test-upgrade-win11      # Test Java (17→21) + Tomcat (9.0.112→9.0.113) upgrade"
+	@echo "  test-upgrade-win11      # Test Java (17→21) + Tomcat (9.0.112→9.0.115) upgrade"
 	@echo "  test-upgrade-candidate-win11 # Same as above but exercises candidate workflow"
 	@echo "  test-upgrade-baseline-win11 # Run upgrade step 2 on baseline box (candidate workflow only)"
 	@echo "  candidate-cleanup-win11    # Remove candidate config + destroy upgrade VM"
 	@echo "  upgrade-cleanup-win11   # Cleanup upgrade test VM"
-	@echo "  test-downgrade-win11    # Test Java (21→17) + Tomcat (9.0.113→9.0.112) downgrade"
+	@echo "  test-downgrade-win11    # Test Java (21→17) + Tomcat (9.0.115→9.0.112) downgrade"
 	@echo "  downgrade-cleanup-win11 # Cleanup downgrade test VM"
 	@echo "  test-upgrade-candidate-stack # Run normal upgrade + candidate workflow + cleanup"
 	@echo ""
@@ -551,7 +551,7 @@ test-upgrade-win11: update-roles
 	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) converge upgrade-win11
 	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) verify upgrade-win11
 	@echo ""
-	@echo "Step 2: Upgrading to Java 21 + Tomcat 9.0.113..."
+	@echo "Step 2: Upgrading to Java 21 + Tomcat 9.0.115..."
 	@sed 's/upgrade_step: 1/upgrade_step: 2/' $(KITCHEN_YAML) > .kitchen.step2.yml
 	KITCHEN_YAML=.kitchen.step2.yml $(KITCHEN_CMD) converge upgrade-win11
 	KITCHEN_YAML=.kitchen.step2.yml $(KITCHEN_CMD) verify upgrade-win11
@@ -569,7 +569,7 @@ test-upgrade-candidate-win11: upgrade-cleanup-win11 update-roles
 	KITCHEN_YAML=.kitchen.cand1.yml $(KITCHEN_CMD) converge upgrade-win11-disk
 	KITCHEN_YAML=.kitchen.cand1.yml $(KITCHEN_CMD) verify upgrade-win11-disk || true
 	@echo ""
-	@echo "Step 2: Upgrading to Java 21 + Tomcat 9.0.113 with candidate workflow..."
+	@echo "Step 2: Upgrading to Java 21 + Tomcat 9.0.115 with candidate workflow..."
 	@sed -e 's/upgrade_step: 1/upgrade_step: 2/' \
 	     -e 's/tomcat_auto_start: true/tomcat_auto_start: true\n        tomcat_candidate_enabled: true\n        tomcat_candidate_delegate: localhost\n        tomcat_candidate_delegate_port: 19080/' \
 	     .kitchen.cand1.yml > .kitchen.cand2.yml
