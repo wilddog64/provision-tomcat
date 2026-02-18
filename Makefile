@@ -21,16 +21,47 @@ else
   KITCHEN_CMD ?= bundle exec kitchen
 endif
 
-PLATFORMS := win11 win11-disk ubuntu-2404 rockylinux9 aws-minimal-win aws-minimal-win-disk
+# Keep Ansible tooling on a consistent install path to avoid
+# ansible-lint/ansible-core mismatch errors.
+ANSIBLE_LINT_BIN ?= $(shell command -v ansible-lint 2>/dev/null)
+BIN_DIR := $(if $(ANSIBLE_LINT_BIN),$(dir $(ANSIBLE_LINT_BIN)),)
+
+# Helper to resolve binaries from same dir as ansible-lint or fallback to PATH
+define resolve_bin
+$(strip $(if $(BIN_DIR),$(if $(shell test -x $(BIN_DIR)$(1) && echo 1),$(BIN_DIR)$(1),$(shell command -v $(1) 2>/dev/null)),$(shell command -v $(1) 2>/dev/null)))
+endef
+
+ANSIBLE_BIN ?= $(call resolve_bin,ansible)
+ANSIBLE_PLAYBOOK_BIN ?= $(call resolve_bin,ansible-playbook)
+ANSIBLE_GALAXY_BIN ?= $(call resolve_bin,ansible-galaxy)
+
+PLATFORMS := win11 win11-disk ubuntu-2404 rockylinux9 win11-azure aws-minimal-win aws-minimal-win-disk
 SUITES := default latest idempotence
 
 # Version variables for upgrade/downgrade testing
 JAVA_OLD_VERSION ?= 17
 JAVA_NEW_VERSION ?= 21
 TOMCAT_OLD_VERSION ?= 9.0.112
-TOMCAT_NEW_VERSION ?= 9.0.113
+TOMCAT_NEW_VERSION ?= 9.0.115
 
 .DEFAULT_GOAL := help
+
+# ============================================================================ 
+# Azure Configuration (Universal Overrides)
+# ============================================================================ 
+# Dynamically resolve subscription if not provided
+AZURE_SUBSCRIPTION_ID ?= $(shell az account show --query id -o tsv 2>/dev/null)
+# Dynamically resolve resource group if not provided, favoring the environment variable
+AZURE_RESOURCE_GROUP ?= $(shell az group list --query "[?contains(name, 'sandbox')].name" -o tsv 2>/dev/null | head -n 1)
+ifeq ($(AZURE_RESOURCE_GROUP),)
+  AZURE_RESOURCE_GROUP := kqvm-win11-rg
+endif
+AZURE_LOCATION ?= 
+AZURE_IMAGE ?= MicrosoftWindowsServer:WindowsServer:2022-datacenter-g2:latest
+AZURE_VM_SIZE ?= Standard_DS1_v2
+AZURE_VM_NAME ?= kqvm-win11
+AZURE_ADMIN_USERNAME ?= azureadmin
+AZURE_ADMIN_PASSWORD ?= ChangeM3!SecurePassword
 
 # ============================================================================ 
 # Validation Targets
@@ -178,7 +209,115 @@ test-aws-upgrade-candidate: update-roles check-aws-credentials discover-aws-reso
 
 .PHONY: test-azure-provision-tomcat
 test-azure-provision-tomcat: update-roles
-	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) test default-azure-minimal-win-disk
+	@set -e; \
+	echo "=== Detecting Azure Environment ==="; \
+	SUB=$(AZURE_SUBSCRIPTION_ID); \
+	RG=$(AZURE_RESOURCE_GROUP); \
+	echo "Using Subscription: $$SUB"; \
+	echo "Using Resource Group: $$RG"; \
+	LOC=$(AZURE_LOCATION); \
+	if [ -z "$$LOC" ]; then LOC=$$(az group show --name "$$RG" --query location -o tsv); fi; \
+	echo "Using Location: $$LOC"; \
+	MY_IP=$$(curl -s https://api.ipify.org); \
+	NAME=$(AZURE_VM_NAME); \
+	USER=$(AZURE_ADMIN_USERNAME); \
+	PASS="$(AZURE_ADMIN_PASSWORD)"; \
+	IMAGE="$(AZURE_IMAGE)"; \
+	SIZE="$(AZURE_VM_SIZE)"; \
+	echo "=== Creating Azure VM: $$NAME in $$RG ($$LOC) ==="; \
+	az vm create --subscription "$$SUB" --resource-group "$$RG" --name "$$NAME" \
+		--image "$$IMAGE" --admin-username "$$USER" --admin-password "$$PASS" --location "$$LOC" \
+		--public-ip-sku Standard --data-disk-sizes-gb 20 --size "$$SIZE"; \
+	echo "=== Configuring NSG Rules (Source IP: $$MY_IP) ==="; \
+	az network nsg rule create --subscription "$$SUB" --resource-group "$$RG" --nsg-name "$${NAME}NSG" --name AllowWinRM --priority 1010 --destination-port-ranges 5985 --access Allow --protocol Tcp --direction Inbound --source-address-prefixes "$$MY_IP"; \
+	az network nsg rule create --subscription "$$SUB" --resource-group "$$RG" --nsg-name "$${NAME}NSG" --name AllowTomcat --priority 1020 --destination-port-ranges 8080 9080 --access Allow --protocol Tcp --direction Inbound --source-address-prefixes "$$MY_IP"; \
+	echo "=== Configuring WinRM Inside VM ==="; \
+	az vm run-command invoke --subscription "$$SUB" --resource-group "$$RG" --name "$$NAME" --command-id RunPowerShellScript --scripts 'winrm quickconfig -q; Set-Item -Path "WSMan:\localhost\Service\Auth\Basic" -Value $$true; Set-Item -Path "WSMan:\localhost\Service\AllowUnencrypted" -Value $$true; New-NetFirewallRule -DisplayName "Allow WinRM HTTP" -Direction Inbound -LocalPort 5985 -Protocol TCP -Action Allow'; \
+	echo "=== Creating Local Admin Account (testadmin) ==="; \
+	az vm run-command invoke --subscription "$$SUB" --resource-group "$$RG" --name "$$NAME" --command-id RunPowerShellScript --scripts \
+		'$$Password = ConvertTo-SecureString "Password123!" -AsPlainText -Force; if (-not (Get-LocalUser -Name "testadmin" -ErrorAction SilentlyContinue)) { New-LocalUser "testadmin" -Password $$Password -Description "Ansible Admin"; Add-LocalGroupMember -Group "Administrators" -Member "testadmin" };'; \
+	IP=$$(az vm show --subscription "$$SUB" -d -g "$$RG" -n "$$NAME" --query publicIps -o tsv); \
+	echo "=== Waiting for WinRM on $$IP:5985... ==="; \
+	for i in {1..60}; do if nc -z -w 5 $$IP 5985; then break; fi; echo "Waiting... ($$i/60)"; sleep 10; if [ $$i -eq 60 ]; then echo "Timeout waiting for WinRM"; exit 1; fi; done; \
+	sleep 10; \
+	mkdir -p scratch; \
+	printf "[azure]\ndefault-win11-azure ansible_host=$$IP ansible_user=testadmin ansible_password=\"Password123!\" ansible_port=5985 ansible_connection=winrm ansible_winrm_transport=basic ansible_winrm_scheme=http ansible_winrm_server_cert_validation=ignore ansible_winrm_read_timeout_sec=300 ansible_become_method=runas ansible_become_user=$$USER ansible_become_password=\"$$PASS\"\n" > scratch/azure-inventory.ini; \
+	echo "=== Verifying Ansible Connectivity (win_ping) ==="; \
+	ansible -i scratch/azure-inventory.ini -m win_ping all; \
+	echo "=== Running Integration Test ==="; \
+	ansible-playbook -i scratch/azure-inventory.ini tests/playbook.yml \
+		-e "env=stage2 extract_build_number=16 extract_debug=False skip_migration=true tomcat_version=9.0.115 tomcat_auto_start=true install_drive=D:" ; \
+	echo "=== Verifying Tomcat Connectivity from Controller ==="; \
+	for i in {1..12}; do \
+		if curl -s --connect-timeout 5 --max-time 10 "http://$$IP:8080" > /dev/null; then \
+			echo "SUCCESS: Tomcat is reachable at http://$$IP:8080"; \
+			break; \
+		fi; \
+		echo "Waiting for Tomcat to respond... ($$i/12)"; \
+		sleep 10; \
+		if [ $$i -eq 12 ]; then echo "FAILED: Tomcat is not reachable externally"; exit 1; fi; \
+	done; \
+	echo "=== Azure VM Provisioning Complete! ==="; \
+	if [ -z "$$KEEP_AZURE_VM" ]; then echo "=== Cleaning up... ==="; $(MAKE) test-azure-destroy; else echo "=== KEEP_AZURE_VM is set. Skipping cleanup. ==="; fi
+
+.PHONY: test-azure-destroy
+test-azure-destroy:
+	@set -e; \
+	echo "=== Detecting Azure Environment for Cleanup ==="; \
+	SUB=$(AZURE_SUBSCRIPTION_ID); \
+	if [ -z "$$SUB" ]; then SUB=$$(az account show --query id -o tsv); fi; \
+	RG=$(AZURE_RESOURCE_GROUP); \
+	if [ -z "$$RG" ]; then RG=$$(az group list --query "[?contains(name, 'playground-sandbox')].name" -o tsv | head -n 1); fi; \
+	NAME=$(AZURE_VM_NAME); \
+	echo "=== Destroying Azure VM: $$NAME in $$RG ==="; \
+	az vm delete --subscription "$$SUB" --resource-group "$$RG" --name "$$NAME" --yes; \
+	echo "=== Cleaning up Network Resources ==="; \
+	az network nic delete --subscription "$$SUB" --resource-group "$$RG" --name "$${NAME}VMNic" || true; \
+	az network public-ip delete --subscription "$$SUB" --resource-group "$$RG" --name "$${NAME}PublicIP" || true; \
+	az network nsg delete --subscription "$$SUB" --resource-group "$$RG" --name "$${NAME}NSG" || true;
+
+.PHONY: test-azure-upgrade-candidate
+test-azure-upgrade-candidate: update-roles
+	@set -e; \
+	echo "=== Detecting Azure Environment ==="; \
+	SUB=$(AZURE_SUBSCRIPTION_ID); \
+	RG=$(AZURE_RESOURCE_GROUP); \
+	echo "Using Subscription: $$SUB"; \
+	echo "Using Resource Group: $$RG"; \
+	LOC=$(AZURE_LOCATION); \
+	if [ -z "$$LOC" ]; then LOC=$$(az group show --name "$$RG" --query location -o tsv); fi; \
+	echo "Using Location: $$LOC"; \
+	MY_IP=$$(curl -s https://api.ipify.org); \
+	NAME=$(AZURE_VM_NAME); \
+	USER=$(AZURE_ADMIN_USERNAME); \
+	PASS="$(AZURE_ADMIN_PASSWORD)"; \
+	IMAGE="$(AZURE_IMAGE)"; \
+	SIZE="$(AZURE_VM_SIZE)"; \
+	echo "=== 1. Creating Azure VM: $$NAME ==="; \
+	az vm create --subscription "$$SUB" --resource-group "$$RG" --name "$$NAME" \
+		--image "$$IMAGE" --admin-username "$$USER" --admin-password "$$PASS" --location "$$LOC" \
+		--public-ip-sku Standard --data-disk-sizes-gb 20 --size "$$SIZE"; \
+	echo "=== 2. Configuring NSG Rules (Source IP: $$MY_IP) ==="; \
+	az network nsg rule create --subscription "$$SUB" --resource-group "$$RG" --nsg-name "$${NAME}NSG" --name AllowWinRM --priority 1010 --destination-port-ranges 5985 --access Allow --protocol Tcp --direction Inbound --source-address-prefixes "$$MY_IP"; \
+	az network nsg rule create --subscription "$$SUB" --resource-group "$$RG" --nsg-name "$${NAME}NSG" --name AllowTomcat --priority 1020 --destination-port-ranges 8080 9080 --access Allow --protocol Tcp --direction Inbound --source-address-prefixes "$$MY_IP"; \
+	echo "=== 3. Configuring WinRM & Local Admin ==="; \
+	az vm run-command invoke --subscription "$$SUB" --resource-group "$$RG" --name "$$NAME" --command-id RunPowerShellScript --scripts 'winrm quickconfig -q; Set-Item -Path "WSMan:\localhost\Service\Auth\Basic" -Value $$true; Set-Item -Path "WSMan:\localhost\Service\AllowUnencrypted" -Value $$true; New-NetFirewallRule -DisplayName "Allow WinRM HTTP" -Direction Inbound -LocalPort 5985 -Protocol TCP -Action Allow'; \
+	az vm run-command invoke --subscription "$$SUB" --resource-group "$$RG" --name "$$NAME" --command-id RunPowerShellScript --scripts \
+		'$$Password = ConvertTo-SecureString "Password123!" -AsPlainText -Force; if (-not (Get-LocalUser -Name "testadmin" -ErrorAction SilentlyContinue)) { New-LocalUser "testadmin" -Password $$Password -Description "Ansible Admin"; Add-LocalGroupMember -Group "Administrators" -Member "testadmin" };'; \
+	IP=$$(az vm show --subscription "$$SUB" -d -g "$$RG" -n "$$NAME" --query publicIps -o tsv); \
+	echo "=== Waiting for WinRM on $$IP:5985... ==="; \
+	for i in {1..60}; do if nc -z -w 5 $$IP 5985; then break; fi; echo "Waiting... ($$i/60)"; sleep 10; if [ $$i -eq 60 ]; then echo "Timeout waiting for WinRM"; exit 1; fi; done; \
+	sleep 10; \
+	mkdir -p scratch; \
+	printf "[azure]\ndefault-win11-azure ansible_host=$$IP ansible_user=testadmin ansible_password=\"Password123!\" ansible_port=5985 ansible_connection=winrm ansible_winrm_transport=basic ansible_winrm_scheme=http ansible_winrm_server_cert_validation=ignore ansible_winrm_read_timeout_sec=300 ansible_become_method=runas ansible_become_user=$$USER ansible_become_password=\"$$PASS\"\n" > scratch/azure-inventory.ini; \
+	echo "=== 5. Step 1: Installing Initial Version ==="; \
+	ansible-playbook -i scratch/azure-inventory.ini tests/playbook-upgrade.yml -e "env=stage2 upgrade_step=1 tomcat_auto_start=true install_drive=D:"; \
+	echo "=== 6. Step 2: Installing Candidate Version ==="; \
+	ansible-playbook -i scratch/azure-inventory.ini tests/playbook-upgrade.yml -e "env=stage2 upgrade_step=2 tomcat_auto_start=true tomcat_candidate_enabled=true tomcat_candidate_delegate_host=$$IP tomcat_candidate_delegate_port=9080 install_drive=D:"; \
+	echo "=== 7. Verifying Candidate on Port 9080 ==="; \
+	curl -v --connect-timeout 5 --max-time 10 http://$$IP:9080; \
+	echo "=== Success! Test Complete. ==="; \
+	if [ -z "$$KEEP_AZURE_VM" ]; then echo "=== Cleaning up... ==="; $(MAKE) test-azure-destroy; else echo "=== Keeping VM... ==="; fi
 
 # ============================================================================
 # Utility Targets

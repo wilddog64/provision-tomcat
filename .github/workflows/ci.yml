@@ -19,8 +19,8 @@ on:
       - 'vars/**'
       - 'roles/**'
       - 'tests/**'
-      - '!docs/**'         # Exclude changes in docs folder
-      - '!memory-bank/**'  # Exclude changes in memory-bank folder
+      - '!docs/**'
+      - '!memory-bank/**'
   pull_request:
     branches: [main, azure-dev, aws-dev, vagrant-dev]
     types: [opened, synchronize, reopened, ready_for_review]
@@ -45,15 +45,17 @@ on:
   workflow_dispatch:
     inputs:
       environment:
-        description: 'Integration environment to run (optional, defaults to branch-based)'
+        description: 'Integration environment to run (optional)'
         required: false
-        default: 'auto'
+        default: 'vagrant'
         type: choice
         options:
-          - auto
+          - vagrant
           - aws
           - azure
-          - vagrant
+
+permissions:
+  contents: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -65,292 +67,58 @@ env:
 jobs:
   lint:
     name: lint
-    # Security: Only run on trusted PRs/pushes/dispatches (No Forks)
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: [self-hosted, macOS, ARM64]
     steps:
-      - name: Debug Runner Environment
-        run: |
-          whoami
-          pwd
-
-      - name: Checkout provision-tomcat
-        uses: actions/checkout@v4
-
-      - name: Checkout provision-java
-        uses: actions/checkout@v4
+      - name: Setup Environment
+        uses: ./.github/actions/setup
         with:
-          repository: wilddog64/provision-java
-          path: roles/provision-java
-          token: ${{ secrets.GH_PAT || github.token }}
-
-      - name: Checkout windows-base
-        uses: actions/checkout@v4
-        with:
-          repository: wilddog64/windows-base
-          path: roles/windows-base
-          ssh-key: ${{ secrets.WINDOWS_BASE_DEPLOY_KEY }}
-
-      - name: Checkout provision-windows-security
-        uses: actions/checkout@v4
-        with:
-          repository: wilddog64/provision-windows-security
-          path: roles/provision-windows-security
-          ssh-key: ${{ secrets.PROVISION_WINDOWS_SECURITY_DEPLOY_KEY }}
-
-      - name: Symlink self as role
-        run: |
-          mkdir -p roles
-          ln -sfn "$PWD" roles/provision-tomcat
-
-      - name: Verify Python Environment
-        run: |
-          python3 --version
-          which python3
-
-      - name: Install dependencies
-        run: |
-          python3 -m venv venv
-          source venv/bin/activate
-          python3 -m pip install --upgrade pip
-          # Use stable ansible-core version
-          pip install "ansible-core>=2.15.0,<2.16.0" pywinrm
-          if [ -f requirements.txt ]; then python3 -m pip install -r requirements.txt; fi
-          python3 -m pip install ansible-lint
-
-      - name: Install Ansible collections
-        run: |
-          source venv/bin/activate
-          make deps
+          github_token: ${{ github.token }}
+          windows_base_deploy_key: ${{ secrets.WINDOWS_BASE_DEPLOY_KEY }}
+          provision_windows_security_deploy_key: ${{ secrets.PROVISION_WINDOWS_SECURITY_DEPLOY_KEY }}
 
       - name: Run Validation
         run: |
           source venv/bin/activate
           make check
 
-  aws_integration:
-    name: AWS Integration Tests
-    runs-on: [self-hosted, macOS, ARM64]
+  integration:
+    name: Integration Tests
     needs: lint
-    if: |
-      (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository) && (
-        (github.event_name == 'push' && (github.ref == 'refs/heads/aws-dev' || github.ref == 'refs/heads/main')) ||
-        (github.event_name == 'pull_request' && github.event.pull_request.draft == false && (github.base_ref == 'main' || github.base_ref == 'aws-dev' || github.head_ref == 'aws-dev')) ||
-        (github.event_name == 'workflow_dispatch' && (inputs.environment == 'aws' || (inputs.environment == 'auto' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/aws-dev'))))
-      )
-    outputs:
-      AWS_AVAILABLE: ${{ steps.aws_check.outputs.AWS_AVAILABLE }}
+    runs-on: [self-hosted, macOS, ARM64]
+    # Guard: Only run on trusted PRs/pushes/dispatches
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
     steps:
-      - name: Checkout provision-tomcat
-        uses: actions/checkout@v4
-
-      - name: Configure AWS Credentials
-        if: |
-          github.ref == 'refs/heads/aws-dev' ||
-          github.ref == 'refs/heads/main' ||
-          github.base_ref == 'main' ||
-          github.base_ref == 'aws-dev' ||
-          (github.event_name == 'workflow_dispatch' && inputs.environment == 'aws')
-        uses: aws-actions/configure-aws-credentials@v4
+      - name: Setup Environment
+        uses: ./.github/actions/setup
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
-          aws-region: us-east-1
+          github_token: ${{ github.token }}
+          windows_base_deploy_key: ${{ secrets.WINDOWS_BASE_DEPLOY_KEY }}
+          provision_windows_security_deploy_key: ${{ secrets.PROVISION_WINDOWS_SECURITY_DEPLOY_KEY }}
 
-      - name: Verify AWS Availability
-        if: |
-          github.ref == 'refs/heads/aws-dev' ||
-          github.ref == 'refs/heads/main' ||
-          github.base_ref == 'main' ||
-          github.base_ref == 'aws-dev' ||
-          (github.event_name == 'workflow_dispatch' && inputs.environment == 'aws')
-        id: aws_check
-        run: |
-          if aws sts get-caller-identity > /dev/null 2>&1; then
-            echo "AWS_AVAILABLE=true" >> $GITHUB_ENV
-            echo "AWS_AVAILABLE=true" >> $GITHUB_OUTPUT
-            echo "AWS session verified."
-          else
-            echo "AWS_AVAILABLE=false" >> $GITHUB_ENV
-            echo "AWS_AVAILABLE=false" >> $GITHUB_OUTPUT
-            echo "AWS session invalid."
-          fi
-
-      - name: Discover Dynamic AWS Resources
-        if: steps.aws_check.outputs.AWS_AVAILABLE == 'true'
-        id: discover_resources
-        run: |
-          # Call the make target to discover resources and save to a file
-          make discover-aws-resources --silent > aws_env.txt
-          
-          # Safely parse and export to GITHUB_ENV
-          # Only allows keys matching the AWS_[A-Z0-9_]+ pattern
-          while IFS='=' read -r key value; do
-            if [[ $key =~ ^AWS_[A-Z0-9_]+$ ]]; then
-              echo "Exporting $key"
-              echo "$key=$value" >> $GITHUB_ENV
-            fi
-          done < aws_env.txt
-          rm aws_env.txt
-
-      - name: Authorize Security Group Ingress
-        if: steps.aws_check.outputs.AWS_AVAILABLE == 'true'
-        run: |
-          # Restrict CIDR to the runner's public IP for security
-          RUNNER_IP=$(curl -s https://checkip.amazonaws.com)
-          echo "RUNNER_IP=${RUNNER_IP}" >> $GITHUB_ENV
-          echo "Authorizing ingress for runner IP: $RUNNER_IP"
-          aws ec2 authorize-security-group-ingress --group-id $AWS_SECURITY_GROUP_ID --protocol tcp --port 5985 --cidr ${RUNNER_IP}/32 || true
-          aws ec2 authorize-security-group-ingress --group-id $AWS_SECURITY_GROUP_ID --protocol tcp --port 8080 --cidr ${RUNNER_IP}/32 || true
-          aws ec2 authorize-security-group-ingress --group-id $AWS_SECURITY_GROUP_ID --protocol tcp --port 9080 --cidr ${RUNNER_IP}/32 || true
-
-      - name: Checkout Roles
-        if: steps.aws_check.outputs.AWS_AVAILABLE == 'true'
-        run: |
-          mkdir -p roles
-          ln -sfn "$PWD" roles/provision-tomcat
-
-      - name: Checkout provision-java
-        if: steps.aws_check.outputs.AWS_AVAILABLE == 'true'
-        uses: actions/checkout@v4
-        with:
-          repository: wilddog64/provision-java
-          path: roles/provision-java
-          token: ${{ secrets.GH_PAT || github.token }}
-
-      - name: Checkout windows-base
-        if: steps.aws_check.outputs.AWS_AVAILABLE == 'true'
-        uses: actions/checkout@v4
-        with:
-          repository: wilddog64/windows-base
-          path: roles/windows-base
-          ssh-key: ${{ secrets.WINDOWS_BASE_DEPLOY_KEY }}
-
-      - name: Checkout provision-windows-security
-        if: steps.aws_check.outputs.AWS_AVAILABLE == 'true'
-        uses: actions/checkout@v4
-        with:
-          repository: wilddog64/provision-windows-security
-          path: roles/provision-windows-security
-          ssh-key: ${{ secrets.PROVISION_WINDOWS_SECURITY_DEPLOY_KEY }}
-
-      - name: Install dependencies
-        if: steps.aws_check.outputs.AWS_AVAILABLE == 'true'
-        run: |
-          python3 -m venv venv
-          source venv/bin/activate
-          python3 -m pip install --upgrade pip
-          pip install "ansible-core>=2.15.0,<2.16.0" pywinrm
-          make deps
-
-      - name: Install Ruby Dependencies
-        if: steps.aws_check.outputs.AWS_AVAILABLE == 'true'
+      - name: Azure Integration (Deferred)
+        if: false # TODO: Re-enable when ACG TAP model stabilizes
         run: |
           source venv/bin/activate
-          bundle install || gem install bundler && bundle install
+          make test-azure-provision-tomcat
 
-      - name: Run AWS Test
-        if: steps.aws_check.outputs.AWS_AVAILABLE == 'true'
-        env:
-          OBJC_DISABLE_INITIALIZE_FORK_SAFETY: "YES"
+      - name: AWS Integration (Deferred)
+        if: false # TODO: Re-enable when AWS sandbox is active
         run: |
           source venv/bin/activate
-          echo "=== Diagnostic: Verifying AMI Visibility ==="
-          aws ec2 describe-images --image-ids $AWS_AMI_ID --region us-east-1 --query "Images[0].ImageId" || echo "AMI NOT FOUND OR ACCESS DENIED"
-          ansible --version
           make test-aws-provision-tomcat
 
+      - name: Vagrant Integration
+        env:
+          OBJC_DISABLE_INITIALIZE_FORK_SAFETY: "YES"
+          VAGRANT_IGNORE_WINRM_PLUGIN: "YES"
+        run: |
+          source venv/bin/activate
+          make test-win11
+          make test-upgrade-win11
+
       - name: Mandatory Cleanup
-        if: always() && steps.aws_check.outputs.AWS_AVAILABLE == 'true'
+        if: always()
         run: |
           source venv/bin/activate || true
-          bundle exec kitchen destroy default-aws-minimal-win-disk || true
-          bundle exec kitchen destroy upgrade-candidate-aws-disk-aws-minimal-win-disk || true
-          
-          # Revoke security group ingress after test completion
-          # Re-using RUNNER_IP from environment to ensure consistency
-          echo "Revoking ingress for runner IP: $RUNNER_IP"
-          aws ec2 revoke-security-group-ingress --group-id $AWS_SECURITY_GROUP_ID --protocol tcp --port 5985 --cidr ${RUNNER_IP}/32 || true
-          aws ec2 revoke-security-group-ingress --group-id $AWS_SECURITY_GROUP_ID --protocol tcp --port 8080 --cidr ${RUNNER_IP}/32 || true
-          aws ec2 revoke-security-group-ingress --group-id $AWS_SECURITY_GROUP_ID --protocol tcp --port 9080 --cidr ${RUNNER_IP}/32 || true
-
-  azure_integration:
-    name: Azure Integration Tests
-    runs-on: [self-hosted, macOS, ARM64]
-    needs: lint
-    if: >-
-      (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository) && (
-        (github.event_name == 'pull_request' && github.event.pull_request.draft == false && github.head_ref == 'azure-dev') ||
-        (github.event_name == 'push' && github.ref_name == 'azure-dev') ||
-        (github.event_name == 'workflow_dispatch' && (github.ref_name == 'azure-dev' || inputs.environment == 'azure'))
-      )
-    steps:
-      - name: Checkout provision-tomcat
-        uses: actions/checkout@v4
-
-      - name: Detect Azure Availability
-        run: |
-          if az account show > /dev/null 2>&1; then
-            echo "AZURE_AVAILABLE=true" >> $GITHUB_ENV
-            echo "Azure session detected."
-          else
-            echo "AZURE_AVAILABLE=false" >> $GITHUB_ENV
-          fi
-
-      - name: Checkout Roles
-        if: env.AZURE_AVAILABLE == 'true'
-        run: |
-          mkdir -p roles
-          ln -sfn "$PWD" roles/provision-tomcat
-
-      - name: Checkout provision-java
-        if: env.AZURE_AVAILABLE == 'true'
-        uses: actions/checkout@v4
-        with:
-          repository: wilddog64/provision-java
-          path: roles/provision-java
-          token: ${{ secrets.GH_PAT || github.token }}
-
-      - name: Checkout windows-base
-        if: env.AZURE_AVAILABLE == 'true'
-        uses: actions/checkout@v4
-        with:
-          repository: wilddog64/windows-base
-          path: roles/windows-base
-          ssh-key: ${{ secrets.WINDOWS_BASE_DEPLOY_KEY }}
-
-      - name: Checkout provision-windows-security
-        if: env.AZURE_AVAILABLE == 'true'
-        uses: actions/checkout@v4
-        with:
-          repository: wilddog64/provision-windows-security
-          path: roles/provision-windows-security
-          ssh-key: ${{ secrets.PROVISION_WINDOWS_SECURITY_DEPLOY_KEY }}
-
-      - name: Run Azure Test
-        if: env.AZURE_AVAILABLE == 'true'
-        run: make test-azure-provision-tomcat
-
-  vagrant_integration:
-    name: Vagrant Integration Tests
-    runs-on: [self-hosted, macOS, ARM64]
-    needs: [lint, aws_integration]
-    if: |
-      always() &&
-      needs.lint.result == 'success' &&
-      (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository) &&
-      (
-        (github.event_name == 'pull_request' && github.event.pull_request.draft == false && github.head_ref == 'vagrant-dev') ||
-        (github.event_name == 'push' && github.ref_name == 'vagrant-dev') ||
-        (github.event_name == 'workflow_dispatch' && (github.ref_name == 'vagrant-dev' || inputs.environment == 'vagrant')) ||
-        (github.ref == 'refs/heads/main' && (needs.aws_integration.result == 'skipped' || needs.aws_integration.outputs.AWS_AVAILABLE == 'false'))
-      )
-    steps:
-      - name: Checkout provision-tomcat
-        uses: actions/checkout@v4
-      - name: Run Vagrant Test
-        run: |
-          echo "AWS Sandbox not available. Falling back to Vagrant tests..."
-          # Note: Currently disabled due to Apple Silicon instability, but logic is now conditional
-          exit 0
+          make vagrant-destroy || true

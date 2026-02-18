@@ -53,6 +53,7 @@ platforms:
       connection_retry_sleep: 10
     provisioner:
       name: ansible_push
+      ready_command: cmd /c exit 0
       ansible_playbook_bin: <%= Dir.glob("#{Dir.pwd}/venv/bin/ansible-playbook").first || Dir.glob("#{File.dirname(File.dirname(__FILE__))}/.direnv/python-*/bin/ansible-playbook").first || Dir.glob("#{Dir.pwd}/.direnv/python-*/bin/ansible-playbook").first || "ansible-playbook" %>
       hosts: test-kitchen
       require_ansible_repo: true
@@ -100,6 +101,7 @@ platforms:
       connection_retry_sleep: 10
     provisioner:
       name: ansible_push
+      ready_command: cmd /c exit 0
       ansible_playbook_bin: <%= Dir.glob("#{Dir.pwd}/venv/bin/ansible-playbook").first || Dir.glob("#{File.dirname(File.dirname(__FILE__))}/.direnv/python-*/bin/ansible-playbook").first || Dir.glob("#{Dir.pwd}/.direnv/python-*/bin/ansible-playbook").first || "ansible-playbook" %>
       hosts: test-kitchen
       require_ansible_repo: true
@@ -146,6 +148,7 @@ platforms:
       connection_retry_sleep: 10
     provisioner:
       name: ansible_push
+      ready_command: cmd /c exit 0
       ansible_playbook_bin: <%= Dir.glob("#{Dir.pwd}/venv/bin/ansible-playbook").first || Dir.glob("#{File.dirname(File.dirname(__FILE__))}/.direnv/python-*/bin/ansible-playbook").first || Dir.glob("#{Dir.pwd}/.direnv/python-*/bin/ansible-playbook").first || "ansible-playbook" %>
       hosts: test-kitchen
       require_ansible_repo: true
@@ -176,12 +179,12 @@ platforms:
     driver:
       name: ec2
       region: us-east-1
-      availability_zone: <%= ENV.fetch('AWS_AZ') %>
+      availability_zone: <%= ENV.fetch('AWS_AZ', 'us-east-1e') %>
       instance_type: t2.micro
       associate_public_ip: true
-      subnet_id: <%= ENV.fetch('AWS_SUBNET_ID') %>
-      security_group_ids: <%= ENV.fetch('AWS_SECURITY_GROUP_IDS') %>
-      image_id: <%= ENV.fetch('AWS_AMI_ID') %>
+      subnet_id: <%= ENV.fetch('AWS_SUBNET_ID', 'subnet-00000000') %>
+      security_group_ids: <%= ENV.fetch('AWS_SECURITY_GROUP_IDS', '["sg-00000000"]') %>
+      image_id: <%= ENV.fetch('AWS_AMI_ID', 'ami-00000000') %>
     transport:
       name: winrm
       elevated: true
@@ -194,6 +197,7 @@ platforms:
       operation_timeout: 600
     provisioner:
       name: ansible_push
+      ready_command: cmd /c exit 0
       ansible_install_mode: :skip
       pass_transport_password: true
       generate_inv: true
@@ -230,12 +234,12 @@ platforms:
     driver:
       name: ec2
       region: us-east-1
-      availability_zone: <%= ENV.fetch('AWS_AZ') %>
+      availability_zone: <%= ENV.fetch('AWS_AZ', 'us-east-1e') %>
       instance_type: t2.medium
       associate_public_ip: true
-      subnet_id: <%= ENV.fetch('AWS_SUBNET_ID') %>
-      security_group_ids: <%= ENV.fetch('AWS_SECURITY_GROUP_IDS') %>
-      image_id: <%= ENV.fetch('AWS_AMI_ID') %>
+      subnet_id: <%= ENV.fetch('AWS_SUBNET_ID', 'subnet-00000000') %>
+      security_group_ids: <%= ENV.fetch('AWS_SECURITY_GROUP_IDS', '["sg-00000000"]') %>
+      image_id: <%= ENV.fetch('AWS_AMI_ID', 'ami-00000000') %>
       block_device_mappings:
         - device_name: /dev/sda1
           ebs:
@@ -259,6 +263,7 @@ platforms:
       operation_timeout: 600
     provisioner:
       name: ansible_push
+      ready_command: cmd /c exit 0
       ansible_install_mode: :skip
       pass_transport_password: true
       generate_inv: true
@@ -304,8 +309,13 @@ suites:
     verifier:
       name: shell
       command: |
-        # Get hostname from Kitchen state (works for both Vagrant/localhost and AWS public IPs)
-        INSTANCE_HOSTNAME=$(yq .hostname .kitchen/default-*.yml)
+        # Get hostname from Kitchen state for the specific instance
+        INSTANCE_FILENAME=".kitchen/${KITCHEN_INSTANCE}.yml"
+        if [ -f "$INSTANCE_FILENAME" ]; then
+          INSTANCE_HOSTNAME=$(yq .hostname "$INSTANCE_FILENAME")
+        else
+          INSTANCE_HOSTNAME="localhost"
+        fi
         if [ "$INSTANCE_HOSTNAME" = "null" ] || [ -z "$INSTANCE_HOSTNAME" ]; then
           INSTANCE_HOSTNAME="localhost"
         fi

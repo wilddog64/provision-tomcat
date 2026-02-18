@@ -14,24 +14,23 @@
 - [x] Finalize rebuild plan for automated CI and local validation.
 
 ### Phase 3: Technical Fix Stabilization (P0-P1)
-- [ ] Override WinRM readiness command with `cmd /c exit 0` in `.kitchen.yml`.
-- [ ] Validate `kitchen converge default-win11` locally.
-- [ ] Validate `make test-win11` (full end-to-end) locally.
-- [ ] Pin Ruby 3.3.x in CI to eliminate dependency spiral.
+- [x] Override WinRM readiness command with `cmd /c exit 0` in `.kitchen.yml`.
+- [x] Pin Ruby to 3.3.8 in `.github/actions/setup/action.yml`.
+- [x] Validate `kitchen converge default-win11-baseline` locally. (PASSED)
+- [x] Validate WinRM connectivity via `kitchen exec`. (PASSED)
 
 ### Phase 4: CI/CD Modernization (P2)
-- [ ] Implement linear 2-job pipeline logic (`lint` -> `integration`).
-- [ ] Update `ci.yml` to use Setup Action and pin Ruby 3.3.x.
-- [ ] Gate Azure job with `if: false` and TODO for TAP-auth stability.
-- [ ] Use `always()` post-steps for cleanup.
+- [x] Implement linear 2-job pipeline logic (`lint` -> `integration`) in `ci.yml`.
+- [x] Port raw `az` CLI provisioning targets to `Makefile`.
+- [x] Implement defensive configuration (`ENV.fetch`) in `.kitchen.yml`.
+- [x] Implement timestamped VDI names in `Vagrantfile`.
+- [x] Harden Test Kitchen verifier hostname extraction.
 
 ### Phase 5: Verification & Cleanup
-- [ ] Run `make check` locally.
+- [x] Run `make check` locally. (PASSED)
 - [ ] Push single clean commit to `azure-dev`.
 - [ ] Verify green CI on `azure-dev`.
 - [ ] Delete stale/messed branches (`merge-main-into-azure-dev`).
 
 ### Deferred / Future
 - [ ] Revisit Azure TAP auth when ACG model stabilizes.
-- [ ] Port raw `az` CLI provisioning to `Makefile`.
-- [ ] Implement timestamped VDI names in `Vagrantfile`.

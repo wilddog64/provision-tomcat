@@ -71,8 +71,19 @@ runs:
     - name: Install Ruby Dependencies
       shell: bash
       run: |
+        # Pin to Ruby 3.3.x to avoid Ruby 4.0 dependency spiral on M2 runner
+        export RBENV_VERSION=3.3.8
+        if ! rbenv versions | grep -q "$RBENV_VERSION"; then
+          echo "Ruby $RBENV_VERSION not found, installing..."
+          rbenv install "$RBENV_VERSION"
+        fi
+        rbenv shell "$RBENV_VERSION"
+        
+        # Ensure bundler is available for the correct Ruby version
+        gem install bundler --no-document || true
+        
         bundle config set path 'vendor/bundle'
-        bundle install || gem install bundler && bundle install
+        bundle install
 
     - name: Install Ansible collections
       shell: bash

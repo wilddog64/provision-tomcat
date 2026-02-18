@@ -1,14 +1,24 @@
-1. [DONE] Troubleshoot Azure login failure (ACG platform change).
-2. [DONE] Harden Vagrant/WinRM fallback stability (Envelope size, timeouts, pauses, memory, concurrent ops).
-3. [DONE] Fix CI workflow triggers and ERB parsing.
-4. [DONE] Diagnose and fix Ruby environment issues for linting.
-5. [DONE] Temporarily disable azure_integration job.
-6. [DONE] Post-mortem analysis of azure-dev branch failure.
-7. [IN PROGRESS] Clean-room rebuild of azure-dev from main.
-8. [TODO] Fix WinRM "true" error (override readiness command with `cmd /c exit 0`).
-9. [TODO] Pin Ruby 3.3.x in CI to eliminate compatibility spiral.
-10. [TODO] Implement 2-job CI pipeline (lint + Vagrant integration).
-11. [TODO] Clean up stale branches (merge-main-into-azure-dev, copilot/sub-pr-13-again, azure-dev-stale).
-12. [TODO] Instruct user to update Copilot firewall allowlist.
-13. [DEFERRED] Revisit Azure TAP auth when ACG credential model stabilizes.
-14. [DEFERRED] Port raw `az` CLI provisioning to Makefile.
+# Task State
+
+## Current Recovery Operation: Clean-Room Rebuild
+Focus: Stabilizing `azure-dev` branch via local-first validation and technical fix application.
+
+### Phase 3: Technical Fix Stabilization [IN PROGRESS]
+- **WinRM "true" Fix**: Applied to `.kitchen.yml` (`ready_command`).
+- **Ruby Pinning**: Applied to `.github/actions/setup/action.yml` and `ci.yml`.
+- **Local Validation**: `make check` passed. `kitchen converge` in progress (downloading box).
+
+### Phase 4: CI/CD Modernization [IN PROGRESS]
+- **Linearized Pipeline**: 2-job flow implemented in `ci.yml`.
+- **Azure Targets**: Ported raw `az` CLI targets to `Makefile`.
+- **Stability**: Timestamped VDI names implemented in `Vagrantfile`.
+
+### Pending
+- [ ] Final verification of `kitchen converge`.
+- [ ] Single clean commit and push.
+- [ ] Branch cleanup.
+
+## Blocker Tracking
+- [x] WinRM "true" error (Fix implemented, pending verification).
+- [x] Ruby 4.0 dependency spiral (Fix implemented via pinning).
+- [ ] Azure TAP model (Deferred to local stabilization first).
