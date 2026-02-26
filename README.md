@@ -1,5 +1,7 @@
 # Provision Tomcat Role
 
+![Architecture](docs/architecture/provision-tomcat.png)
+
 ![Demo](docs/recordings/provision-tmcat.gif)
 *More recordings [here](docs/recordings/README.md)*
 
