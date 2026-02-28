@@ -48,7 +48,7 @@
   - [x] Avoid private SSL API usage in lookup plugins (LOW-2).
   - [x] Remove stale AWS resource ID fallbacks from Makefile and .kitchen.yml (LOW-3).
   - [x] Feedback Integrated: Refined by `@copilot` to include missed variables and .gitignore updates.
-- [x] Consolidate AWS stabilization and security hardening into final PR to main (#6).
+- [x] Consolidate AWS stabilization and security hardening into final PR to main (#6) — **merged 2026-02-14**.
 - [x] Resolve all remaining Copilot (Codex) feedback on PR #6:
   - [x] Added root-level manifests to CI path filters.
   - [x] Added `ready_for_review` trigger to `ci.yml`.
@@ -57,7 +57,7 @@
   - [x] Cleaned up `.clinerules`.
 
 ## In Progress
-- [ ] Finalize merge of `aws-dev` to `main` (PR #6).
+- [ ] **azure-dev** — Azure backend integration has open issues, branch parked
 
 ## Future / Pending
 - [ ] Expand `systemPatterns.md` if k3s/ArgoCD scope is added.

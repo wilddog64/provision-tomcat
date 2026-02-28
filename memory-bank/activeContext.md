@@ -1,7 +1,30 @@
 # Active Context
 
-## Current Session Objective
-Security hardening and remediation of audit findings. Following a comprehensive security audit, we are implementing a phased hardening roadmap to address high and medium-severity vulnerabilities.
+## Current Branch: `docs/update-clinerules-compaction` (as of 2026-02-28)
+
+## Current Focus
+
+No active development. `aws-dev` merged to `main` via PR #6. `azure-dev` branch has open issues — not ready to merge.
+
+## Open Items
+
+### azure-dev
+- Azure backend integration has unresolved issues — branch parked
+- Not ready to merge to `main`
+- Resume when Azure backend work is prioritized
+
+### docs/update-clinerules-compaction
+- Added compaction recovery rule to `.clinerules`
+- PR pending — low priority, no CI blocking
+
+## Pending Future Work
+- Audit CredSSP wildcard delegation in `windows-base` role (MED-1)
+- Migrate `provision-java` checkout to SSH deploy key (MED-3)
+- WinRM HTTPS (HIGH-4) — deferred due to AMI connectivity issues
+
+---
+
+## Historical Context (2026-02-14)
 
 ## Security Hardening Roadmap (2026-02-14)
 - **Roadmap Created**: `docs/plans/2026-02-14-security-hardening-roadmap.md` outlines a 3-phase remediation plan.
