@@ -175,7 +175,7 @@ platforms:
   - name: aws-minimal-win
     driver:
       name: ec2
-      region: us-east-1
+      region: <%= ENV.fetch('AWS_REGION', 'us-east-1') %>
       availability_zone: <%= ENV.fetch('AWS_AZ') %>
       instance_type: t2.micro
       associate_public_ip: true
@@ -229,7 +229,7 @@ platforms:
   - name: aws-minimal-win-disk
     driver:
       name: ec2
-      region: us-east-1
+      region: <%= ENV.fetch('AWS_REGION', 'us-east-1') %>
       availability_zone: <%= ENV.fetch('AWS_AZ') %>
       instance_type: t2.medium
       associate_public_ip: true

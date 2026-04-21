@@ -58,8 +58,9 @@ check: lint syntax
 AWS_ACCOUNT_ID ?= $(shell aws sts get-caller-identity --query Account --output text 2>/dev/null)
 AWS_REGION ?= $(shell aws configure get region 2>/dev/null)
 ifeq ($(AWS_REGION),)
-  AWS_REGION := us-east-1
+  AWS_REGION := us-west-2
 endif
+export AWS_REGION
 
 # ============================================================================ 
 # Secret Management

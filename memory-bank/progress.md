@@ -16,6 +16,10 @@
     - [x] Implemented offline linting.
     - [x] Added role resolution symlinking to `syntax` target.
     - [x] Modernized `ansible.cfg` callback and connection settings.
+- [x] Fixed AWS Kitchen region drift:
+    - [x] Documented the mismatch in `docs/issues/2026-04-21-kitchen-aws-region-mismatch.md`.
+    - [x] Exported `AWS_REGION` from `Makefile` for Kitchen subprocesses.
+    - [x] Changed AWS EC2 suites in `.kitchen.yml` to consume `ENV.fetch('AWS_REGION', 'us-east-1')`.
 - [x] Implemented AWS D: drive support (disk initialization + redirected test targets).
 - [x] Synchronized AWS sandbox credentials to GitHub (refreshed session).
 - [x] Renamed CI validation job to `lint` for branch protection compliance.

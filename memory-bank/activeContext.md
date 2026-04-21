@@ -3,6 +3,12 @@
 ## Current Session Objective
 Security hardening and remediation of audit findings. Following a comprehensive security audit, we are implementing a phased hardening roadmap to address high and medium-severity vulnerabilities.
 
+## Latest AWS Integration Finding (2026-04-21)
+- **Bug Identified**: `make test-aws-provision-tomcat` reports `AWS_REGION=us-west-2`, but Test Kitchen still creates AWS instances in `us-east-1`.
+- **Root Cause**: `.kitchen.yml` hardcodes `region: us-east-1` for the AWS EC2 suites, so Kitchen ignores the `Makefile`-resolved `AWS_REGION` value unless it is wired through `ENV`.
+- **Fix Applied**: Export `AWS_REGION` from `Makefile` and change the AWS EC2 suites to `region: <%= ENV.fetch('AWS_REGION', 'us-east-1') %>`.
+- **Issue Doc**: `docs/issues/2026-04-21-kitchen-aws-region-mismatch.md`
+
 ## Security Hardening Roadmap (2026-02-14)
 - **Roadmap Created**: `docs/plans/2026-02-14-security-hardening-roadmap.md` outlines a 3-phase remediation plan.
 - **Priority 1**: Addressing High-severity CI and Supply Chain risks (Checksums, Fork Protection, SG Hardening).
