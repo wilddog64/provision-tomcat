@@ -1,6 +1,6 @@
 # AWS Integration Hurdles and Resolutions (2026-02-14)
 
-> **Related**: See `docs/plans/AWS-SANDBOX-STABILIZATION.md` for the broader stabilization plan.
+> **Related**: See `docs/plans/archive/AWS-SANDBOX-STABILIZATION.md` for the broader stabilization plan.
 
 ## 1. WinRM Transport Conflict
 - **Issue**: Setting `winrm_transport: :basic` in `.kitchen.yml` (parity with Azure) caused the `#create` action to fail.

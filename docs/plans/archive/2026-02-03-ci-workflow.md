@@ -46,4 +46,4 @@ To support private repositories, the following secrets will be documented as req
 
 ## Evolution Notes
 - Original plan called for `validation.yml`; actual implementation uses consolidated `ci.yml` with lint + integration jobs.
-- Path filtering added per `docs/plans/2026-02-14-controlled-ci-execution.md`.
+- Path filtering added per `docs/plans/archive/2026-02-14-controlled-ci-execution.md`.

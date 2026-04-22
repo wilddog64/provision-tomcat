@@ -9,7 +9,7 @@
 - **Target Platform:** Windows via WinRM
 - **Test Harness:** Test Kitchen
 - **Local Virtualization:** Vagrant + VirtualBox
-- **Cloud Sandbox Path:** Azure CLI + Kitchen AzureRM driver + Make targets
+- **Cloud Sandbox Paths:** AWS EC2 + Test Kitchen EC2 driver, plus Azure support used for earlier cloud validation work
 
 ## Structure at a Glance
 - `tasks/`: role execution logic (entry + install/upgrade workflow)
@@ -17,7 +17,7 @@
 - `lookup_plugins/`: controller-side network/http checks
 - `tests/`: playbooks for default, upgrade, downgrade scenarios
 - `docs/`: setup, troubleshooting, candidate strategy, service-account guidance
-- `Makefile`: operator interface for validation, kitchen flows, Azure provisioning/testing
+- `Makefile`: operator interface for validation, Kitchen flows, AWS helpers, and candidate test targets
 
 ## Runtime Variables (Selected)
 - Version/paths:
@@ -34,7 +34,8 @@
 ## Validation Paths
 - Static checks: `make lint`, `make syntax`, `make check`
 - Kitchen suites: default/upgrade/downgrade/idempotence/no-autostart + baseline/candidate paths
-- Azure end-to-end commands: `make test-azure-provision-tomcat`, `make test-azure-upgrade-candidate`, `make test-azure-destroy`
+- AWS end-to-end commands: `make test-aws-provision-tomcat`, `make test-aws-upgrade-candidate`
+- Vagrant candidate helpers: `make test-upgrade-candidate-win11`, `make test-upgrade-candidate-stack`, `bin/vagrant-upgrade-demo`
 
 ## Security Model Notes
 - Expected secret injection via lookup plugins and external secret stores.
@@ -43,13 +44,13 @@
 
 ## Security Audit Status (2026-02-14)
 - Full red-team audit completed: `docs/SECURITY-AUDIT.md`.
-- **Phase 1 & 2 Remediated**:
+- **Key remediations implemented**:
     - [x] **Supply Chain**: Mandatory SHA-512 checksum verification for all binary downloads.
     - [x] **Runner Security**: Missing fork protection guards implemented in CI.
     - [x] **Network Hardening**: AWS SG ingress restricted to CI runner IP during execution.
     - [x] **Log Security**: `no_log: true` implemented for all credential-handling tasks.
     - [x] **Service Security**: Tomcat shutdown port bound to `127.0.0.1`.
-- **Remaining Items (Phase 3)**: CredSSP restriction, safer CI parsing (`eval` removal), GH_PAT migration.
+- **Current follow-up area**: configurable upgrade-version inputs and AWS promotion ergonomics, not core security remediation.
 - **Positive observations**: No production secrets in repo, SSH deploy keys used for private roles, aggressive cleanup patterns.
 
 ## Known Gaps / Guardrails

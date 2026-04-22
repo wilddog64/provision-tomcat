@@ -38,9 +38,9 @@ To mitigate this CI fragility and reduce manual intervention for resource ID upd
 -   **Aligns with Patterns**: Enhances "Test Orchestration Pattern" and "Zero-Touch Secret Sync" from `systemPatterns.md`.
 
 ## Related Documents
--   `docs/plans/AWS-SANDBOX-STABILIZATION.md` - Parent stabilization plan
+-   `docs/plans/archive/AWS-SANDBOX-STABILIZATION.md` - Parent stabilization plan
 -   `docs/issues/2026-02-14-aws-integration-hurdles.md` - Related integration issues resolved
--   `docs/plans/2026-02-14-controlled-ci-execution.md` - CI optimization complementing this work
+-   `docs/plans/archive/2026-02-14-controlled-ci-execution.md` - CI optimization complementing this work
 
 ## Next Steps
 -   [ ] Implement `check-aws-credentials` make target.

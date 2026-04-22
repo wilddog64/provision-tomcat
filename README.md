@@ -315,14 +315,15 @@ make destroy-all      # Destroy all kitchen instances
 This role uses Test Kitchen with Vagrant for automated testing.
 
 **Documentation**:
-- **[AWS AGC Integration Plan](docs/plans/aws/kitchen-aws-integration.md)** - Plan for AWS-based testing
 - **[Development Environment Setup](docs/DEVELOPMENT-SETUP.md)** - First-time setup and prerequisites
 - **[Test Kitchen Guide](docs/TEST-KITCHEN.md)** - Using Test Kitchen for testing
 - **[Testing Upgrades](docs/TESTING-UPGRADES.md)** - Upgrade and downgrade testing procedures
 - **[Zero-Downtime Upgrades](docs/ZERO-DOWNTIME-UPGRADES.md)** - Candidate workflow details
 - **[Candidate Troubleshooting](docs/CANDIDATE-TROUBLESHOOTING.md)** - Common issues and fixes while exercising the candidate workflow
+- **[Configurable Upgrade Versions Spec](docs/plans/2026-04-22-configurable-upgrade-version-targets.md)** - Current plan for passing Java/Tomcat versions through `Makefile` targets
 - **[VirtualBox Stale Disks](docs/issues/VIRTUALBOX-STALE-DISKS.md)** - Fix for `VERR_ALREADY_EXISTS` errors when creating disks
 - **[Controller Lookup Plugins](docs/plugins/CONTROLLER-LOOKUP-PLUGINS.md)** - How the controller-side port/HTTP checks work
+- **[Archived Plans](docs/plans/archive/README.md)** - Completed planning documents kept for historical reference
 
 ### Test Suites
 

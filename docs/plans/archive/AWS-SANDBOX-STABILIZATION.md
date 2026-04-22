@@ -47,7 +47,7 @@ AWS tests currently rely on brittle Kitchen configurations and lack the same lev
 - [ ] Update `memory-bank/` to reflect AWS stabilization status.
 
 ### 5. Related Plans
-- `docs/plans/2026-02-14-controlled-ci-execution.md` - CI trigger optimization (path filtering, draft PRs)
+- `docs/plans/archive/2026-02-14-controlled-ci-execution.md` - CI trigger optimization (path filtering, draft PRs)
 - `docs/issues/2026-02-14-aws-infrastructure-drift.md` - Dynamic resource ID discovery strategy
 
 ## Success Criteria
