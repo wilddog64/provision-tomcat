@@ -12,9 +12,11 @@
 - [x] Live-validated `make test-aws-upgrade-candidate` with Makefile-provided version, URL, and checksum overrides.
 - [x] Documented checksum-resolution blocker in `docs/issues/2026-04-22-tomcat-checksum-resolution-blocks-version-override-automation.md`.
 - [x] Implemented automatic Tomcat URL/checksum resolution for version overrides.
+- [x] Documented CI trigger / branch-policy mismatch in `docs/issues/2026-04-22-ci-policy-runs-on-dev-branches-instead-of-prs-to-main.md`.
 
 ## In Progress
 - [ ] Complete a fully supported AWS promotion step for the candidate workflow.
+- [ ] Restrict CI to PRs targeting `main` and keep `main` as the protected branch.
 
 ## Historical Notes
 - Earlier CI hardening, security roadmap, and AWS stabilization planning have been moved to `docs/plans/archive/` and related issue docs.

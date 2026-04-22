@@ -24,13 +24,15 @@
 - AWS latest-version live findings: `docs/issues/2026-04-22-aws-candidate-latest-version-live-test.md`
 - Local WinRM parity blocker/fix: `docs/issues/2026-04-22-local-aws-winrm-blocked-by-default-sg.md`
 - Checksum automation bug: `docs/issues/2026-04-22-tomcat-checksum-resolution-blocks-version-override-automation.md`
+- CI policy bug: `docs/issues/2026-04-22-ci-policy-runs-on-dev-branches-instead-of-prs-to-main.md`
 
 ## Current State Snapshot
 - Current working branch: `aws-dev`
 - Local branch is ahead of `origin/aws-dev`
-- `origin/aws-dev` is protected and expects pull-request flow plus the `lint` status check
+- `aws-dev` is no longer protected; `main` should remain the protected merge target
 - Repository default install path still pins Tomcat `9.0.115`
 - Upgrade test playbook still hardcodes Tomcat `9.0.112 -> 9.0.113` and Java `17 -> 21`
 
 ## Next Actions
 - Wire a fully supported AWS promotion step so the candidate workflow validates post-promotion primary health.
+- Fix workflow triggers so CI runs for PRs to `main` instead of direct pushes to dev branches.
