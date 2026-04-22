@@ -16,6 +16,7 @@
 - [x] Implemented AWS candidate promotion validation in the supported target.
 - [x] Added easy validation target `make test-aws-upgrade-candidate-latest`.
 - [x] Live-validated the full promote-and-verify AWS path with `make test-aws-upgrade-candidate-latest`.
+- [x] Made `test-aws-upgrade-candidate` depend on `sync-aws`.
 - [x] Restricted CI triggers to PRs targeting `main` plus manual dispatch.
 
 ## In Progress

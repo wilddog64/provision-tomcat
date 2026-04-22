@@ -287,7 +287,7 @@ test-aws-provision-tomcat: update-roles check-aws-credentials
 	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) verify default-aws-minimal-win-disk
 
 .PHONY: test-aws-upgrade-candidate
-test-aws-upgrade-candidate: update-roles check-aws-credentials
+test-aws-upgrade-candidate: sync-aws update-roles check-aws-credentials
 	@set -e; \
 	$(load_aws_discovery_env) \
 	$(authorize_local_aws_test_ingress) \

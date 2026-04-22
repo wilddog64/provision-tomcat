@@ -13,6 +13,7 @@
   - promotion runs against the real AWS instance
   - promoted primary is validated on `localhost:8080` via WinRM
 - Easy validation path is available through `make test-aws-upgrade-candidate-latest`.
+- `test-aws-upgrade-candidate` now depends on `sync-aws` so the local credential refresh happens before the AWS candidate run.
 - CI workflow policy is now aligned in code: CI runs for PRs to `main` and manual dispatches, not direct dev-branch pushes.
 - Remaining branch-policy work is repository configuration: confirm that `main` stays protected while dev branches remain unprotected.
 
