@@ -135,9 +135,23 @@ discover-aws-resources: check-aws-credentials
 	echo "AWS_AZ=$$NEW_AZ"; \
 	echo "AWS_REGION=$$NEW_REGION"
 
+
+define load_aws_discovery_env
+	DISCOVERY_OUTPUT="$$($(MAKE) --no-print-directory discover-aws-resources)"; \
+	printf '%s\n' "$$DISCOVERY_OUTPUT"; \
+	while IFS='=' read -r key value; do \
+		case "$$key" in \
+			AWS_SUBNET_ID|AWS_SECURITY_GROUP_ID|AWS_SECURITY_GROUP_IDS|AWS_AMI_ID|AWS_AZ|AWS_REGION) \
+				export "$$key=$$value"; \
+				;; \
+		esac; \
+	done <<< "$$DISCOVERY_OUTPUT";
+endef
+
 .PHONY: test-aws-provision-tomcat
-test-aws-provision-tomcat: update-roles check-aws-credentials discover-aws-resources
+test-aws-provision-tomcat: update-roles check-aws-credentials
 	@set -e; \
+	$(load_aws_discovery_env) \
 	echo "=== Detecting AWS Environment ==="; \
 	ACC=$(AWS_ACCOUNT_ID); \
 	REG=$(AWS_REGION); \
@@ -157,8 +171,9 @@ test-aws-provision-tomcat: update-roles check-aws-credentials discover-aws-resou
 	if [ -z "$$KEEP_AWS_VM" ]; then echo "=== Cleaning up... ==="; KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) destroy default-aws-minimal-win-disk; else echo "=== KEEP_AWS_VM is set. Skipping cleanup. ==="; fi
 
 .PHONY: test-aws-upgrade-candidate
-test-aws-upgrade-candidate: update-roles check-aws-credentials discover-aws-resources
+test-aws-upgrade-candidate: update-roles check-aws-credentials
 	@set -e; \
+	$(load_aws_discovery_env) \
 	echo "=== Detecting AWS Environment ==="; \
 	ACC=$(AWS_ACCOUNT_ID); \
 	REG=$(AWS_REGION); \
