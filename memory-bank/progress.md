@@ -10,9 +10,9 @@
 - [x] Implemented configurable Java/Tomcat upgrade inputs for candidate workflows.
 - [x] Live-validated `make test-aws-upgrade-candidate` with Makefile-provided version, URL, and checksum overrides.
 - [x] Documented checksum-resolution blocker in `docs/issues/2026-04-22-tomcat-checksum-resolution-blocks-version-override-automation.md`.
+- [x] Implemented automatic Tomcat URL/checksum resolution for version overrides.
 
 ## In Progress
-- [ ] Implement automatic Tomcat URL/checksum resolution for version overrides.
 - [ ] Complete a fully supported AWS promotion step for the candidate workflow.
 
 ## Historical Notes

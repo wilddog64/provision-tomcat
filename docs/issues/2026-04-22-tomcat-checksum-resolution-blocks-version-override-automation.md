@@ -48,6 +48,20 @@ The target only passed when explicit URL and checksum overrides were provided.
 - Decide archive vs. `dlcdn` source based on version availability.
 - Preserve checksum verification; do not weaken the download integrity gate.
 
+## Status update
+
+- Implemented in `Makefile`: upgrade-oriented targets now auto-resolve Tomcat download URLs and SHA-512 checksums when only `TOMCAT_*_VERSION` values are supplied.
+- Resolution behavior prefers `dlcdn.apache.org` when the release is available there and falls back to `archive.apache.org` for older releases.
+- Live validation passed with:
+
+```text
+make test-aws-upgrade-candidate \
+  JAVA_OLD_VERSION=21 \
+  JAVA_NEW_VERSION=25 \
+  TOMCAT_OLD_VERSION=9.0.115 \
+  TOMCAT_NEW_VERSION=9.0.117
+```
+
 ## Related
 
 - Spec: `docs/plans/2026-04-22-configurable-upgrade-version-targets.md`

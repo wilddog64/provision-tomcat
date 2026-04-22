@@ -174,15 +174,58 @@ define revoke_local_aws_test_ingress
 	fi
 endef
 
-define upgrade_test_env
-	UPGRADE_JAVA_OLD_VERSION="$(JAVA_OLD_VERSION)" \
-	UPGRADE_JAVA_NEW_VERSION="$(JAVA_NEW_VERSION)" \
-	UPGRADE_TOMCAT_OLD_VERSION="$(TOMCAT_OLD_VERSION)" \
-	UPGRADE_TOMCAT_NEW_VERSION="$(TOMCAT_NEW_VERSION)" \
-	UPGRADE_TOMCAT_OLD_DOWNLOAD_URL="$(TOMCAT_OLD_DOWNLOAD_URL)" \
-	UPGRADE_TOMCAT_NEW_DOWNLOAD_URL="$(TOMCAT_NEW_DOWNLOAD_URL)" \
-	UPGRADE_TOMCAT_OLD_CHECKSUM="$(TOMCAT_OLD_CHECKSUM)" \
-	UPGRADE_TOMCAT_NEW_CHECKSUM="$(TOMCAT_NEW_CHECKSUM)"
+define load_upgrade_test_env
+	resolve_tomcat_release() { \
+		local version="$$1"; \
+		local resolved_url="$$2"; \
+		local resolved_checksum="$$3"; \
+		local label="$$4"; \
+		local dlcdn_url archive_url checksum_url; \
+		if [ -z "$$resolved_url" ]; then \
+			dlcdn_url="https://dlcdn.apache.org/tomcat/tomcat-9/v$${version}/bin/apache-tomcat-$${version}-windows-x64.zip"; \
+			archive_url="https://archive.apache.org/dist/tomcat/tomcat-9/v$${version}/bin/apache-tomcat-$${version}-windows-x64.zip"; \
+			if curl -fsI "$$dlcdn_url" >/dev/null 2>&1; then \
+				resolved_url="$$dlcdn_url"; \
+			elif curl -fsI "$$archive_url" >/dev/null 2>&1; then \
+				resolved_url="$$archive_url"; \
+			else \
+				echo "ERROR: Failed to resolve Tomcat $$label download URL for version $$version." >&2; \
+				exit 1; \
+			fi; \
+		fi; \
+		if [ -z "$$resolved_checksum" ]; then \
+			checksum_url="$$resolved_url.sha512"; \
+			resolved_checksum="$$(curl -fsSL "$$checksum_url" | awk 'NF {print $$1; exit}')"; \
+			if [ -z "$$resolved_checksum" ]; then \
+				echo "ERROR: Failed to resolve Tomcat $$label checksum from $$checksum_url." >&2; \
+				exit 1; \
+			fi; \
+		fi; \
+		case "$$label" in \
+			old) \
+				export UPGRADE_TOMCAT_OLD_DOWNLOAD_URL="$$resolved_url"; \
+				export UPGRADE_TOMCAT_OLD_CHECKSUM="$$resolved_checksum"; \
+				;; \
+			new) \
+				export UPGRADE_TOMCAT_NEW_DOWNLOAD_URL="$$resolved_url"; \
+				export UPGRADE_TOMCAT_NEW_CHECKSUM="$$resolved_checksum"; \
+				;; \
+			*) \
+				echo "ERROR: Unknown Tomcat label $$label." >&2; \
+				exit 1; \
+				;; \
+		esac; \
+		echo "Resolved Tomcat $$label version $$version"; \
+		echo "  URL: $$resolved_url"; \
+		echo "  SHA512: $$resolved_checksum"; \
+	}; \
+	export UPGRADE_JAVA_OLD_VERSION="$(JAVA_OLD_VERSION)"; \
+	export UPGRADE_JAVA_NEW_VERSION="$(JAVA_NEW_VERSION)"; \
+	export UPGRADE_TOMCAT_OLD_VERSION="$(TOMCAT_OLD_VERSION)"; \
+	export UPGRADE_TOMCAT_NEW_VERSION="$(TOMCAT_NEW_VERSION)"; \
+	resolve_tomcat_release "$(TOMCAT_OLD_VERSION)" "$(TOMCAT_OLD_DOWNLOAD_URL)" "$(TOMCAT_OLD_CHECKSUM)" old; \
+	resolve_tomcat_release "$(TOMCAT_NEW_VERSION)" "$(TOMCAT_NEW_DOWNLOAD_URL)" "$(TOMCAT_NEW_CHECKSUM)" new; \
+	true
 endef
 
 .PHONY: test-aws-provision-tomcat
@@ -237,21 +280,22 @@ test-aws-upgrade-candidate: update-roles check-aws-credentials
 	}; \
 	trap cleanup EXIT; \
 	echo "=== Detecting AWS Environment ==="; \
-	ACC=$(AWS_ACCOUNT_ID); \
-	REG=$(AWS_REGION); \
-	echo "Using Account: $$ACC"; \
-	echo "Using Region: $$REG"; \
-	$(upgrade_test_env) KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) destroy upgrade-candidate-aws-disk-aws-minimal-win-disk; \
-	$(upgrade_test_env) KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) create upgrade-candidate-aws-disk-aws-minimal-win-disk; \
-	IP=$$(yq .hostname .kitchen/upgrade-candidate-aws-disk-aws-minimal-win-disk.yml); \
-	echo "=== Waiting for WinRM on $$IP:5985... ==="; \
-	for i in {1..60}; do if nc -z -w 5 $$IP 5985; then break; fi; echo "Waiting... ($$i/60)"; sleep 10; if [ $$i -eq 60 ]; then echo "Timeout waiting for WinRM"; exit 1; fi; done; \
-	sleep 10; \
-	echo "=== Running Candidate Upgrade Test ==="; \
-	$(upgrade_test_env) KITCHEN_YAML=$(KITCHEN_YAML) ANSIBLE_HOST_OVERRIDE=$$IP $(KITCHEN_CMD) converge upgrade-candidate-aws-disk-aws-minimal-win-disk; \
-	echo "=== Verifying Ansible Connectivity (win_ping) ==="; \
-	ANSIBLE_CONFIG=ansible.cfg ANSIBLE_HOST_OVERRIDE=$$IP ansible -i .kitchen/ansible_inventory/ansible_inventory.ini -m win_ping all; \
-	$(upgrade_test_env) KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) verify upgrade-candidate-aws-disk-aws-minimal-win-disk
+		ACC=$(AWS_ACCOUNT_ID); \
+		REG=$(AWS_REGION); \
+		echo "Using Account: $$ACC"; \
+		echo "Using Region: $$REG"; \
+		$(load_upgrade_test_env) \
+		KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) destroy upgrade-candidate-aws-disk-aws-minimal-win-disk; \
+		KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) create upgrade-candidate-aws-disk-aws-minimal-win-disk; \
+		IP=$$(yq .hostname .kitchen/upgrade-candidate-aws-disk-aws-minimal-win-disk.yml); \
+		echo "=== Waiting for WinRM on $$IP:5985... ==="; \
+		for i in {1..60}; do if nc -z -w 5 $$IP 5985; then break; fi; echo "Waiting... ($$i/60)"; sleep 10; if [ $$i -eq 60 ]; then echo "Timeout waiting for WinRM"; exit 1; fi; done; \
+		sleep 10; \
+		echo "=== Running Candidate Upgrade Test ==="; \
+		KITCHEN_YAML=$(KITCHEN_YAML) ANSIBLE_HOST_OVERRIDE=$$IP $(KITCHEN_CMD) converge upgrade-candidate-aws-disk-aws-minimal-win-disk; \
+		echo "=== Verifying Ansible Connectivity (win_ping) ==="; \
+		ANSIBLE_CONFIG=ansible.cfg ANSIBLE_HOST_OVERRIDE=$$IP ansible -i .kitchen/ansible_inventory/ansible_inventory.ini -m win_ping all; \
+		KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) verify upgrade-candidate-aws-disk-aws-minimal-win-disk
 
 .PHONY: test-azure-provision-tomcat
 test-azure-provision-tomcat: update-roles
@@ -483,39 +527,41 @@ update-roles:
 # Upgrade testing helpers
 .PHONY: test-upgrade-win11
 test-upgrade-win11: update-roles
-	@echo "=== Testing Java + Tomcat upgrade on Windows 11 ==="
-	@echo "Step 1: Installing Java $(JAVA_OLD_VERSION) + Tomcat $(TOMCAT_OLD_VERSION)..."
-	$(upgrade_test_env) KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) create upgrade-win11
-	$(upgrade_test_env) KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) converge upgrade-win11
-	$(upgrade_test_env) KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) verify upgrade-win11
-	@echo ""
-	@echo "Step 2: Upgrading to Java $(JAVA_NEW_VERSION) + Tomcat $(TOMCAT_NEW_VERSION)..."
-	@sed 's/upgrade_step: 1/upgrade_step: 2/' $(KITCHEN_YAML) > .kitchen.step2.yml
-	$(upgrade_test_env) KITCHEN_YAML=.kitchen.step2.yml $(KITCHEN_CMD) converge upgrade-win11
-	$(upgrade_test_env) KITCHEN_YAML=.kitchen.step2.yml $(KITCHEN_CMD) verify upgrade-win11
-	@rm -f .kitchen.step2.yml
-	@echo ""
-	@echo "Upgrade test complete!"
+		@echo "=== Testing Java + Tomcat upgrade on Windows 11 ==="
+		@echo "Step 1: Installing Java $(JAVA_OLD_VERSION) + Tomcat $(TOMCAT_OLD_VERSION)..."
+		$(load_upgrade_test_env) \
+		KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) create upgrade-win11
+		KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) converge upgrade-win11
+		KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) verify upgrade-win11
+		@echo ""
+		@echo "Step 2: Upgrading to Java $(JAVA_NEW_VERSION) + Tomcat $(TOMCAT_NEW_VERSION)..."
+		@sed 's/upgrade_step: 1/upgrade_step: 2/' $(KITCHEN_YAML) > .kitchen.step2.yml
+		KITCHEN_YAML=.kitchen.step2.yml $(KITCHEN_CMD) converge upgrade-win11
+		KITCHEN_YAML=.kitchen.step2.yml $(KITCHEN_CMD) verify upgrade-win11
+		@rm -f .kitchen.step2.yml
+		@echo ""
+		@echo "Upgrade test complete!"
 
 
 .PHONY: test-upgrade-candidate-win11
 test-upgrade-candidate-win11: upgrade-cleanup-win11 update-roles
-	@echo "=== Testing Java + Tomcat upgrade (candidate mode) on Windows 11 (D: drive) ==="
-	@echo "Step 1: Installing Java $(JAVA_OLD_VERSION) + Tomcat $(TOMCAT_OLD_VERSION)..."
-	@sed 's/.*guest: 8080, host: 8080, auto_correct: true.*/        - ["forwarded_port", {guest: 8080, host: 18080, auto_correct: true}]\n        - ["forwarded_port", {guest: 9080, host: 19080, auto_correct: true}]/' $(KITCHEN_YAML) > .kitchen.cand1.yml
-	$(upgrade_test_env) KITCHEN_YAML=.kitchen.cand1.yml $(KITCHEN_CMD) create upgrade-win11-disk
-	$(upgrade_test_env) KITCHEN_YAML=.kitchen.cand1.yml $(KITCHEN_CMD) converge upgrade-win11-disk
-	$(upgrade_test_env) KITCHEN_YAML=.kitchen.cand1.yml $(KITCHEN_CMD) verify upgrade-win11-disk || true
-	@echo ""
-	@echo "Step 2: Upgrading to Java $(JAVA_NEW_VERSION) + Tomcat $(TOMCAT_NEW_VERSION) with candidate workflow..."
-	@sed -e 's/upgrade_step: 1/upgrade_step: 2/' \
-	     -e 's/tomcat_auto_start: true/tomcat_auto_start: true\n        tomcat_candidate_enabled: true\n        tomcat_candidate_delegate: localhost\n        tomcat_candidate_delegate_port: 19080/' \
-	     .kitchen.cand1.yml > .kitchen.cand2.yml
-	$(upgrade_test_env) KITCHEN_YAML=.kitchen.cand2.yml $(KITCHEN_CMD) converge upgrade-win11-disk
-	$(upgrade_test_env) KITCHEN_YAML=.kitchen.cand2.yml $(KITCHEN_CMD) verify upgrade-win11-disk
-	@rm -f .kitchen.cand1.yml .kitchen.cand2.yml
-	@echo ""
-	@echo "Candidate upgrade test complete!"
+		@echo "=== Testing Java + Tomcat upgrade (candidate mode) on Windows 11 (D: drive) ==="
+		@echo "Step 1: Installing Java $(JAVA_OLD_VERSION) + Tomcat $(TOMCAT_OLD_VERSION)..."
+		@sed 's/.*guest: 8080, host: 8080, auto_correct: true.*/        - ["forwarded_port", {guest: 8080, host: 18080, auto_correct: true}]\n        - ["forwarded_port", {guest: 9080, host: 19080, auto_correct: true}]/' $(KITCHEN_YAML) > .kitchen.cand1.yml
+		$(load_upgrade_test_env) \
+		KITCHEN_YAML=.kitchen.cand1.yml $(KITCHEN_CMD) create upgrade-win11-disk
+		KITCHEN_YAML=.kitchen.cand1.yml $(KITCHEN_CMD) converge upgrade-win11-disk
+		KITCHEN_YAML=.kitchen.cand1.yml $(KITCHEN_CMD) verify upgrade-win11-disk || true
+		@echo ""
+		@echo "Step 2: Upgrading to Java $(JAVA_NEW_VERSION) + Tomcat $(TOMCAT_NEW_VERSION) with candidate workflow..."
+		@sed -e 's/upgrade_step: 1/upgrade_step: 2/' \
+		     -e 's/tomcat_auto_start: true/tomcat_auto_start: true\n        tomcat_candidate_enabled: true\n        tomcat_candidate_delegate: localhost\n        tomcat_candidate_delegate_port: 19080/' \
+		     .kitchen.cand1.yml > .kitchen.cand2.yml
+		KITCHEN_YAML=.kitchen.cand2.yml $(KITCHEN_CMD) converge upgrade-win11-disk
+		KITCHEN_YAML=.kitchen.cand2.yml $(KITCHEN_CMD) verify upgrade-win11-disk
+		@rm -f .kitchen.cand1.yml .kitchen.cand2.yml
+		@echo ""
+		@echo "Candidate upgrade test complete!"
 
 .PHONY: upgrade-cleanup-win11
 upgrade-cleanup-win11:
@@ -523,7 +569,9 @@ upgrade-cleanup-win11:
 
 .PHONY: test-upgrade-baseline-win11
 test-upgrade-baseline-win11: update-roles
-	$(upgrade_test_env) KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) test upgrade-baseline-win11-baseline
+		@set -e; \
+		$(load_upgrade_test_env) \
+		KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) test upgrade-baseline-win11-baseline
 
 .PHONY: candidate-cleanup-win11
 candidate-cleanup-win11: upgrade-cleanup-win11
