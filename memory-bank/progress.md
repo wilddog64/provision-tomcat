@@ -22,6 +22,8 @@
     - [x] Changed AWS EC2 suites in `.kitchen.yml` to consume `ENV.fetch('AWS_REGION', 'us-east-1')`.
 - [x] Documented local AWS WinRM parity gap in `docs/issues/2026-04-22-local-aws-winrm-blocked-by-default-sg.md`.
 - [x] Implemented local AWS ingress parity in `Makefile` for `test-aws-provision-tomcat` and `test-aws-upgrade-candidate`.
+- [x] Documented AWS latest-version candidate test findings in `docs/issues/2026-04-22-aws-candidate-latest-version-live-test.md`.
+- [x] Created configurable upgrade-version spec in `docs/plans/2026-04-22-configurable-upgrade-version-targets.md`.
 - [x] Implemented AWS D: drive support (disk initialization + redirected test targets).
 - [x] Synchronized AWS sandbox credentials to GitHub (refreshed session).
 - [x] Renamed CI validation job to `lint` for branch protection compliance.
@@ -65,6 +67,7 @@
 ## In Progress
 - [ ] Finalize merge of `aws-dev` to `main` (PR #6).
 - [ ] Live-verify local AWS ingress parity fix with a full end-to-end run.
+- [ ] Implement configurable Java/Tomcat upgrade inputs for candidate workflows.
 
 ## Future / Pending
 - [ ] Expand `systemPatterns.md` if k3s/ArgoCD scope is added.

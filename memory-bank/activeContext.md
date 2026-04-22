@@ -16,6 +16,16 @@ Security hardening and remediation of audit findings. Following a comprehensive 
 - **Fix Implemented**: `Makefile` now authorizes and revokes `5985`/`8080`/`9080` for the caller IP around both local AWS test targets, with shell-exit cleanup that also destroys the Kitchen instance unless `KEEP_AWS_VM` is set.
 - **Issue Doc**: `docs/issues/2026-04-22-local-aws-winrm-blocked-by-default-sg.md`
 
+## Latest AWS Candidate Upgrade Findings (2026-04-22)
+- **Live test target**: AWS candidate workflow with Java `21 -> 25` and Tomcat `9.0.115 -> 9.0.117`.
+- **What worked**: AWS candidate provisioning reached a live candidate Tomcat on `9080` and installed Java `25` + Tomcat `9.0.117` successfully on the instance.
+- **What failed**:
+  - legacy Tomcat `9.0.115` required `archive.apache.org` because `dlcdn.apache.org` returned `404`
+  - latest Tomcat `9.0.117` required a new SHA-512 checksum instead of the repo default `9.0.115` checksum
+  - promotion orchestration skipped because the AWS inventory handoff was not valid for the direct `ansible-playbook` call
+- **Issue Doc**: `docs/issues/2026-04-22-aws-candidate-latest-version-live-test.md`
+- **Spec**: `docs/plans/2026-04-22-configurable-upgrade-version-targets.md`
+
 ## Security Hardening Roadmap (2026-02-14)
 - **Roadmap Created**: `docs/plans/2026-02-14-security-hardening-roadmap.md` outlines a 3-phase remediation plan.
 - **Priority 1**: Addressing High-severity CI and Supply Chain risks (Checksums, Fork Protection, SG Hardening).
@@ -39,6 +49,7 @@ This approach successfully mitigated the CI failure and improved pipeline effici
 - All security audit HIGH findings remediated.
 - AWS integration pipeline stabilized and hardened against environment drift.
 - Workspace includes a local AWS ingress parity fix on `aws-dev`; live verification is still pending.
+- Configurable upgrade-version support is now planned but not yet implemented.
 
 ## What Was Done
 1. **Applied Fixes:** Restored missing collection to `deps` targets, implemented offline linting, and added symlink-based role resolution in `Makefile`.
@@ -91,6 +102,7 @@ This approach successfully mitigated the CI failure and improved pipeline effici
 - **Cleanup Persistence**: While `if: always()` is implemented, manual monitoring of the AWS console is still advised during active development to ensure no orphaned resources remain due to workflow cancellation limits.
 - **Local AWS parity gap**: Developers can still hang at the WinRM wait loop until local ingress authorization mirrors the CI workflow.
 - **Local AWS live verify pending**: The parity fix is implemented, but an end-to-end local run has not yet been executed in this session.
+- **Upgrade-version configurability gap**: Candidate workflows still require hardcoded playbook versions or temporary runtime overrides for newer Java/Tomcat combinations.
 
 ## Security Audit (2026-02-14)
 A comprehensive red-team security audit was performed across the full codebase. **15 findings** identified (5 HIGH, 6 MEDIUM, 4 LOW). Key critical items:
