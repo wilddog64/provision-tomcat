@@ -183,7 +183,7 @@ jobs:
         run: |
           # Call the make target to discover resources and save to a file
           make discover-aws-resources --silent > aws_env.txt
-          
+
           # Safely parse and export to GITHUB_ENV
           # Only allows keys matching the AWS_[A-Z0-9_]+ pattern
           while IFS='=' read -r key value; do
@@ -267,7 +267,7 @@ jobs:
           source venv/bin/activate || true
           bundle exec kitchen destroy default-aws-minimal-win-disk || true
           bundle exec kitchen destroy upgrade-candidate-aws-disk-aws-minimal-win-disk || true
-          
+
           # Revoke security group ingress after test completion
           # Re-using RUNNER_IP from environment to ensure consistency
           echo "Revoking ingress for runner IP: $RUNNER_IP"
