@@ -20,6 +20,7 @@
 
 ## Active References
 - Spec: `docs/plans/2026-04-22-configurable-upgrade-version-targets.md`
+- Promotion spec: `docs/plans/2026-04-22-aws-candidate-promotion-validation.md`
 - AWS latest-version live findings: `docs/issues/2026-04-22-aws-candidate-latest-version-live-test.md`
 - Local WinRM parity blocker/fix: `docs/issues/2026-04-22-local-aws-winrm-blocked-by-default-sg.md`
 - Checksum automation bug: `docs/issues/2026-04-22-tomcat-checksum-resolution-blocks-version-override-automation.md`
