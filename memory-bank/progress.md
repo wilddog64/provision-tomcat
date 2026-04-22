@@ -16,9 +16,10 @@
 - [x] Implemented AWS candidate promotion validation in the supported target.
 - [x] Added easy validation target `make test-aws-upgrade-candidate-latest`.
 - [x] Live-validated the full promote-and-verify AWS path with `make test-aws-upgrade-candidate-latest`.
+- [x] Restricted CI triggers to PRs targeting `main` plus manual dispatch.
 
 ## In Progress
-- [ ] Restrict CI to PRs targeting `main` and keep `main` as the protected branch.
+- [ ] Verify repository protection remains on `main` only.
 
 ## Historical Notes
 - Earlier CI hardening, security roadmap, and AWS stabilization planning have been moved to `docs/plans/archive/` and related issue docs.

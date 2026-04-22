@@ -1,28 +1,8 @@
 name: CI
 
 on:
-  push:
-    branches: [main, azure-dev, aws-dev, vagrant-dev]
-    paths:
-      - '**.yml'
-      - '**.yaml'
-      - '**.sh'
-      - '**.py'
-      - '**.rb'
-      - 'Makefile'
-      - 'Gemfile'
-      - 'requirements.txt'
-      - 'requirements.yml'
-      - 'Vagrantfile*'
-      - 'tasks/**'
-      - 'defaults/**'
-      - 'vars/**'
-      - 'roles/**'
-      - 'tests/**'
-      - '!docs/**'         # Exclude changes in docs folder
-      - '!memory-bank/**'  # Exclude changes in memory-bank folder
   pull_request:
-    branches: [main, azure-dev, aws-dev, vagrant-dev]
+    branches: [main]
     types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - '**.yml'
@@ -65,8 +45,8 @@ env:
 jobs:
   lint:
     name: lint
-    # Security: Only run on trusted PRs/pushes/dispatches (No Forks)
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
+    # Security: Only run on trusted PRs to main or manual dispatches
+    if: github.event_name == 'workflow_dispatch' || (github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.draft == false)
     runs-on: [self-hosted, macOS, ARM64]
     steps:
       - name: Debug Runner Environment
@@ -133,10 +113,12 @@ jobs:
     runs-on: [self-hosted, macOS, ARM64]
     needs: lint
     if: |
-      (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository) && (
-        (github.event_name == 'push' && (github.ref == 'refs/heads/aws-dev' || github.ref == 'refs/heads/main')) ||
-        (github.event_name == 'pull_request' && github.event.pull_request.draft == false && (github.base_ref == 'main' || github.base_ref == 'aws-dev' || github.head_ref == 'aws-dev')) ||
-        (github.event_name == 'workflow_dispatch' && (inputs.environment == 'aws' || (inputs.environment == 'auto' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/aws-dev'))))
+      (github.event_name == 'workflow_dispatch') || (
+        github.event_name == 'pull_request' &&
+        github.event.pull_request.head.repo.full_name == github.repository &&
+        github.event.pull_request.draft == false &&
+        github.base_ref == 'main' &&
+        github.head_ref == 'aws-dev'
       )
     outputs:
       AWS_AVAILABLE: ${{ steps.aws_check.outputs.AWS_AVAILABLE }}
@@ -146,11 +128,8 @@ jobs:
 
       - name: Configure AWS Credentials
         if: |
-          github.ref == 'refs/heads/aws-dev' ||
-          github.ref == 'refs/heads/main' ||
-          github.base_ref == 'main' ||
-          github.base_ref == 'aws-dev' ||
-          (github.event_name == 'workflow_dispatch' && inputs.environment == 'aws')
+          github.event_name == 'pull_request' ||
+          (github.event_name == 'workflow_dispatch' && (inputs.environment == 'aws' || inputs.environment == 'auto'))
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -160,11 +139,8 @@ jobs:
 
       - name: Verify AWS Availability
         if: |
-          github.ref == 'refs/heads/aws-dev' ||
-          github.ref == 'refs/heads/main' ||
-          github.base_ref == 'main' ||
-          github.base_ref == 'aws-dev' ||
-          (github.event_name == 'workflow_dispatch' && inputs.environment == 'aws')
+          github.event_name == 'pull_request' ||
+          (github.event_name == 'workflow_dispatch' && (inputs.environment == 'aws' || inputs.environment == 'auto'))
         id: aws_check
         run: |
           if aws sts get-caller-identity > /dev/null 2>&1; then
@@ -280,10 +256,12 @@ jobs:
     runs-on: [self-hosted, macOS, ARM64]
     needs: lint
     if: >-
-      (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository) && (
-        (github.event_name == 'pull_request' && github.event.pull_request.draft == false && github.head_ref == 'azure-dev') ||
-        (github.event_name == 'push' && github.ref_name == 'azure-dev') ||
-        (github.event_name == 'workflow_dispatch' && (github.ref_name == 'azure-dev' || inputs.environment == 'azure'))
+      (github.event_name == 'workflow_dispatch' && (inputs.environment == 'azure' || inputs.environment == 'auto')) || (
+        github.event_name == 'pull_request' &&
+        github.event.pull_request.head.repo.full_name == github.repository &&
+        github.event.pull_request.draft == false &&
+        github.base_ref == 'main' &&
+        github.head_ref == 'azure-dev'
       )
     steps:
       - name: Checkout provision-tomcat
@@ -339,12 +317,23 @@ jobs:
     if: |
       always() &&
       needs.lint.result == 'success' &&
-      (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository) &&
       (
-        (github.event_name == 'pull_request' && github.event.pull_request.draft == false && github.head_ref == 'vagrant-dev') ||
-        (github.event_name == 'push' && github.ref_name == 'vagrant-dev') ||
-        (github.event_name == 'workflow_dispatch' && (github.ref_name == 'vagrant-dev' || inputs.environment == 'vagrant')) ||
-        (github.ref == 'refs/heads/main' && (needs.aws_integration.result == 'skipped' || needs.aws_integration.outputs.AWS_AVAILABLE == 'false'))
+        (github.event_name == 'workflow_dispatch' && (inputs.environment == 'vagrant' || inputs.environment == 'auto')) ||
+        (
+          github.event_name == 'pull_request' &&
+          github.event.pull_request.head.repo.full_name == github.repository &&
+          github.event.pull_request.draft == false &&
+          github.base_ref == 'main' &&
+          github.head_ref == 'vagrant-dev'
+        ) ||
+        (
+          github.event_name == 'pull_request' &&
+          github.event.pull_request.head.repo.full_name == github.repository &&
+          github.event.pull_request.draft == false &&
+          github.base_ref == 'main' &&
+          github.head_ref == 'aws-dev' &&
+          (needs.aws_integration.result == 'skipped' || needs.aws_integration.outputs.AWS_AVAILABLE == 'false')
+        )
       )
     steps:
       - name: Checkout provision-tomcat

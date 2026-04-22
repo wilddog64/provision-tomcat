@@ -13,7 +13,8 @@
   - promotion runs against the real AWS instance
   - promoted primary is validated on `localhost:8080` via WinRM
 - Easy validation path is available through `make test-aws-upgrade-candidate-latest`.
-- Remaining active platform gap is now the CI policy mismatch, not the AWS candidate workflow itself.
+- CI workflow policy is now aligned in code: CI runs for PRs to `main` and manual dispatches, not direct dev-branch pushes.
+- Remaining branch-policy work is repository configuration: confirm that `main` stays protected while dev branches remain unprotected.
 
 ## Active References
 - Spec: `docs/plans/2026-04-22-configurable-upgrade-version-targets.md`
@@ -31,4 +32,4 @@
 - Upgrade test playbook still hardcodes Tomcat `9.0.112 -> 9.0.113` and Java `17 -> 21`
 
 ## Next Actions
-- Fix workflow triggers so CI runs for PRs to `main` instead of direct pushes to dev branches.
+- Verify repository protection remains on `main` only.

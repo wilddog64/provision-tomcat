@@ -41,6 +41,15 @@ on:
 - Keep or refine `ready_for_review` / draft gating so heavy jobs run only when the PR is intended for merge.
 - Leave `main` protected.
 
+## Status update
+
+- Implemented in `.github/workflows/ci.yml`:
+  - removed automatic `push` triggers for development branches
+  - restricted `pull_request.branches` to `main`
+  - kept `workflow_dispatch` for manual execution
+  - kept draft gating at the job level so CI runs when PRs are ready for review
+- The remaining branch-policy action is operational rather than code-based: confirm that `main` remains protected while development branches stay unprotected.
+
 ## Related
 
 - Current workflow: `.github/workflows/ci.yml`
