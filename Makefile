@@ -148,10 +148,45 @@ define load_aws_discovery_env
 	done <<< "$$DISCOVERY_OUTPUT";
 endef
 
+define authorize_local_aws_test_ingress
+	RUNNER_IP=$${LOCAL_AWS_RUNNER_IP:-$${RUNNER_IP:-$$(curl -fsS https://checkip.amazonaws.com | tr -d '\n')}}; \
+	if [ -z "$$RUNNER_IP" ]; then \
+		echo "ERROR: Failed to determine runner IP for AWS ingress authorization." >&2; \
+		exit 1; \
+	fi; \
+	export RUNNER_IP; \
+	echo "Authorizing ingress for runner IP: $$RUNNER_IP"; \
+	aws ec2 authorize-security-group-ingress --region "$$AWS_REGION" --group-id "$$AWS_SECURITY_GROUP_ID" --protocol tcp --port 5985 --cidr "$${RUNNER_IP}/32" >/dev/null 2>&1 || true; \
+	aws ec2 authorize-security-group-ingress --region "$$AWS_REGION" --group-id "$$AWS_SECURITY_GROUP_ID" --protocol tcp --port 8080 --cidr "$${RUNNER_IP}/32" >/dev/null 2>&1 || true; \
+	aws ec2 authorize-security-group-ingress --region "$$AWS_REGION" --group-id "$$AWS_SECURITY_GROUP_ID" --protocol tcp --port 9080 --cidr "$${RUNNER_IP}/32" >/dev/null 2>&1 || true;
+endef
+
+define revoke_local_aws_test_ingress
+	if [ -n "$$RUNNER_IP" ]; then \
+		echo "Revoking ingress for runner IP: $$RUNNER_IP"; \
+		aws ec2 revoke-security-group-ingress --region "$$AWS_REGION" --group-id "$$AWS_SECURITY_GROUP_ID" --protocol tcp --port 5985 --cidr "$${RUNNER_IP}/32" >/dev/null 2>&1 || true; \
+		aws ec2 revoke-security-group-ingress --region "$$AWS_REGION" --group-id "$$AWS_SECURITY_GROUP_ID" --protocol tcp --port 8080 --cidr "$${RUNNER_IP}/32" >/dev/null 2>&1 || true; \
+		aws ec2 revoke-security-group-ingress --region "$$AWS_REGION" --group-id "$$AWS_SECURITY_GROUP_ID" --protocol tcp --port 9080 --cidr "$${RUNNER_IP}/32" >/dev/null 2>&1 || true; \
+	fi
+endef
+
 .PHONY: test-aws-provision-tomcat
 test-aws-provision-tomcat: update-roles check-aws-credentials
 	@set -e; \
 	$(load_aws_discovery_env) \
+	$(authorize_local_aws_test_ingress) \
+	cleanup() { \
+		status=$$?; \
+		if [ -z "$$KEEP_AWS_VM" ]; then \
+			echo "=== Cleaning up... ==="; \
+			KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) destroy default-aws-minimal-win-disk || true; \
+		else \
+			echo "=== KEEP_AWS_VM is set. Skipping cleanup. ==="; \
+		fi; \
+		$(revoke_local_aws_test_ingress); \
+		exit $$status; \
+	}; \
+	trap cleanup EXIT; \
 	echo "=== Detecting AWS Environment ==="; \
 	ACC=$(AWS_ACCOUNT_ID); \
 	REG=$(AWS_REGION); \
@@ -167,13 +202,25 @@ test-aws-provision-tomcat: update-roles check-aws-credentials
 	KITCHEN_YAML=$(KITCHEN_YAML) ANSIBLE_HOST_OVERRIDE=$$IP $(KITCHEN_CMD) converge default-aws-minimal-win-disk; \
 	echo "=== Verifying Ansible Connectivity (win_ping) ==="; \
 	ANSIBLE_CONFIG=ansible.cfg ANSIBLE_HOST_OVERRIDE=$$IP ansible -i .kitchen/ansible_inventory/ansible_inventory.ini -m win_ping all; \
-	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) verify default-aws-minimal-win-disk; \
-	if [ -z "$$KEEP_AWS_VM" ]; then echo "=== Cleaning up... ==="; KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) destroy default-aws-minimal-win-disk; else echo "=== KEEP_AWS_VM is set. Skipping cleanup. ==="; fi
+	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) verify default-aws-minimal-win-disk
 
 .PHONY: test-aws-upgrade-candidate
 test-aws-upgrade-candidate: update-roles check-aws-credentials
 	@set -e; \
 	$(load_aws_discovery_env) \
+	$(authorize_local_aws_test_ingress) \
+	cleanup() { \
+		status=$$?; \
+		if [ -z "$$KEEP_AWS_VM" ]; then \
+			echo "=== Cleaning up... ==="; \
+			KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) destroy upgrade-candidate-aws-disk-aws-minimal-win-disk || true; \
+		else \
+			echo "=== KEEP_AWS_VM is set. Skipping cleanup. ==="; \
+		fi; \
+		$(revoke_local_aws_test_ingress); \
+		exit $$status; \
+	}; \
+	trap cleanup EXIT; \
 	echo "=== Detecting AWS Environment ==="; \
 	ACC=$(AWS_ACCOUNT_ID); \
 	REG=$(AWS_REGION); \
@@ -189,8 +236,7 @@ test-aws-upgrade-candidate: update-roles check-aws-credentials
 	KITCHEN_YAML=$(KITCHEN_YAML) ANSIBLE_HOST_OVERRIDE=$$IP $(KITCHEN_CMD) converge upgrade-candidate-aws-disk-aws-minimal-win-disk; \
 	echo "=== Verifying Ansible Connectivity (win_ping) ==="; \
 	ANSIBLE_CONFIG=ansible.cfg ANSIBLE_HOST_OVERRIDE=$$IP ansible -i .kitchen/ansible_inventory/ansible_inventory.ini -m win_ping all; \
-	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) verify upgrade-candidate-aws-disk-aws-minimal-win-disk; \
-	if [ -z "$$KEEP_AWS_VM" ]; then echo "=== Cleaning up... ==="; KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) destroy upgrade-candidate-aws-disk-aws-minimal-win-disk; else echo "=== KEEP_AWS_VM is set. Skipping cleanup. ==="; fi
+	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) verify upgrade-candidate-aws-disk-aws-minimal-win-disk
 
 .PHONY: test-azure-provision-tomcat
 test-azure-provision-tomcat: update-roles

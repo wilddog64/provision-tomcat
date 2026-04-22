@@ -13,6 +13,7 @@ Security hardening and remediation of audit findings. Following a comprehensive 
 - **Bug Identified**: Local `make test-aws-provision-tomcat` stalls waiting for WinRM even after AWS credentials are refreshed successfully.
 - **Root Cause**: Local runs do not authorize inbound `5985`/`8080`/`9080`, while CI does. In `us-west-2`, discovery currently falls back to the VPC `default` security group (`sg-0d89881a3d8fd4fdb`), which only allows self-referenced inbound traffic.
 - **Why CI still works**: CI opens the discovered security group for the runner IP in `.github/workflows/ci.yml` before invoking `make test-aws-provision-tomcat`.
+- **Fix Implemented**: `Makefile` now authorizes and revokes `5985`/`8080`/`9080` for the caller IP around both local AWS test targets, with shell-exit cleanup that also destroys the Kitchen instance unless `KEEP_AWS_VM` is set.
 - **Issue Doc**: `docs/issues/2026-04-22-local-aws-winrm-blocked-by-default-sg.md`
 
 ## Security Hardening Roadmap (2026-02-14)
@@ -37,7 +38,7 @@ This approach successfully mitigated the CI failure and improved pipeline effici
 - Consolidating PR #6 is fully verified and ready for merge into `main`.
 - All security audit HIGH findings remediated.
 - AWS integration pipeline stabilized and hardened against environment drift.
-- Workspace has a documented local AWS WinRM parity gap on `aws-dev`; implementation intentionally deferred pending approval.
+- Workspace includes a local AWS ingress parity fix on `aws-dev`; live verification is still pending.
 
 ## What Was Done
 1. **Applied Fixes:** Restored missing collection to `deps` targets, implemented offline linting, and added symlink-based role resolution in `Makefile`.
@@ -89,6 +90,7 @@ This approach successfully mitigated the CI failure and improved pipeline effici
 - **AZ Drift**: If the sandbox allocation moves to a non-legacy AZ, `t2` instances may be less efficient than `t3`. Recommend periodic review of instance types against AZ capabilities.
 - **Cleanup Persistence**: While `if: always()` is implemented, manual monitoring of the AWS console is still advised during active development to ensure no orphaned resources remain due to workflow cancellation limits.
 - **Local AWS parity gap**: Developers can still hang at the WinRM wait loop until local ingress authorization mirrors the CI workflow.
+- **Local AWS live verify pending**: The parity fix is implemented, but an end-to-end local run has not yet been executed in this session.
 
 ## Security Audit (2026-02-14)
 A comprehensive red-team security audit was performed across the full codebase. **15 findings** identified (5 HIGH, 6 MEDIUM, 4 LOW). Key critical items:

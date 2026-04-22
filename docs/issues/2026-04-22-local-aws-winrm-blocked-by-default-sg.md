@@ -99,3 +99,9 @@ Tagged test security group lookup in `us-west-2` returned no rows.
 - Add matching cleanup to revoke those rules after the local test.
 - Consider creating or requiring a tagged test security group in `us-west-2` so discovery does not fall back to `default`.
 - Keep the implementation separate from this documentation-only commit.
+
+## Status update
+
+- Implemented in `Makefile`: local `test-aws-provision-tomcat` and `test-aws-upgrade-candidate` now authorize ingress for the caller IP before create/wait, and revoke it during shell exit cleanup.
+- Cleanup now also destroys the Kitchen instance on failure unless `KEEP_AWS_VM` is set, matching the intent of the CI workflow more closely.
+- Live AWS verification is still pending.
