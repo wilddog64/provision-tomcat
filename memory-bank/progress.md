@@ -15,3 +15,4 @@
 ## Historical Notes
 - Earlier CI hardening, security roadmap, and AWS stabilization planning have been moved to `docs/plans/archive/` and related issue docs.
 - The repository already includes completed fixes for checksum enforcement, CI fork protection, runner-IP-scoped AWS ingress, and local AWS ingress parity.
+- Older undated CI/GitHub troubleshooting notes have been moved to `docs/issues/archive/` so `docs/issues/` stays focused on active operator-facing references.

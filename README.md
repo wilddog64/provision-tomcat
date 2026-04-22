@@ -567,7 +567,8 @@ See **[VirtualBox Stale Disks](docs/issues/VIRTUALBOX-STALE-DISKS.md)** for deta
 
 If you encounter "Repository not found" errors when checking out private dependencies:
 
-- See **[GitHub Actions Multiple Deploy Keys](docs/issues/GITHUB-ACTIONS-MULTIPLE-DEPLOY-KEYS.md)** for the fix regarding ambiguous SSH keys.
+- Start with **[CI/CD Security Architecture](docs/CI-SECURITY.md)** for the supported runner and deploy-key model.
+- Older GitHub-specific incident notes are preserved in **[Archived Issue Notes](docs/issues/archive/README.md)**.
 
 ### CI on Self-Hosted Runners
 
@@ -584,12 +585,13 @@ See the [docs/issues](docs/issues/) directory for detailed documentation on comm
 | **[pywinrm urllib3 Compatibility](docs/issues/pywinrm-urllib3-compatibility.md)** | AttributeError with urllib3 2.x - pin to `urllib3<2` |
 | **[Vagrant Bundler Conflict](docs/issues/VAGRANT-BUNDLER-CONFLICT.md)** | Vagrant crashes due to rbenv/Bundler environment pollution |
 | **[WinRM Port Forwarding](docs/issues/WINRM-PORT-FORWARDING.md)** | Ansible connection fails - use port 55985 not 5985 |
-| **[provision-java Regex Crash](docs/issues/PROVISION-JAVA-REGEX-CRASH.md)** | NoneType error parsing Java version |
 | **[Candidate Mode Port](docs/issues/CANDIDATE-MODE-PORT.md)** | Candidate mode uses 9080 during testing; final verify must hit 8080 post-promotion |
-| **[GitHub workflow_run Limitation](docs/issues/GITHUB-WORKFLOW-RUN-LIMITATION.md)** | workflow_run only works from default branch |
 | **[VirtualBox Stale Disks](docs/issues/VIRTUALBOX-STALE-DISKS.md)** | VERR_ALREADY_EXISTS when creating disks |
-| **[Multiple Deploy Keys](docs/issues/GITHUB-ACTIONS-MULTIPLE-DEPLOY-KEYS.md)** | SSH key ambiguity with multiple private repos |
-| **[AWS Kitchen Integration](docs/issues/AWS-KITCHEN-INTEGRATION.md)** | Region mismatches, WinRM connectivity, and hostname resolution issues |
+| **[AWS Region Mismatch](docs/issues/2026-04-21-kitchen-aws-region-mismatch.md)** | Test Kitchen picked `us-east-1` instead of the discovered AWS region |
+| **[Local AWS WinRM Blocker](docs/issues/2026-04-22-local-aws-winrm-blocked-by-default-sg.md)** | Local AWS tests stalled until ingress authorization mirrored CI |
+| **[AWS Candidate Latest-Version Live Test](docs/issues/2026-04-22-aws-candidate-latest-version-live-test.md)** | Latest-version candidate run findings, archive URLs, checksum drift, and promotion gap |
+
+Historical CI and GitHub troubleshooting notes are preserved in **[docs/issues/archive](docs/issues/archive/README.md)**.
 
 ## Security
 
