@@ -7,9 +7,9 @@
 - [x] Ran a live AWS candidate test with newer versions and documented the findings in `docs/issues/2026-04-22-aws-candidate-latest-version-live-test.md`.
 - [x] Wrote the current implementation spec in `docs/plans/2026-04-22-configurable-upgrade-version-targets.md`.
 - [x] Refreshed `README.md` to point at current docs and version examples.
+- [x] Implemented configurable Java/Tomcat upgrade inputs for candidate workflows.
 
 ## In Progress
-- [ ] Implement configurable Java/Tomcat upgrade inputs for candidate workflows.
 - [ ] Add supported URL/checksum overrides for archived or newer Tomcat releases.
 - [ ] Complete a fully supported AWS promotion step for the candidate workflow.
 

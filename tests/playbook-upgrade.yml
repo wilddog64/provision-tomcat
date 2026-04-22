@@ -83,10 +83,30 @@
   tasks:
     - name: Determine which version to install based on run number
       set_fact:
-        # First converge (if upgrade_step not defined): install old version
-        # Second converge (upgrade_step=2): install new version
-        tomcat_version: "{{ '9.0.112' if (upgrade_step | default(1) | int) == 1 else '9.0.113' }}"
-        jdk_version: "{{ '17' if (upgrade_step | default(1) | int) == 1 else '21' }}"
+        tomcat_version: >-
+          {{
+            (upgrade_tomcat_old_version | default('9.0.112') | string)
+            if (upgrade_step | default(1) | int) == 1
+            else (upgrade_tomcat_new_version | default('9.0.113') | string)
+          }}
+        jdk_version: >-
+          {{
+            (upgrade_java_old_version | default('17') | string)
+            if (upgrade_step | default(1) | int) == 1
+            else (upgrade_java_new_version | default('21') | string)
+          }}
+        selected_tomcat_download_url: >-
+          {{
+            ((upgrade_tomcat_old_download_url | default('', true))
+            if (upgrade_step | default(1) | int) == 1
+            else (upgrade_tomcat_new_download_url | default('', true))) | trim
+          }}
+        selected_tomcat_checksum: >-
+          {{
+            ((upgrade_tomcat_old_checksum | default('', true))
+            if (upgrade_step | default(1) | int) == 1
+            else (upgrade_tomcat_new_checksum | default('', true))) | trim
+          }}
       tags:
         - always
 
@@ -118,6 +138,9 @@
     - name: Include provision-tomcat role
       include_role:
         name: provision-tomcat
+      vars:
+        tomcat_download_url: "{{ selected_tomcat_download_url if (selected_tomcat_download_url | length) > 0 else omit }}"
+        tomcat_checksum: "{{ selected_tomcat_checksum if (selected_tomcat_checksum | length) > 0 else omit }}"
 
     - name: Display installation summary
       debug:

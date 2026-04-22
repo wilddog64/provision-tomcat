@@ -6,6 +6,7 @@
 
 ## Active Findings
 - Local AWS WinRM parity is fixed in `Makefile`; the local path now authorizes and revokes `5985`/`8080`/`9080` around AWS test runs.
+- Upgrade-oriented `Makefile` targets now pass Java/Tomcat version overrides through Kitchen into `tests/playbook-upgrade.yml`.
 - A live AWS candidate test proved candidate mode works on cloud instances up to the candidate stage:
   - baseline primary responded on `8080`
   - candidate responded on `9080`
@@ -28,6 +29,5 @@
 - Upgrade test playbook still hardcodes Tomcat `9.0.112 -> 9.0.113` and Java `17 -> 21`
 
 ## Next Actions
-- Implement configurable old/new Java and Tomcat inputs for upgrade targets.
 - Add supported URL/checksum overrides for archived or newer Tomcat releases.
 - Wire a fully supported AWS promotion step so the candidate workflow validates post-promotion primary health.

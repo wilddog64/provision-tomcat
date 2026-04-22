@@ -320,6 +320,14 @@ suites:
       playbook: tests/playbook-upgrade.yml
       extra_vars:
         upgrade_step: 1
+        upgrade_java_old_version: "<%= ENV.fetch('UPGRADE_JAVA_OLD_VERSION', '17') %>"
+        upgrade_java_new_version: "<%= ENV.fetch('UPGRADE_JAVA_NEW_VERSION', '21') %>"
+        upgrade_tomcat_old_version: "<%= ENV.fetch('UPGRADE_TOMCAT_OLD_VERSION', '9.0.112') %>"
+        upgrade_tomcat_new_version: "<%= ENV.fetch('UPGRADE_TOMCAT_NEW_VERSION', '9.0.113') %>"
+        upgrade_tomcat_old_download_url: "<%= ENV.fetch('UPGRADE_TOMCAT_OLD_DOWNLOAD_URL', '') %>"
+        upgrade_tomcat_new_download_url: "<%= ENV.fetch('UPGRADE_TOMCAT_NEW_DOWNLOAD_URL', '') %>"
+        upgrade_tomcat_old_checksum: "<%= ENV.fetch('UPGRADE_TOMCAT_OLD_CHECKSUM', '') %>"
+        upgrade_tomcat_new_checksum: "<%= ENV.fetch('UPGRADE_TOMCAT_NEW_CHECKSUM', '') %>"
         tomcat_auto_start: true
     verifier:
       name: shell
@@ -377,6 +385,14 @@ suites:
       playbook: tests/playbook-upgrade.yml
       extra_vars:
         upgrade_step: 2
+        upgrade_java_old_version: "<%= ENV.fetch('UPGRADE_JAVA_OLD_VERSION', '17') %>"
+        upgrade_java_new_version: "<%= ENV.fetch('UPGRADE_JAVA_NEW_VERSION', '21') %>"
+        upgrade_tomcat_old_version: "<%= ENV.fetch('UPGRADE_TOMCAT_OLD_VERSION', '9.0.112') %>"
+        upgrade_tomcat_new_version: "<%= ENV.fetch('UPGRADE_TOMCAT_NEW_VERSION', '9.0.113') %>"
+        upgrade_tomcat_old_download_url: "<%= ENV.fetch('UPGRADE_TOMCAT_OLD_DOWNLOAD_URL', '') %>"
+        upgrade_tomcat_new_download_url: "<%= ENV.fetch('UPGRADE_TOMCAT_NEW_DOWNLOAD_URL', '') %>"
+        upgrade_tomcat_old_checksum: "<%= ENV.fetch('UPGRADE_TOMCAT_OLD_CHECKSUM', '') %>"
+        upgrade_tomcat_new_checksum: "<%= ENV.fetch('UPGRADE_TOMCAT_NEW_CHECKSUM', '') %>"
         tomcat_auto_start: true
         tomcat_candidate_enabled: true
         tomcat_candidate_delegate: localhost
@@ -424,7 +440,7 @@ suites:
         [baseline-win11-baseline]
         baseline-win11 ansible_connection=winrm ansible_host=127.0.0.1 ansible_user=vagrant ansible_password=vagrant ansible_port=55985 ansible_winrm_transport=basic ansible_winrm_scheme=http ansible_winrm_server_cert_validation=ignore
         EOF
-        promotion_extra_vars="env=stage2 extract_build_number=16 extract_debug=False skip_migration=true upgrade_step=2 tomcat_auto_start=true tomcat_candidate_enabled=true tomcat_candidate_delegate=localhost tomcat_candidate_delegate_host=127.0.0.1 tomcat_candidate_delegate_port=${candidate_host_port}"
+        promotion_extra_vars="env=stage2 extract_build_number=16 extract_debug=False skip_migration=true upgrade_step=2 tomcat_auto_start=true tomcat_candidate_enabled=true tomcat_candidate_delegate=localhost tomcat_candidate_delegate_host=127.0.0.1 tomcat_candidate_delegate_port=${candidate_host_port} upgrade_java_old_version=${UPGRADE_JAVA_OLD_VERSION:-17} upgrade_java_new_version=${UPGRADE_JAVA_NEW_VERSION:-21} upgrade_tomcat_old_version=${UPGRADE_TOMCAT_OLD_VERSION:-9.0.112} upgrade_tomcat_new_version=${UPGRADE_TOMCAT_NEW_VERSION:-9.0.113} upgrade_tomcat_old_download_url=${UPGRADE_TOMCAT_OLD_DOWNLOAD_URL:-} upgrade_tomcat_new_download_url=${UPGRADE_TOMCAT_NEW_DOWNLOAD_URL:-} upgrade_tomcat_old_checksum=${UPGRADE_TOMCAT_OLD_CHECKSUM:-} upgrade_tomcat_new_checksum=${UPGRADE_TOMCAT_NEW_CHECKSUM:-}"
 
         echo "Checking candidate Tomcat on port ${candidate_host_port} before promotion..."
         check_port "${candidate_host_port}" 20 10
@@ -449,6 +465,14 @@ suites:
         ansible_host: "<%= ENV['ANSIBLE_HOST_OVERRIDE'] %>"
         tomcat_candidate_delegate_host: "<%= ENV['ANSIBLE_HOST_OVERRIDE'] %>"
         upgrade_step: 2
+        upgrade_java_old_version: "<%= ENV.fetch('UPGRADE_JAVA_OLD_VERSION', '17') %>"
+        upgrade_java_new_version: "<%= ENV.fetch('UPGRADE_JAVA_NEW_VERSION', '21') %>"
+        upgrade_tomcat_old_version: "<%= ENV.fetch('UPGRADE_TOMCAT_OLD_VERSION', '9.0.112') %>"
+        upgrade_tomcat_new_version: "<%= ENV.fetch('UPGRADE_TOMCAT_NEW_VERSION', '9.0.113') %>"
+        upgrade_tomcat_old_download_url: "<%= ENV.fetch('UPGRADE_TOMCAT_OLD_DOWNLOAD_URL', '') %>"
+        upgrade_tomcat_new_download_url: "<%= ENV.fetch('UPGRADE_TOMCAT_NEW_DOWNLOAD_URL', '') %>"
+        upgrade_tomcat_old_checksum: "<%= ENV.fetch('UPGRADE_TOMCAT_OLD_CHECKSUM', '') %>"
+        upgrade_tomcat_new_checksum: "<%= ENV.fetch('UPGRADE_TOMCAT_NEW_CHECKSUM', '') %>"
         tomcat_auto_start: true
         tomcat_candidate_enabled: true
         tomcat_candidate_delegate: localhost
@@ -472,6 +496,14 @@ suites:
         ansible_host: "<%= ENV['ANSIBLE_HOST_OVERRIDE'] %>"
         tomcat_candidate_delegate_host: "<%= ENV['ANSIBLE_HOST_OVERRIDE'] %>"
         upgrade_step: 2
+        upgrade_java_old_version: "<%= ENV.fetch('UPGRADE_JAVA_OLD_VERSION', '17') %>"
+        upgrade_java_new_version: "<%= ENV.fetch('UPGRADE_JAVA_NEW_VERSION', '21') %>"
+        upgrade_tomcat_old_version: "<%= ENV.fetch('UPGRADE_TOMCAT_OLD_VERSION', '9.0.112') %>"
+        upgrade_tomcat_new_version: "<%= ENV.fetch('UPGRADE_TOMCAT_NEW_VERSION', '9.0.113') %>"
+        upgrade_tomcat_old_download_url: "<%= ENV.fetch('UPGRADE_TOMCAT_OLD_DOWNLOAD_URL', '') %>"
+        upgrade_tomcat_new_download_url: "<%= ENV.fetch('UPGRADE_TOMCAT_NEW_DOWNLOAD_URL', '') %>"
+        upgrade_tomcat_old_checksum: "<%= ENV.fetch('UPGRADE_TOMCAT_OLD_CHECKSUM', '') %>"
+        upgrade_tomcat_new_checksum: "<%= ENV.fetch('UPGRADE_TOMCAT_NEW_CHECKSUM', '') %>"
         tomcat_auto_start: true
         tomcat_candidate_enabled: true
         tomcat_candidate_delegate: localhost
