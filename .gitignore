@@ -25,3 +25,4 @@ scratch/
 tests/roles/
 roles/
 venv/
+.claude/
