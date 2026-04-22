@@ -17,7 +17,7 @@ Default variables (`defaults/main.yml`):
 
 | Variable | Default | Description |
 | --- | --- | --- |
-| `tomcat_version` | `'9.0.113'` | Tomcat version to install |
+| `tomcat_version` | `'9.0.115'` | Tomcat version to install |
 | `tomcat_major_version` | `'9'` | Major version (used for service name and paths) |
 | `tomcat_service_name` | `"Tomcat{{ tomcat_major_version }}"` | Windows service name (e.g., `Tomcat9`) |
 | `tomcat_install_dir` | `'C:/Tomcat'` | Base installation directory |
@@ -59,9 +59,9 @@ The Tomcat installation uses a symlink structure:
 
 ```
 C:/Tomcat/
-├── apache-tomcat-9.0.113/    # Actual installation
-├── apache-tomcat-9.0.120/    # After upgrade
-└── current -> apache-tomcat-9.0.120/  # Symlink (always points to active version)
+├── apache-tomcat-9.0.115/    # Existing installation
+├── apache-tomcat-9.0.117/    # After upgrade
+└── current -> apache-tomcat-9.0.117/  # Symlink (always points to active version)
 ```
 
 The Tomcat service points to: `C:/Tomcat/current/`
@@ -106,10 +106,10 @@ The role automatically manages old Tomcat versions using the `tomcat_keep_versio
 - **Disable cleanup**: Set `tomcat_keep_versions: 0` to keep all versions
 
 **Example:**
-- You have versions: 9.0.100, 9.0.105, 9.0.110, 9.0.113, 9.0.115, 9.0.117, 9.0.119, 9.0.120 (8 versions)
-- You upgrade to 9.0.125 (9 versions total)
-- Next upgrade to 9.0.130 (10 versions total)
-- Next upgrade to 9.0.135 (11 versions) - oldest version (9.0.100) is automatically removed
+- You have versions: 9.0.100, 9.0.105, 9.0.110, 9.0.112, 9.0.113, 9.0.115, 9.0.117, 9.0.119 (8 versions)
+- You upgrade to 9.0.120 (9 versions total)
+- Next upgrade to 9.0.121 (10 versions total)
+- Next upgrade to 9.0.122 (11 versions) - oldest version (9.0.100) is automatically removed
 - Result: You always have the current version plus 9 previous versions for rollback
 
 This ensures you have recent versions available for rollback while preventing unlimited disk usage growth.
@@ -196,7 +196,7 @@ ansible-playbook playbook.yml --skip-tags tomcat-install
 - hosts: windows
   gather_facts: yes
   vars:
-    tomcat_version: "9.0.120"
+    tomcat_version: "9.0.117"
   roles:
     - provision-java
     - provision-tomcat
@@ -209,7 +209,7 @@ ansible-playbook playbook.yml --skip-tags tomcat-install
 - hosts: windows
   gather_facts: yes
   vars:
-    tomcat_version: "9.0.113"
+    tomcat_version: "9.0.115"
     tomcat_auto_start: false
   roles:
     - provision-java
@@ -223,7 +223,7 @@ ansible-playbook playbook.yml --skip-tags tomcat-install
 - hosts: windows
   gather_facts: yes
   vars:
-    tomcat_version: "9.0.120"  # Change to new version
+    tomcat_version: "9.0.117"  # Change to new version
   roles:
     - provision-java
     - provision-tomcat
@@ -232,7 +232,7 @@ ansible-playbook playbook.yml --skip-tags tomcat-install
 When you change `tomcat_version`, the role will:
 1. Detect the version mismatch
 2. Stop the old service
-3. Backup the old installation (e.g., `apache-tomcat-9.0.113.bak.1736549230`)
+3. Backup the old installation (e.g., `apache-tomcat-9.0.115.bak.1736549230`)
 4. Install the new version
 5. Start the new service
 
@@ -243,8 +243,10 @@ When you change `tomcat_version`, the role will:
 To upgrade Tomcat to a new version:
 
 ```bash
-ansible-playbook -i inventory playbook.yml --extra-vars "tomcat_version=9.0.120"
+ansible-playbook -i inventory playbook.yml --extra-vars "tomcat_version=9.0.117"
 ```
+
+If you need to test an older archived Tomcat release or a newer release with a custom checksum, override `tomcat_download_url` and `tomcat_checksum` explicitly.
 
 ### Upgrade Java and Tomcat Together
 
@@ -253,8 +255,8 @@ ansible-playbook -i inventory playbook.yml --extra-vars "tomcat_version=9.0.120"
 - hosts: windows
   gather_facts: yes
   vars:
-    java_version: 21
-    tomcat_version: "9.0.120"
+    jdk_version: 21
+    tomcat_version: "9.0.117"
   roles:
     - provision-java
     - provision-tomcat

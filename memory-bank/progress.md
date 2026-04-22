@@ -6,6 +6,7 @@
 - [x] Captured local WinRM blocker findings in `docs/issues/2026-04-22-local-aws-winrm-blocked-by-default-sg.md`.
 - [x] Ran a live AWS candidate test with newer versions and documented the findings in `docs/issues/2026-04-22-aws-candidate-latest-version-live-test.md`.
 - [x] Wrote the current implementation spec in `docs/plans/2026-04-22-configurable-upgrade-version-targets.md`.
+- [x] Refreshed `README.md` to point at current docs and version examples.
 
 ## In Progress
 - [ ] Implement configurable Java/Tomcat upgrade inputs for candidate workflows.
