@@ -90,3 +90,12 @@ This means AWS candidate testing is still incomplete compared with the intended 
 - Keep the change narrowly focused on AWS promotion validation.
 - Prefer a single explicit inventory strategy rather than multiple fallback mechanisms.
 - Use the existing successful candidate-stage AWS flow as the baseline, then layer promotion on top.
+
+## Status update
+
+- Implemented in `Makefile`: AWS candidate runs now perform a real promotion using a generated WinRM inventory built from Kitchen state.
+- The supported target now validates:
+  - candidate readiness through Kitchen verify on `9080`
+  - post-promotion primary health on `localhost:8080` via WinRM
+- Added convenience target: `make test-aws-upgrade-candidate-latest`
+- Live validation passed with the easy target.

@@ -13,9 +13,11 @@
 - [x] Documented checksum-resolution blocker in `docs/issues/2026-04-22-tomcat-checksum-resolution-blocks-version-override-automation.md`.
 - [x] Implemented automatic Tomcat URL/checksum resolution for version overrides.
 - [x] Documented CI trigger / branch-policy mismatch in `docs/issues/2026-04-22-ci-policy-runs-on-dev-branches-instead-of-prs-to-main.md`.
+- [x] Implemented AWS candidate promotion validation in the supported target.
+- [x] Added easy validation target `make test-aws-upgrade-candidate-latest`.
+- [x] Live-validated the full promote-and-verify AWS path with `make test-aws-upgrade-candidate-latest`.
 
 ## In Progress
-- [ ] Complete a fully supported AWS promotion step for the candidate workflow.
 - [ ] Restrict CI to PRs targeting `main` and keep `main` as the protected branch.
 
 ## Historical Notes

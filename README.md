@@ -282,6 +282,14 @@ The same override pattern works for `make test-upgrade-win11`, `make test-upgrad
 
 If you need to pin a non-default source or checksum manually, `TOMCAT_*_DOWNLOAD_URL` and `TOMCAT_*_CHECKSUM` are still supported as overrides.
 
+For the easiest end-to-end AWS validation run, use:
+
+```bash
+make test-aws-upgrade-candidate-latest
+```
+
+That wrapper runs the proven workflow with Java `21 -> 25` and Tomcat `9.0.115 -> 9.0.117`. It automatically resolves Tomcat download URLs and SHA-512 checksums, verifies the candidate endpoint, promotes the candidate on the AWS instance, validates the promoted primary service on `localhost:8080` via WinRM, and then cleans up the instance plus temporary security-group ingress.
+
 ### Verification After Upgrade
 
 ```bash
