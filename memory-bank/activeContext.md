@@ -15,7 +15,7 @@
 - Easy validation path is available through `make test-aws-upgrade-candidate-latest`.
 - `test-aws-upgrade-candidate` now depends on `sync-aws` so the local credential refresh happens before the AWS candidate run.
 - CI workflow policy is now aligned in code: CI runs for PRs to `main` and manual dispatches, not direct dev-branch pushes.
-- Remaining branch-policy work is repository configuration: confirm that `main` stays protected while dev branches remain unprotected.
+- Repository branch policy is now verified live: `main` remains protected and `aws-dev` is unprotected.
 
 ## Active References
 - Spec: `docs/plans/2026-04-22-configurable-upgrade-version-targets.md`
@@ -29,9 +29,9 @@
 ## Current State Snapshot
 - Current working branch: `aws-dev`
 - Local branch is ahead of `origin/aws-dev`
-- `aws-dev` is no longer protected; `main` should remain the protected merge target
+- `aws-dev` is unprotected; `main` remains the protected merge target with required PR review and `lint`
 - Repository default install path still pins Tomcat `9.0.115`
 - Upgrade test playbook still hardcodes Tomcat `9.0.112 -> 9.0.113` and Java `17 -> 21`
 
 ## Next Actions
-- Verify repository protection remains on `main` only.
+- Wait for operator direction before pushing the local `aws-dev` commit stack.

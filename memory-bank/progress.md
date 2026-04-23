@@ -20,9 +20,10 @@
 - [x] Restricted CI triggers to PRs targeting `main` plus manual dispatch.
 - [x] Re-ran `make test-aws-upgrade-candidate-latest` successfully after the latest fixes (log: `scratch/live-test-aws-upgrade-candidate-latest-now-20260422-181629.log`).
 - [x] Documented the initial AWS promotion-helper `Error 127` failure in `docs/issues/2026-04-22-aws-candidate-promotion-helper-error-127.md`.
+- [x] Verified repository branch protection is scoped to `main`; `aws-dev` is unprotected.
 
 ## In Progress
-- [ ] Verify repository protection remains on `main` only.
+- [ ] Wait for go-ahead before pushing the local `aws-dev` commit stack.
 
 ## Historical Notes
 - Earlier CI hardening, security roadmap, and AWS stabilization planning have been moved to `docs/plans/archive/` and related issue docs.
