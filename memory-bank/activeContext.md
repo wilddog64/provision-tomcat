@@ -16,12 +16,14 @@
 - `test-aws-upgrade-candidate` now depends on `sync-aws` so the local credential refresh happens before the AWS candidate run.
 - CI workflow policy is now aligned in code: CI runs for PRs to `main` and manual dispatches, not direct dev-branch pushes.
 - Repository branch policy is now verified live: `main` remains protected and `aws-dev` is unprotected.
+- The AWS candidate promotion-helper `Error 127` fix is validated locally but not yet delivered to the remote `aws-dev` branch; local branch remains ahead of origin.
 
 ## Active References
 - Spec: `docs/plans/2026-04-22-configurable-upgrade-version-targets.md`
 - Promotion spec: `docs/plans/2026-04-22-aws-candidate-promotion-validation.md`
 - AWS latest-version live findings: `docs/issues/2026-04-22-aws-candidate-latest-version-live-test.md`
 - Historical failed promotion helper run: `docs/issues/2026-04-22-aws-candidate-promotion-helper-error-127.md`
+- Delivery-state bug for that fix: `docs/issues/2026-04-23-aws-candidate-promotion-fix-not-delivered-to-branch.md`
 - Local WinRM parity blocker/fix: `docs/issues/2026-04-22-local-aws-winrm-blocked-by-default-sg.md`
 - Checksum automation bug: `docs/issues/2026-04-22-tomcat-checksum-resolution-blocks-version-override-automation.md`
 - CI policy bug: `docs/issues/2026-04-22-ci-policy-runs-on-dev-branches-instead-of-prs-to-main.md`
@@ -34,4 +36,4 @@
 - Upgrade test playbook still hardcodes Tomcat `9.0.112 -> 9.0.113` and Java `17 -> 21`
 
 ## Next Actions
-- Wait for operator direction before pushing the local `aws-dev` commit stack.
+- Wait for operator direction before pushing the local `aws-dev` commit stack that contains the AWS candidate promotion fix.

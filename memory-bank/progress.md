@@ -21,9 +21,10 @@
 - [x] Re-ran `make test-aws-upgrade-candidate-latest` successfully after the latest fixes (log: `scratch/live-test-aws-upgrade-candidate-latest-now-20260422-181629.log`).
 - [x] Documented the initial AWS promotion-helper `Error 127` failure in `docs/issues/2026-04-22-aws-candidate-promotion-helper-error-127.md`.
 - [x] Verified repository branch protection is scoped to `main`; `aws-dev` is unprotected.
+- [x] Documented that the AWS candidate promotion-helper fix is still undelivered from an operator perspective because the validated local commit stack has not been pushed.
 
 ## In Progress
-- [ ] Wait for go-ahead before pushing the local `aws-dev` commit stack.
+- [ ] Wait for go-ahead before pushing the local `aws-dev` commit stack that contains the AWS candidate promotion fix.
 
 ## Historical Notes
 - Earlier CI hardening, security roadmap, and AWS stabilization planning have been moved to `docs/plans/archive/` and related issue docs.
