@@ -20,8 +20,6 @@
 - Local repo-native proof collection is currently blocked by missing Bundler `4.0.6` / local permission issues when running `make syntax`.
 - A fresh AWS candidate run now shows a new pre-converge failure: WinRM never becomes reachable and cleanup reports the EC2 instance no longer exists.
 - `Makefile` now uses an instance-aware AWS WinRM wait loop that refreshes public endpoint data from EC2 and reports instance/system status while waiting.
-- `Makefile` now falls back to `direnv exec .` for `ansible` / `ansible-playbook` when the caller shell has not loaded the repo virtualenv onto `PATH`.
-- The shared parent `.envrc` quoting bug for `sync-claude` was corrected locally so `direnv` loads cleanly without the earlier shell error.
 
 ## Active References
 - Spec: `docs/plans/2026-04-22-configurable-upgrade-version-targets.md`
@@ -31,7 +29,6 @@
 - Delivery-state bug for that fix: `docs/issues/2026-04-23-aws-candidate-promotion-fix-not-delivered-to-branch.md`
 - Validation blocker after delivery: `docs/issues/2026-04-23-local-validation-blocked-by-missing-bundler-4.0.6.md`
 - New AWS WinRM timeout blocker: `docs/issues/2026-04-23-aws-candidate-winrm-timeout-before-converge.md`
-- Direnv / Ansible path resolution fix: `docs/issues/2026-04-23-direnv-envrc-ansible-path-resolution.md`
 - Local WinRM parity blocker/fix: `docs/issues/2026-04-22-local-aws-winrm-blocked-by-default-sg.md`
 - Checksum automation bug: `docs/issues/2026-04-22-tomcat-checksum-resolution-blocks-version-override-automation.md`
 - CI policy bug: `docs/issues/2026-04-22-ci-policy-runs-on-dev-branches-instead-of-prs-to-main.md`
@@ -45,4 +42,4 @@
 - Delivery record: AWS candidate promotion fix delivered in commit `457d2e0`; PR URL: none (per workflow, no PR created by this agent)
 
 ## Next Actions
-- Live-validate the AWS candidate path with both the hardened WinRM wait and the `direnv`-backed Ansible fallback in place.
+- Live-validate the new AWS WinRM wait path against the candidate target and confirm whether the root cause is slow readiness, stale endpoint data, or instance termination.

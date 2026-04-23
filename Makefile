@@ -174,28 +174,6 @@ define revoke_local_aws_test_ingress
 	fi
 endef
 
-define run_ansible
-	if command -v ansible >/dev/null 2>&1; then \
-		ANSIBLE_CONFIG=ansible.cfg $(1) ansible $(2); \
-	elif command -v direnv >/dev/null 2>&1; then \
-		ANSIBLE_CONFIG=ansible.cfg $(1) direnv exec . ansible $(2); \
-	else \
-		echo "ERROR: ansible not found on PATH and direnv is unavailable." >&2; \
-		exit 127; \
-	fi
-endef
-
-define run_ansible_playbook
-	if command -v ansible-playbook >/dev/null 2>&1; then \
-		ANSIBLE_CONFIG=ansible.cfg $(1) ansible-playbook $(2); \
-	elif command -v direnv >/dev/null 2>&1; then \
-		ANSIBLE_CONFIG=ansible.cfg $(1) direnv exec . ansible-playbook $(2); \
-	else \
-		echo "ERROR: ansible-playbook not found on PATH and direnv is unavailable." >&2; \
-		exit 127; \
-	fi
-endef
-
 define wait_for_aws_winrm
 	STATE_FILE="$(1)"; \
 	INSTANCE_ID=""; \
@@ -307,15 +285,15 @@ define promote_aws_candidate
 		echo "ERROR: Failed to extract AWS promotion host credentials from $$PROMOTION_HOST_FILE" >&2; \
 		exit 1; \
 		fi; \
-			PROMOTION_INVENTORY="$$(mktemp)"; \
-			PROMOTION_VARS="$$(mktemp)"; \
-			export PROMOTION_INVENTORY PROMOTION_VARS PROMOTION_HOST PROMOTION_USER PROMOTION_PASS; \
-			python3 -c 'import json, os; host=os.environ["PROMOTION_HOST"]; user=os.environ["PROMOTION_USER"]; password=os.environ["PROMOTION_PASS"]; inventory=("[aws_candidates]\n" + "aws_candidate ansible_connection=winrm ansible_host={host} ansible_user={user} ansible_password={password} ansible_port=5985 ansible_winrm_transport=ntlm ansible_winrm_scheme=http ansible_winrm_server_cert_validation=ignore ansible_become_method=runas ansible_become_user={user}\n").format(host=json.dumps(host), user=json.dumps(user), password=json.dumps(password)); extra_vars={"env":"stage2","extract_build_number":16,"extract_debug":"False","skip_migration":True,"upgrade_step":2,"tomcat_auto_start":True,"tomcat_candidate_enabled":True,"tomcat_candidate_delegate":"localhost","tomcat_candidate_delegate_host":host,"tomcat_candidate_delegate_port":9080,"tomcat_candidate_manual_control":False,"upgrade_java_old_version":os.environ["UPGRADE_JAVA_OLD_VERSION"],"upgrade_java_new_version":os.environ["UPGRADE_JAVA_NEW_VERSION"],"upgrade_tomcat_old_version":os.environ["UPGRADE_TOMCAT_OLD_VERSION"],"upgrade_tomcat_new_version":os.environ["UPGRADE_TOMCAT_NEW_VERSION"],"upgrade_tomcat_old_download_url":os.environ["UPGRADE_TOMCAT_OLD_DOWNLOAD_URL"],"upgrade_tomcat_new_download_url":os.environ["UPGRADE_TOMCAT_NEW_DOWNLOAD_URL"],"upgrade_tomcat_old_checksum":os.environ["UPGRADE_TOMCAT_OLD_CHECKSUM"],"upgrade_tomcat_new_checksum":os.environ["UPGRADE_TOMCAT_NEW_CHECKSUM"]}; open(os.environ["PROMOTION_INVENTORY"],"w",encoding="utf-8").write(inventory); open(os.environ["PROMOTION_VARS"],"w",encoding="utf-8").write(json.dumps(extra_vars))'; \
-			echo "=== Promoting AWS candidate on $$PROMOTION_HOST ==="; \
-			$(call run_ansible_playbook,,-i "$$PROMOTION_INVENTORY" tests/playbook-upgrade.yml -e @"$$PROMOTION_VARS"); \
-			echo "=== Verifying promoted primary on localhost:8080 via WinRM ==="; \
-			$(call run_ansible,,aws_candidate -i "$$PROMOTION_INVENTORY" -m ansible.windows.win_uri -a 'url=http://localhost:8080 status_code=200,404'); \
-			rm -f "$$PROMOTION_INVENTORY" "$$PROMOTION_VARS"
+		PROMOTION_INVENTORY="$$(mktemp)"; \
+		PROMOTION_VARS="$$(mktemp)"; \
+		export PROMOTION_INVENTORY PROMOTION_VARS PROMOTION_HOST PROMOTION_USER PROMOTION_PASS; \
+		python3 -c 'import json, os; host=os.environ["PROMOTION_HOST"]; user=os.environ["PROMOTION_USER"]; password=os.environ["PROMOTION_PASS"]; inventory=("[aws_candidates]\n" + "aws_candidate ansible_connection=winrm ansible_host={host} ansible_user={user} ansible_password={password} ansible_port=5985 ansible_winrm_transport=ntlm ansible_winrm_scheme=http ansible_winrm_server_cert_validation=ignore ansible_become_method=runas ansible_become_user={user}\n").format(host=json.dumps(host), user=json.dumps(user), password=json.dumps(password)); extra_vars={"env":"stage2","extract_build_number":16,"extract_debug":"False","skip_migration":True,"upgrade_step":2,"tomcat_auto_start":True,"tomcat_candidate_enabled":True,"tomcat_candidate_delegate":"localhost","tomcat_candidate_delegate_host":host,"tomcat_candidate_delegate_port":9080,"tomcat_candidate_manual_control":False,"upgrade_java_old_version":os.environ["UPGRADE_JAVA_OLD_VERSION"],"upgrade_java_new_version":os.environ["UPGRADE_JAVA_NEW_VERSION"],"upgrade_tomcat_old_version":os.environ["UPGRADE_TOMCAT_OLD_VERSION"],"upgrade_tomcat_new_version":os.environ["UPGRADE_TOMCAT_NEW_VERSION"],"upgrade_tomcat_old_download_url":os.environ["UPGRADE_TOMCAT_OLD_DOWNLOAD_URL"],"upgrade_tomcat_new_download_url":os.environ["UPGRADE_TOMCAT_NEW_DOWNLOAD_URL"],"upgrade_tomcat_old_checksum":os.environ["UPGRADE_TOMCAT_OLD_CHECKSUM"],"upgrade_tomcat_new_checksum":os.environ["UPGRADE_TOMCAT_NEW_CHECKSUM"]}; open(os.environ["PROMOTION_INVENTORY"],"w",encoding="utf-8").write(inventory); open(os.environ["PROMOTION_VARS"],"w",encoding="utf-8").write(json.dumps(extra_vars))'; \
+		echo "=== Promoting AWS candidate on $$PROMOTION_HOST ==="; \
+		ANSIBLE_CONFIG=ansible.cfg ansible-playbook tests/playbook-upgrade.yml -i "$$PROMOTION_INVENTORY" -e @"$$PROMOTION_VARS"; \
+		echo "=== Verifying promoted primary on localhost:8080 via WinRM ==="; \
+		ANSIBLE_CONFIG=ansible.cfg ansible aws_candidate -i "$$PROMOTION_INVENTORY" -m ansible.windows.win_uri -a 'url=http://localhost:8080 status_code=200,404' ; \
+		rm -f "$$PROMOTION_INVENTORY" "$$PROMOTION_VARS"
 endef
 
 .PHONY: test-aws-provision-tomcat
@@ -344,12 +322,12 @@ test-aws-provision-tomcat: update-roles check-aws-credentials
 		KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) create default-aws-minimal-win-disk; \
 		echo "=== Waiting for WinRM on default-aws-minimal-win-disk... ==="; \
 		$(call wait_for_aws_winrm,.kitchen/default-aws-minimal-win-disk.yml); \
-			sleep 10; \
-			echo "=== Running Integration Test ==="; \
-			KITCHEN_YAML=$(KITCHEN_YAML) ANSIBLE_HOST_OVERRIDE=$$IP $(KITCHEN_CMD) converge default-aws-minimal-win-disk; \
-		echo "=== Verifying Ansible Connectivity (win_ping) ==="; \
-		$(call run_ansible,ANSIBLE_HOST_OVERRIDE=$$IP,-i .kitchen/ansible_inventory/ansible_inventory.ini -m win_ping all); \
-		KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) verify default-aws-minimal-win-disk
+		sleep 10; \
+		echo "=== Running Integration Test ==="; \
+		KITCHEN_YAML=$(KITCHEN_YAML) ANSIBLE_HOST_OVERRIDE=$$IP $(KITCHEN_CMD) converge default-aws-minimal-win-disk; \
+	echo "=== Verifying Ansible Connectivity (win_ping) ==="; \
+	ANSIBLE_CONFIG=ansible.cfg ANSIBLE_HOST_OVERRIDE=$$IP ansible -i .kitchen/ansible_inventory/ansible_inventory.ini -m win_ping all; \
+	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) verify default-aws-minimal-win-disk
 
 .PHONY: test-aws-upgrade-candidate
 test-aws-upgrade-candidate: sync-aws update-roles check-aws-credentials
@@ -378,13 +356,13 @@ test-aws-upgrade-candidate: sync-aws update-roles check-aws-credentials
 			KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) create upgrade-candidate-aws-disk-aws-minimal-win-disk; \
 			echo "=== Waiting for WinRM on upgrade-candidate-aws-disk-aws-minimal-win-disk... ==="; \
 			$(call wait_for_aws_winrm,.kitchen/upgrade-candidate-aws-disk-aws-minimal-win-disk.yml); \
-				sleep 10; \
-				echo "=== Running Candidate Upgrade Test ==="; \
-				KITCHEN_YAML=$(KITCHEN_YAML) ANSIBLE_HOST_OVERRIDE=$$IP $(KITCHEN_CMD) converge upgrade-candidate-aws-disk-aws-minimal-win-disk; \
-			echo "=== Verifying Ansible Connectivity (win_ping) ==="; \
-			$(call run_ansible,ANSIBLE_HOST_OVERRIDE=$$IP,-i .kitchen/ansible_inventory/ansible_inventory.ini -m win_ping all); \
-			KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) verify upgrade-candidate-aws-disk-aws-minimal-win-disk; \
-			$(promote_aws_candidate)
+			sleep 10; \
+			echo "=== Running Candidate Upgrade Test ==="; \
+			KITCHEN_YAML=$(KITCHEN_YAML) ANSIBLE_HOST_OVERRIDE=$$IP $(KITCHEN_CMD) converge upgrade-candidate-aws-disk-aws-minimal-win-disk; \
+		echo "=== Verifying Ansible Connectivity (win_ping) ==="; \
+		ANSIBLE_CONFIG=ansible.cfg ANSIBLE_HOST_OVERRIDE=$$IP ansible -i .kitchen/ansible_inventory/ansible_inventory.ini -m win_ping all; \
+		KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) verify upgrade-candidate-aws-disk-aws-minimal-win-disk; \
+		$(promote_aws_candidate)
 
 .PHONY: test-aws-upgrade-candidate-latest
 test-aws-upgrade-candidate-latest:
