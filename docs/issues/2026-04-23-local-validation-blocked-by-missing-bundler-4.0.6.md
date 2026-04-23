@@ -48,5 +48,5 @@ _agent_audit not found in provision-tomcat repo
 
 ## Related
 
-- Delivered branch tip: `ffdbfd2`
+- Delivered branch tip: `11ea1e8`
 - Prior live AWS validation log: `scratch/live-test-aws-upgrade-candidate-latest-now-20260422-181629.log`
