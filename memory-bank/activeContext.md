@@ -19,6 +19,7 @@
 - The AWS candidate promotion-helper `Error 127` fix is now delivered to `origin/aws-dev`.
 - Local repo-native proof collection is currently blocked by missing Bundler `4.0.6` / local permission issues when running `make syntax`.
 - A fresh AWS candidate run now shows a new pre-converge failure: WinRM never becomes reachable and cleanup reports the EC2 instance no longer exists.
+- `Makefile` now uses an instance-aware AWS WinRM wait loop that refreshes public endpoint data from EC2 and reports instance/system status while waiting.
 
 ## Active References
 - Spec: `docs/plans/2026-04-22-configurable-upgrade-version-targets.md`
@@ -41,4 +42,4 @@
 - Delivery record: AWS candidate promotion fix delivered in commit `457d2e0`; PR URL: none (per workflow, no PR created by this agent)
 
 ## Next Actions
-- Investigate the new AWS pre-converge WinRM timeout with AWS-side instance diagnostics before modifying upgrade logic.
+- Live-validate the new AWS WinRM wait path against the candidate target and confirm whether the root cause is slow readiness, stale endpoint data, or instance termination.
