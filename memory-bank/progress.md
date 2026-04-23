@@ -25,9 +25,11 @@
 - [x] Delivered the validated AWS candidate promotion-helper fix stack to `origin/aws-dev` (push includes `457d2e0`).
 - [x] Documented the post-delivery local validation blocker in `docs/issues/2026-04-23-local-validation-blocked-by-missing-bundler-4.0.6.md`.
 - [x] AWS candidate promotion fix was delivered in commit `457d2e0`; PR URL: none (per workflow, no PR created by this agent).
+- [x] Documented the new AWS candidate pre-converge WinRM timeout / missing-instance failure in `docs/issues/2026-04-23-aws-candidate-winrm-timeout-before-converge.md`.
 
 ## In Progress
 - [ ] Restore Bundler `4.0.6` / local validation environment if repo-native `make syntax` proof is still required.
+- [ ] Investigate the AWS candidate pre-converge WinRM timeout with AWS-side instance diagnostics.
 
 ## Historical Notes
 - Earlier CI hardening, security roadmap, and AWS stabilization planning have been moved to `docs/plans/archive/` and related issue docs.

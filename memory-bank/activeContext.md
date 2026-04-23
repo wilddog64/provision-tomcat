@@ -18,6 +18,7 @@
 - Repository branch policy is now verified live: `main` remains protected and `aws-dev` is unprotected.
 - The AWS candidate promotion-helper `Error 127` fix is now delivered to `origin/aws-dev`.
 - Local repo-native proof collection is currently blocked by missing Bundler `4.0.6` / local permission issues when running `make syntax`.
+- A fresh AWS candidate run now shows a new pre-converge failure: WinRM never becomes reachable and cleanup reports the EC2 instance no longer exists.
 
 ## Active References
 - Spec: `docs/plans/2026-04-22-configurable-upgrade-version-targets.md`
@@ -26,6 +27,7 @@
 - Historical failed promotion helper run: `docs/issues/2026-04-22-aws-candidate-promotion-helper-error-127.md`
 - Delivery-state bug for that fix: `docs/issues/2026-04-23-aws-candidate-promotion-fix-not-delivered-to-branch.md`
 - Validation blocker after delivery: `docs/issues/2026-04-23-local-validation-blocked-by-missing-bundler-4.0.6.md`
+- New AWS WinRM timeout blocker: `docs/issues/2026-04-23-aws-candidate-winrm-timeout-before-converge.md`
 - Local WinRM parity blocker/fix: `docs/issues/2026-04-22-local-aws-winrm-blocked-by-default-sg.md`
 - Checksum automation bug: `docs/issues/2026-04-22-tomcat-checksum-resolution-blocks-version-override-automation.md`
 - CI policy bug: `docs/issues/2026-04-22-ci-policy-runs-on-dev-branches-instead-of-prs-to-main.md`
@@ -39,4 +41,4 @@
 - Delivery record: AWS candidate promotion fix delivered in commit `457d2e0`; PR URL: none (per workflow, no PR created by this agent)
 
 ## Next Actions
-- Restore the expected Ruby/Bundler toolchain if local `make syntax` proof is required.
+- Investigate the new AWS pre-converge WinRM timeout with AWS-side instance diagnostics before modifying upgrade logic.
