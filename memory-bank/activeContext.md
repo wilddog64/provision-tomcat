@@ -32,11 +32,11 @@
 
 ## Current State Snapshot
 - Current working branch: `aws-dev`
-- Local branch is aligned with `origin/aws-dev` after pushing commit `4e757f7`
+- Local branch is aligned with `origin/aws-dev`.
 - `aws-dev` is unprotected; `main` remains the protected merge target with required PR review and `lint`
 - Repository default install path still pins Tomcat `9.0.115`
 - Upgrade test playbook still hardcodes Tomcat `9.0.112 -> 9.0.113` and Java `17 -> 21`
-- Delivery record: pushed branch tip `4e757f7`; PR URL: none (per workflow, no PR created by this agent)
+- Delivery record: AWS candidate promotion fix delivered in commit `457d2e0`; PR URL: none (per workflow, no PR created by this agent)
 
 ## Next Actions
 - Restore the expected Ruby/Bundler toolchain if local `make syntax` proof is required.
