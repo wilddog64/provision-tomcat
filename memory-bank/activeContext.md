@@ -16,7 +16,7 @@
 - `test-aws-upgrade-candidate` now depends on `sync-aws` so the local credential refresh happens before the AWS candidate run.
 - CI workflow policy is now aligned in code: CI runs for PRs to `main` and manual dispatches, not direct dev-branch pushes.
 - Repository branch policy is now verified live: `main` remains protected and `aws-dev` is unprotected.
-- The AWS candidate promotion-helper `Error 127` fix is validated locally but not yet delivered to the remote `aws-dev` branch; local branch remains ahead of origin.
+- The AWS candidate promotion-helper `Error 127` fix is now delivered to `origin/aws-dev`.
 
 ## Active References
 - Spec: `docs/plans/2026-04-22-configurable-upgrade-version-targets.md`
@@ -30,10 +30,10 @@
 
 ## Current State Snapshot
 - Current working branch: `aws-dev`
-- Local branch is ahead of `origin/aws-dev`
+- Local branch is aligned with `origin/aws-dev` after pushing commit `457d2e0`
 - `aws-dev` is unprotected; `main` remains the protected merge target with required PR review and `lint`
 - Repository default install path still pins Tomcat `9.0.115`
 - Upgrade test playbook still hardcodes Tomcat `9.0.112 -> 9.0.113` and Java `17 -> 21`
 
 ## Next Actions
-- Wait for operator direction before pushing the local `aws-dev` commit stack that contains the AWS candidate promotion fix.
+- Confirm remote branch behavior with operator-facing validation as needed.

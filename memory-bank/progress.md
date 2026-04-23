@@ -22,9 +22,10 @@
 - [x] Documented the initial AWS promotion-helper `Error 127` failure in `docs/issues/2026-04-22-aws-candidate-promotion-helper-error-127.md`.
 - [x] Verified repository branch protection is scoped to `main`; `aws-dev` is unprotected.
 - [x] Documented that the AWS candidate promotion-helper fix is still undelivered from an operator perspective because the validated local commit stack has not been pushed.
+- [x] Delivered the validated AWS candidate promotion-helper fix stack to `origin/aws-dev` (push includes `457d2e0`).
 
 ## In Progress
-- [ ] Wait for go-ahead before pushing the local `aws-dev` commit stack that contains the AWS candidate promotion fix.
+- [ ] Capture final operator proof (`git log`, BATS, shellcheck/NA, `_agent_audit`) for the delivered branch state.
 
 ## Historical Notes
 - Earlier CI hardening, security roadmap, and AWS stabilization planning have been moved to `docs/plans/archive/` and related issue docs.
