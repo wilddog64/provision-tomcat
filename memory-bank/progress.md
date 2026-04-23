@@ -24,6 +24,7 @@
 - [x] Documented that the AWS candidate promotion-helper fix is still undelivered from an operator perspective because the validated local commit stack has not been pushed.
 - [x] Delivered the validated AWS candidate promotion-helper fix stack to `origin/aws-dev` (push includes `457d2e0`).
 - [x] Documented the post-delivery local validation blocker in `docs/issues/2026-04-23-local-validation-blocked-by-missing-bundler-4.0.6.md`.
+- [x] Final delivered branch tip is `f360647`; PR URL: none (per workflow, no PR created by this agent).
 
 ## In Progress
 - [ ] Restore Bundler `4.0.6` / local validation environment if repo-native `make syntax` proof is still required.
