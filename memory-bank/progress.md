@@ -18,6 +18,7 @@
 - [x] Live-validated the full promote-and-verify AWS path with `make test-aws-upgrade-candidate-latest`.
 - [x] Made `test-aws-upgrade-candidate` depend on `sync-aws`.
 - [x] Restricted CI triggers to PRs targeting `main` plus manual dispatch.
+- [x] Documented the initial AWS promotion-helper `Error 127` failure in `docs/issues/2026-04-22-aws-candidate-promotion-helper-error-127.md`.
 
 ## In Progress
 - [ ] Verify repository protection remains on `main` only.

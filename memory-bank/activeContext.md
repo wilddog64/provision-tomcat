@@ -21,6 +21,7 @@
 - Spec: `docs/plans/2026-04-22-configurable-upgrade-version-targets.md`
 - Promotion spec: `docs/plans/2026-04-22-aws-candidate-promotion-validation.md`
 - AWS latest-version live findings: `docs/issues/2026-04-22-aws-candidate-latest-version-live-test.md`
+- Historical failed promotion helper run: `docs/issues/2026-04-22-aws-candidate-promotion-helper-error-127.md`
 - Local WinRM parity blocker/fix: `docs/issues/2026-04-22-local-aws-winrm-blocked-by-default-sg.md`
 - Checksum automation bug: `docs/issues/2026-04-22-tomcat-checksum-resolution-blocks-version-override-automation.md`
 - CI policy bug: `docs/issues/2026-04-22-ci-policy-runs-on-dev-branches-instead-of-prs-to-main.md`
