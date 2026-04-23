@@ -23,9 +23,10 @@
 - [x] Verified repository branch protection is scoped to `main`; `aws-dev` is unprotected.
 - [x] Documented that the AWS candidate promotion-helper fix is still undelivered from an operator perspective because the validated local commit stack has not been pushed.
 - [x] Delivered the validated AWS candidate promotion-helper fix stack to `origin/aws-dev` (push includes `457d2e0`).
+- [x] Documented the post-delivery local validation blocker in `docs/issues/2026-04-23-local-validation-blocked-by-missing-bundler-4.0.6.md`.
 
 ## In Progress
-- [ ] Capture final operator proof (`git log`, BATS, shellcheck/NA, `_agent_audit`) for the delivered branch state.
+- [ ] Restore Bundler `4.0.6` / local validation environment if repo-native `make syntax` proof is still required.
 
 ## Historical Notes
 - Earlier CI hardening, security roadmap, and AWS stabilization planning have been moved to `docs/plans/archive/` and related issue docs.

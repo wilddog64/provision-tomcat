@@ -17,6 +17,7 @@
 - CI workflow policy is now aligned in code: CI runs for PRs to `main` and manual dispatches, not direct dev-branch pushes.
 - Repository branch policy is now verified live: `main` remains protected and `aws-dev` is unprotected.
 - The AWS candidate promotion-helper `Error 127` fix is now delivered to `origin/aws-dev`.
+- Local repo-native proof collection is currently blocked by missing Bundler `4.0.6` / local permission issues when running `make syntax`.
 
 ## Active References
 - Spec: `docs/plans/2026-04-22-configurable-upgrade-version-targets.md`
@@ -24,6 +25,7 @@
 - AWS latest-version live findings: `docs/issues/2026-04-22-aws-candidate-latest-version-live-test.md`
 - Historical failed promotion helper run: `docs/issues/2026-04-22-aws-candidate-promotion-helper-error-127.md`
 - Delivery-state bug for that fix: `docs/issues/2026-04-23-aws-candidate-promotion-fix-not-delivered-to-branch.md`
+- Validation blocker after delivery: `docs/issues/2026-04-23-local-validation-blocked-by-missing-bundler-4.0.6.md`
 - Local WinRM parity blocker/fix: `docs/issues/2026-04-22-local-aws-winrm-blocked-by-default-sg.md`
 - Checksum automation bug: `docs/issues/2026-04-22-tomcat-checksum-resolution-blocks-version-override-automation.md`
 - CI policy bug: `docs/issues/2026-04-22-ci-policy-runs-on-dev-branches-instead-of-prs-to-main.md`
@@ -36,4 +38,4 @@
 - Upgrade test playbook still hardcodes Tomcat `9.0.112 -> 9.0.113` and Java `17 -> 21`
 
 ## Next Actions
-- Confirm remote branch behavior with operator-facing validation as needed.
+- Restore the expected Ruby/Bundler toolchain if local `make syntax` proof is required.
