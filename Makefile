@@ -174,50 +174,6 @@ define revoke_local_aws_test_ingress
 	fi
 endef
 
-define wait_for_aws_winrm
-	STATE_FILE="$(1)"; \
-	INSTANCE_ID=""; \
-	INSTANCE_STATE="unknown"; \
-	INSTANCE_STATUS="unknown"; \
-	SYSTEM_STATUS="unknown"; \
-	IP=""; \
-	for i in $$(seq 1 90); do \
-		if [ -f "$$STATE_FILE" ]; then \
-			IP="$$(yq '.hostname // ""' "$$STATE_FILE" 2>/dev/null)"; \
-			INSTANCE_ID="$$(yq '.instance_id // .driver.instance_id // ""' "$$STATE_FILE" 2>/dev/null)"; \
-		fi; \
-		if [ -n "$$INSTANCE_ID" ] && [ "$$INSTANCE_ID" != "null" ]; then \
-			INSTANCE_STATE="$$(aws ec2 describe-instances --region "$$AWS_REGION" --instance-ids "$$INSTANCE_ID" --query 'Reservations[0].Instances[0].State.Name' --output text 2>/dev/null || echo unknown)"; \
-			INSTANCE_STATUS="$$(aws ec2 describe-instance-status --region "$$AWS_REGION" --include-all-instances --instance-ids "$$INSTANCE_ID" --query 'InstanceStatuses[0].InstanceStatus.Status' --output text 2>/dev/null || echo unknown)"; \
-			SYSTEM_STATUS="$$(aws ec2 describe-instance-status --region "$$AWS_REGION" --include-all-instances --instance-ids "$$INSTANCE_ID" --query 'InstanceStatuses[0].SystemStatus.Status' --output text 2>/dev/null || echo unknown)"; \
-			PUBLIC_DNS="$$(aws ec2 describe-instances --region "$$AWS_REGION" --instance-ids "$$INSTANCE_ID" --query 'Reservations[0].Instances[0].PublicDnsName' --output text 2>/dev/null || true)"; \
-			PUBLIC_IP="$$(aws ec2 describe-instances --region "$$AWS_REGION" --instance-ids "$$INSTANCE_ID" --query 'Reservations[0].Instances[0].PublicIpAddress' --output text 2>/dev/null || true)"; \
-			if [ -n "$$PUBLIC_DNS" ] && [ "$$PUBLIC_DNS" != "None" ]; then \
-				IP="$$PUBLIC_DNS"; \
-			elif [ -n "$$PUBLIC_IP" ] && [ "$$PUBLIC_IP" != "None" ]; then \
-				IP="$$PUBLIC_IP"; \
-			fi; \
-			case "$$INSTANCE_STATE" in \
-				terminated|shutting-down|stopped|stopping) \
-					echo "ERROR: AWS instance $$INSTANCE_ID entered state $$INSTANCE_STATE before WinRM became ready." >&2; \
-					exit 1; \
-					;; \
-			esac; \
-		fi; \
-		if [ -n "$$IP" ] && [ "$$IP" != "null" ] && nc -z -w 5 "$$IP" 5985; then \
-			echo "WinRM reachable on $$IP:5985"; \
-			break; \
-		fi; \
-		if [ $$i -eq 90 ]; then \
-			echo "Timeout waiting for WinRM" >&2; \
-			echo "Last known instance: id=$${INSTANCE_ID:-unknown} state=$${INSTANCE_STATE:-unknown} instance_status=$${INSTANCE_STATUS:-unknown} system_status=$${SYSTEM_STATUS:-unknown} host=$${IP:-unknown}" >&2; \
-			exit 1; \
-		fi; \
-		echo "Waiting for WinRM... ($$i/90) state=$${INSTANCE_STATE:-unknown} instance_status=$${INSTANCE_STATUS:-unknown} system_status=$${SYSTEM_STATUS:-unknown} host=$${IP:-pending}"; \
-		sleep 10; \
-	done
-endef
-
 define load_upgrade_test_env
 	resolve_tomcat_release() { \
 		local version="$$1"; \
@@ -318,13 +274,14 @@ test-aws-provision-tomcat: update-roles check-aws-credentials
 	REG=$(AWS_REGION); \
 	echo "Using Account: $$ACC"; \
 	echo "Using Region: $$REG"; \
-		KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) destroy default-aws-minimal-win-disk; \
-		KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) create default-aws-minimal-win-disk; \
-		echo "=== Waiting for WinRM on default-aws-minimal-win-disk... ==="; \
-		$(call wait_for_aws_winrm,.kitchen/default-aws-minimal-win-disk.yml); \
-		sleep 10; \
-		echo "=== Running Integration Test ==="; \
-		KITCHEN_YAML=$(KITCHEN_YAML) ANSIBLE_HOST_OVERRIDE=$$IP $(KITCHEN_CMD) converge default-aws-minimal-win-disk; \
+	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) destroy default-aws-minimal-win-disk; \
+	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) create default-aws-minimal-win-disk; \
+	IP=$$(yq .hostname .kitchen/default-aws-minimal-win-disk.yml); \
+	echo "=== Waiting for WinRM on $$IP:5985... ==="; \
+	for i in {1..60}; do if nc -z -w 5 $$IP 5985; then break; fi; echo "Waiting... ($$i/60)"; sleep 10; if [ $$i -eq 60 ]; then echo "Timeout waiting for WinRM"; exit 1; fi; done; \
+	sleep 10; \
+	echo "=== Running Integration Test ==="; \
+	KITCHEN_YAML=$(KITCHEN_YAML) ANSIBLE_HOST_OVERRIDE=$$IP $(KITCHEN_CMD) converge default-aws-minimal-win-disk; \
 	echo "=== Verifying Ansible Connectivity (win_ping) ==="; \
 	ANSIBLE_CONFIG=ansible.cfg ANSIBLE_HOST_OVERRIDE=$$IP ansible -i .kitchen/ansible_inventory/ansible_inventory.ini -m win_ping all; \
 	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) verify default-aws-minimal-win-disk
@@ -351,14 +308,15 @@ test-aws-upgrade-candidate: sync-aws update-roles check-aws-credentials
 		REG=$(AWS_REGION); \
 		echo "Using Account: $$ACC"; \
 		echo "Using Region: $$REG"; \
-			$(load_upgrade_test_env) \
-			KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) destroy upgrade-candidate-aws-disk-aws-minimal-win-disk; \
-			KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) create upgrade-candidate-aws-disk-aws-minimal-win-disk; \
-			echo "=== Waiting for WinRM on upgrade-candidate-aws-disk-aws-minimal-win-disk... ==="; \
-			$(call wait_for_aws_winrm,.kitchen/upgrade-candidate-aws-disk-aws-minimal-win-disk.yml); \
-			sleep 10; \
-			echo "=== Running Candidate Upgrade Test ==="; \
-			KITCHEN_YAML=$(KITCHEN_YAML) ANSIBLE_HOST_OVERRIDE=$$IP $(KITCHEN_CMD) converge upgrade-candidate-aws-disk-aws-minimal-win-disk; \
+		$(load_upgrade_test_env) \
+		KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) destroy upgrade-candidate-aws-disk-aws-minimal-win-disk; \
+		KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) create upgrade-candidate-aws-disk-aws-minimal-win-disk; \
+		IP=$$(yq .hostname .kitchen/upgrade-candidate-aws-disk-aws-minimal-win-disk.yml); \
+		echo "=== Waiting for WinRM on $$IP:5985... ==="; \
+		for i in {1..60}; do if nc -z -w 5 $$IP 5985; then break; fi; echo "Waiting... ($$i/60)"; sleep 10; if [ $$i -eq 60 ]; then echo "Timeout waiting for WinRM"; exit 1; fi; done; \
+		sleep 10; \
+		echo "=== Running Candidate Upgrade Test ==="; \
+		KITCHEN_YAML=$(KITCHEN_YAML) ANSIBLE_HOST_OVERRIDE=$$IP $(KITCHEN_CMD) converge upgrade-candidate-aws-disk-aws-minimal-win-disk; \
 		echo "=== Verifying Ansible Connectivity (win_ping) ==="; \
 		ANSIBLE_CONFIG=ansible.cfg ANSIBLE_HOST_OVERRIDE=$$IP ansible -i .kitchen/ansible_inventory/ansible_inventory.ini -m win_ping all; \
 		KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) verify upgrade-candidate-aws-disk-aws-minimal-win-disk; \

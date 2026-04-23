@@ -42,12 +42,6 @@ make: *** [test-aws-upgrade-candidate] Error 1
   - stale hostname/IP data, and
   - instance termination during boot.
 
-## Resolution status
-
-- Implemented an instance-aware AWS WinRM wait path in `Makefile`.
-- The wait loop now refreshes public endpoint data from EC2, surfaces instance/system status during the wait, and fails early if the instance enters a terminal state before WinRM is reachable.
-- Live AWS re-validation is still pending.
-
 ## Related
 
 - Local WinRM ingress parity: `docs/issues/2026-04-22-local-aws-winrm-blocked-by-default-sg.md`
