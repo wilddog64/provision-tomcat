@@ -43,4 +43,5 @@
 
 ## Next Actions
 - Hand `docs/plans/2026-04-26-provider-plugin-makefile-refactor.md` to Codex (Phase 1 — AWS extraction + Azure stubs).
+- After lib-acg `feat/phase5-ci-setup` merges: start `docs/plans/2026-04-26-lib-acg-github-secrets-sync-integration.md` — move `ansible/bin/sync-aws-secrets` into lib-acg as `acg_sync_github_secrets`.
 - Investigate the new AWS pre-converge WinRM timeout with AWS-side instance diagnostics before modifying upgrade logic.

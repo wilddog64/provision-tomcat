@@ -29,6 +29,7 @@
 
 ## In Progress
 - [ ] **Provider plugin refactor** — PLANNED. Spec: `docs/plans/2026-04-26-provider-plugin-makefile-refactor.md`. Phase 1: extract AWS defines → `scripts/providers/aws/`; add Azure stubs. Phase 2/3: Azure and GCP implementation (separate tasks).
+- [ ] **lib-acg GitHub Secrets sync integration** — GATED on lib-acg `feat/phase5-ci-setup` merge. Move `ansible/bin/sync-aws-secrets` into lib-acg as `acg_sync_github_secrets`; provision-tomcat `sync-aws` sources lib-acg. Spec: `docs/plans/2026-04-26-lib-acg-github-secrets-sync-integration.md`.
 - [ ] Restore Bundler `4.0.6` / local validation environment if repo-native `make syntax` proof is still required.
 - [ ] Investigate the AWS candidate pre-converge WinRM timeout with AWS-side instance diagnostics.
 
