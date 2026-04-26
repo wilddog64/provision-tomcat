@@ -1,6 +1,7 @@
 # Active Context
 
 ## Current Focus
+- **Makefile provider plugin refactor** — extract AWS `define` blocks into `scripts/providers/aws/`; establish provider interface contract for future Azure and GCP support. Spec: `docs/plans/2026-04-26-provider-plugin-makefile-refactor.md`. PLANNED — ready to hand to Codex.
 - Keep AWS candidate testing viable with current releases while preserving checksum verification.
 - Align CI policy with the intended branch model so CI runs for PRs to `main`, not pushes to dev branches.
 
@@ -41,4 +42,5 @@
 - Delivery record: AWS candidate promotion fix delivered in commit `457d2e0`; PR URL: none (per workflow, no PR created by this agent)
 
 ## Next Actions
+- Hand `docs/plans/2026-04-26-provider-plugin-makefile-refactor.md` to Codex (Phase 1 — AWS extraction + Azure stubs).
 - Investigate the new AWS pre-converge WinRM timeout with AWS-side instance diagnostics before modifying upgrade logic.
