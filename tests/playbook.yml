@@ -5,7 +5,7 @@
   vars:
     jdk_version: 21
     # Install paths - override with -e install_drive=D: to use D: drive
-    install_drive: "C:"
+    install_drive: "D:"
     java_install_base_dir: "{{ install_drive }}/java"
     tomcat_install_dir: "{{ install_drive }}/Tomcat"
     java_temp_dir: "{{ install_drive }}/temp"
