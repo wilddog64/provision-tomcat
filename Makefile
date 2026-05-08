@@ -91,422 +91,69 @@ sync-azure:
 sync-secrets: sync-aws sync-azure
 	@echo "All secrets synchronized to GitHub."
 
-.PHONY: check-aws-credentials
-check-aws-credentials:
-	@echo "=== Checking AWS Credentials ===" >&2
-	@if aws sts get-caller-identity > /dev/null 2>&1; then \
-		echo "AWS Credentials are valid." >&2; \
-	else \
-		echo "ERROR: AWS Credentials invalid or expired. Please run 'make sync-aws' manually." >&2; \
-		exit 1; \
-	fi
+PROVIDER ?= aws
+AWS_REGION ?= us-east-1
 
-.PHONY: discover-aws-resources
-discover-aws-resources: check-aws-credentials
-	@NEW_SUBNET_ID=$$(aws ec2 describe-subnets --region $(AWS_REGION) --filters "Name=tag:Project,Values=Tomcat-Provisioning" "Name=tag:Type,Values=Test" --query "Subnets[0].SubnetId" --output text 2>/dev/null); \
-	if [ "$$NEW_SUBNET_ID" = "None" ] || [ -z "$$NEW_SUBNET_ID" ]; then \
-		NEW_SUBNET_ID=$$(aws ec2 describe-subnets --region $(AWS_REGION) --filters "Name=availability-zone,Values=$(AWS_REGION)e" --query "Subnets[0].SubnetId" --output text 2>/dev/null); \
-	fi; \
-	if [ "$$NEW_SUBNET_ID" = "None" ] || [ -z "$$NEW_SUBNET_ID" ]; then \
-		NEW_SUBNET_ID=$$(aws ec2 describe-subnets --region $(AWS_REGION) --query "Subnets[0].SubnetId" --output text 2>/dev/null); \
-	fi; \
-	if [ "$$NEW_SUBNET_ID" = "None" ] || [ -z "$$NEW_SUBNET_ID" ]; then \
-		echo "ERROR: Failed to discover subnet." >&2; \
-		exit 1; \
-	fi; \
-	NEW_SECURITY_GROUP_IDS=$$(aws ec2 describe-security-groups --region $(AWS_REGION) --filters "Name=tag:Project,Values=Tomcat-Provisioning" "Name=tag:Type,Values=Test" --query "SecurityGroups[0].GroupId" --output text 2>/dev/null); \
-	if [ "$$NEW_SECURITY_GROUP_IDS" = "None" ] || [ -z "$$NEW_SECURITY_GROUP_IDS" ]; then \
-		NEW_SECURITY_GROUP_IDS=$$(aws ec2 describe-security-groups --region $(AWS_REGION) --filters "Name=group-name,Values=default" --query "SecurityGroups[0].GroupId" --output text 2>/dev/null); \
-	fi; \
-	if [ "$$NEW_SECURITY_GROUP_IDS" = "None" ] || [ -z "$$NEW_SECURITY_GROUP_IDS" ]; then \
-		echo "ERROR: Failed to discover security group." >&2; \
-		exit 1; \
-	fi; \
-	NEW_AMI_ID=$$(aws ec2 describe-images --region $(AWS_REGION) --owners amazon --filters "Name=name,Values=Windows_Server-2019-English-Full-Base*" --query 'sort_by(Images, &CreationDate)[-1].ImageId' --output text 2>/dev/null); \
-	if [ "$$NEW_AMI_ID" = "None" ] || [ -z "$$NEW_AMI_ID" ]; then \
-		NEW_AMI_ID=$$(aws ec2 describe-images --region $(AWS_REGION) --owners amazon --filters "Name=name,Values=Windows_Server-2016-English-Full-Base*" --query 'sort_by(Images, &CreationDate)[-1].ImageId' --output text 2>/dev/null); \
-	fi; \
-	if [ "$$NEW_AMI_ID" = "None" ] || [ -z "$$NEW_AMI_ID" ]; then \
-		echo "ERROR: Failed to discover AMI." >&2; \
-		exit 1; \
-	fi; \
-	NEW_AZ=$$(aws ec2 describe-subnets --region $(AWS_REGION) --subnet-ids $$NEW_SUBNET_ID --query "Subnets[0].AvailabilityZone" --output text 2>/dev/null || echo "$(AWS_REGION)e"); \
-	NEW_REGION=$$(aws configure --region $(AWS_REGION) get region 2>/dev/null || echo "$(AWS_REGION)"); \
-	echo "AWS_SUBNET_ID=$$NEW_SUBNET_ID"; \
-	echo "AWS_SECURITY_GROUP_ID=$$NEW_SECURITY_GROUP_IDS"; \
-	echo "AWS_SECURITY_GROUP_IDS=[\"$$NEW_SECURITY_GROUP_IDS\"]"; \
-	echo "AWS_AMI_ID=$$NEW_AMI_ID"; \
-	echo "AWS_AZ=$$NEW_AZ"; \
-	echo "AWS_REGION=$$NEW_REGION"
+# --- Provider Dispatchers ---
 
+.PHONY: test-provision-tomcat
+test-provision-tomcat: check-credentials update-roles
+	@eval $$(scripts/providers/$(PROVIDER)/discover.sh) && \
+	eval $$(scripts/common/resolve-tomcat.sh) && \
+	RUNNER_IP=$${LOCAL_AWS_RUNNER_IP:-$$(curl -fsS https://checkip.amazonaws.com | tr -d '\n')} && \
+	export RUNNER_IP && \
+	scripts/providers/$(PROVIDER)/ingress.sh authorize && \
+	trap 'scripts/providers/$(PROVIDER)/ingress.sh revoke' EXIT && \
+	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) test default-$(PROVIDER)-minimal-win-disk && \
+	scripts/providers/$(PROVIDER)/promote-candidate.sh
 
-define load_aws_discovery_env
-	DISCOVERY_OUTPUT="$$($(MAKE) --no-print-directory discover-aws-resources)"; \
-	printf '%s\n' "$$DISCOVERY_OUTPUT"; \
-	while IFS='=' read -r key value; do \
-		case "$$key" in \
-			AWS_SUBNET_ID|AWS_SECURITY_GROUP_ID|AWS_SECURITY_GROUP_IDS|AWS_AMI_ID|AWS_AZ|AWS_REGION) \
-				export "$$key=$$value"; \
-				;; \
-		esac; \
-	done <<< "$$DISCOVERY_OUTPUT";
-endef
+.PHONY: test-upgrade-candidate
+test-upgrade-candidate: check-credentials sync-$(PROVIDER) update-roles
+	@eval $$(scripts/providers/$(PROVIDER)/discover.sh) && \
+	eval $$(scripts/common/resolve-tomcat.sh) && \
+	RUNNER_IP=$${LOCAL_AWS_RUNNER_IP:-$$(curl -fsS https://checkip.amazonaws.com | tr -d '\n')} && \
+	export RUNNER_IP && \
+	scripts/providers/$(PROVIDER)/ingress.sh authorize && \
+	trap 'scripts/providers/$(PROVIDER)/ingress.sh revoke' EXIT && \
+	scripts/providers/$(PROVIDER)/promote-candidate.sh
 
-define authorize_local_aws_test_ingress
-	RUNNER_IP=$${LOCAL_AWS_RUNNER_IP:-$${RUNNER_IP:-$$(curl -fsS https://checkip.amazonaws.com | tr -d '\n')}}; \
-	if [ -z "$$RUNNER_IP" ]; then \
-		echo "ERROR: Failed to determine runner IP for AWS ingress authorization." >&2; \
-		exit 1; \
-	fi; \
-	export RUNNER_IP; \
-	echo "Authorizing ingress for runner IP: $$RUNNER_IP"; \
-	aws ec2 authorize-security-group-ingress --region "$$AWS_REGION" --group-id "$$AWS_SECURITY_GROUP_ID" --protocol tcp --port 5985 --cidr "$${RUNNER_IP}/32" >/dev/null 2>&1 || true; \
-	aws ec2 authorize-security-group-ingress --region "$$AWS_REGION" --group-id "$$AWS_SECURITY_GROUP_ID" --protocol tcp --port 8080 --cidr "$${RUNNER_IP}/32" >/dev/null 2>&1 || true; \
-	aws ec2 authorize-security-group-ingress --region "$$AWS_REGION" --group-id "$$AWS_SECURITY_GROUP_ID" --protocol tcp --port 9080 --cidr "$${RUNNER_IP}/32" >/dev/null 2>&1 || true;
-endef
-
-define revoke_local_aws_test_ingress
-	if [ -n "$$RUNNER_IP" ]; then \
-		echo "Revoking ingress for runner IP: $$RUNNER_IP"; \
-		aws ec2 revoke-security-group-ingress --region "$$AWS_REGION" --group-id "$$AWS_SECURITY_GROUP_ID" --protocol tcp --port 5985 --cidr "$${RUNNER_IP}/32" >/dev/null 2>&1 || true; \
-		aws ec2 revoke-security-group-ingress --region "$$AWS_REGION" --group-id "$$AWS_SECURITY_GROUP_ID" --protocol tcp --port 8080 --cidr "$${RUNNER_IP}/32" >/dev/null 2>&1 || true; \
-		aws ec2 revoke-security-group-ingress --region "$$AWS_REGION" --group-id "$$AWS_SECURITY_GROUP_ID" --protocol tcp --port 9080 --cidr "$${RUNNER_IP}/32" >/dev/null 2>&1 || true; \
-	fi
-endef
-
-define load_upgrade_test_env
-	resolve_tomcat_release() { \
-		local version="$$1"; \
-		local resolved_url="$$2"; \
-		local resolved_checksum="$$3"; \
-		local label="$$4"; \
-		local dlcdn_url archive_url checksum_url; \
-		if [ -z "$$resolved_url" ]; then \
-			dlcdn_url="https://dlcdn.apache.org/tomcat/tomcat-9/v$${version}/bin/apache-tomcat-$${version}-windows-x64.zip"; \
-			archive_url="https://archive.apache.org/dist/tomcat/tomcat-9/v$${version}/bin/apache-tomcat-$${version}-windows-x64.zip"; \
-			if curl -fsI "$$dlcdn_url" >/dev/null 2>&1; then \
-				resolved_url="$$dlcdn_url"; \
-			elif curl -fsI "$$archive_url" >/dev/null 2>&1; then \
-				resolved_url="$$archive_url"; \
-			else \
-				echo "ERROR: Failed to resolve Tomcat $$label download URL for version $$version." >&2; \
-				exit 1; \
-			fi; \
-		fi; \
-		if [ -z "$$resolved_checksum" ]; then \
-			checksum_url="$$resolved_url.sha512"; \
-			resolved_checksum="$$(curl -fsSL "$$checksum_url" | awk 'NF {print $$1; exit}')"; \
-			if [ -z "$$resolved_checksum" ]; then \
-				echo "ERROR: Failed to resolve Tomcat $$label checksum from $$checksum_url." >&2; \
-				exit 1; \
-			fi; \
-		fi; \
-		case "$$label" in \
-			old) \
-				export UPGRADE_TOMCAT_OLD_DOWNLOAD_URL="$$resolved_url"; \
-				export UPGRADE_TOMCAT_OLD_CHECKSUM="$$resolved_checksum"; \
-				;; \
-			new) \
-				export UPGRADE_TOMCAT_NEW_DOWNLOAD_URL="$$resolved_url"; \
-				export UPGRADE_TOMCAT_NEW_CHECKSUM="$$resolved_checksum"; \
-				;; \
-			*) \
-				echo "ERROR: Unknown Tomcat label $$label." >&2; \
-				exit 1; \
-				;; \
-		esac; \
-		echo "Resolved Tomcat $$label version $$version"; \
-		echo "  URL: $$resolved_url"; \
-		echo "  SHA512: $$resolved_checksum"; \
-	}; \
-	export UPGRADE_JAVA_OLD_VERSION="$(JAVA_OLD_VERSION)"; \
-	export UPGRADE_JAVA_NEW_VERSION="$(JAVA_NEW_VERSION)"; \
-	export UPGRADE_TOMCAT_OLD_VERSION="$(TOMCAT_OLD_VERSION)"; \
-	export UPGRADE_TOMCAT_NEW_VERSION="$(TOMCAT_NEW_VERSION)"; \
-	resolve_tomcat_release "$(TOMCAT_OLD_VERSION)" "$(TOMCAT_OLD_DOWNLOAD_URL)" "$(TOMCAT_OLD_CHECKSUM)" old; \
-	resolve_tomcat_release "$(TOMCAT_NEW_VERSION)" "$(TOMCAT_NEW_DOWNLOAD_URL)" "$(TOMCAT_NEW_CHECKSUM)" new; \
-	true
-endef
-
-define promote_aws_candidate
-	PROMOTION_HOST_FILE=".kitchen/ansiblepush/ansiblepush_host_candidate-aws-disk-aws-minimal-win-disk.yml"; \
-	if [ ! -f "$$PROMOTION_HOST_FILE" ]; then \
-		echo "ERROR: AWS candidate host file not found: $$PROMOTION_HOST_FILE" >&2; \
-		exit 1; \
-	fi; \
-	PROMOTION_HOST="$$(yq '."candidate-aws-disk-aws-minimal-win-disk".ansible_ssh_host' "$$PROMOTION_HOST_FILE")"; \
-	PROMOTION_USER="$$(yq '."candidate-aws-disk-aws-minimal-win-disk".ansible_ssh_user' "$$PROMOTION_HOST_FILE")"; \
-	PROMOTION_PASS="$$(yq '."candidate-aws-disk-aws-minimal-win-disk".ansible_ssh_pass' "$$PROMOTION_HOST_FILE")"; \
-	if [ -z "$$PROMOTION_HOST" ] || [ "$$PROMOTION_HOST" = "null" ] || [ -z "$$PROMOTION_USER" ] || [ "$$PROMOTION_USER" = "null" ] || [ -z "$$PROMOTION_PASS" ] || [ "$$PROMOTION_PASS" = "null" ]; then \
-		echo "ERROR: Failed to extract AWS promotion host credentials from $$PROMOTION_HOST_FILE" >&2; \
-		exit 1; \
-		fi; \
-		PROMOTION_INVENTORY="$$(mktemp)"; \
-		PROMOTION_VARS="$$(mktemp)"; \
-		export PROMOTION_INVENTORY PROMOTION_VARS PROMOTION_HOST PROMOTION_USER PROMOTION_PASS; \
-		python3 -c 'import json, os; host=os.environ["PROMOTION_HOST"]; user=os.environ["PROMOTION_USER"]; password=os.environ["PROMOTION_PASS"]; inventory=("[aws_candidates]\n" + "aws_candidate ansible_connection=winrm ansible_host={host} ansible_user={user} ansible_password={password} ansible_port=5985 ansible_winrm_transport=ntlm ansible_winrm_scheme=http ansible_winrm_server_cert_validation=ignore ansible_become_method=runas ansible_become_user={user}\n").format(host=json.dumps(host), user=json.dumps(user), password=json.dumps(password)); extra_vars={"env":"stage2","extract_build_number":16,"extract_debug":"False","skip_migration":True,"upgrade_step":2,"tomcat_auto_start":True,"tomcat_candidate_enabled":True,"tomcat_candidate_delegate":"localhost","tomcat_candidate_delegate_host":host,"tomcat_candidate_delegate_port":9080,"tomcat_candidate_manual_control":False,"upgrade_java_old_version":os.environ["UPGRADE_JAVA_OLD_VERSION"],"upgrade_java_new_version":os.environ["UPGRADE_JAVA_NEW_VERSION"],"upgrade_tomcat_old_version":os.environ["UPGRADE_TOMCAT_OLD_VERSION"],"upgrade_tomcat_new_version":os.environ["UPGRADE_TOMCAT_NEW_VERSION"],"upgrade_tomcat_old_download_url":os.environ["UPGRADE_TOMCAT_OLD_DOWNLOAD_URL"],"upgrade_tomcat_new_download_url":os.environ["UPGRADE_TOMCAT_NEW_DOWNLOAD_URL"],"upgrade_tomcat_old_checksum":os.environ["UPGRADE_TOMCAT_OLD_CHECKSUM"],"upgrade_tomcat_new_checksum":os.environ["UPGRADE_TOMCAT_NEW_CHECKSUM"]}; open(os.environ["PROMOTION_INVENTORY"],"w",encoding="utf-8").write(inventory); open(os.environ["PROMOTION_VARS"],"w",encoding="utf-8").write(json.dumps(extra_vars))'; \
-		echo "=== Promoting AWS candidate on $$PROMOTION_HOST ==="; \
-		ANSIBLE_CONFIG=ansible.cfg ansible-playbook tests/playbook-upgrade.yml -i "$$PROMOTION_INVENTORY" -e @"$$PROMOTION_VARS"; \
-		echo "=== Verifying promoted primary on localhost:8080 via WinRM ==="; \
-		ANSIBLE_CONFIG=ansible.cfg ansible aws_candidate -i "$$PROMOTION_INVENTORY" -m ansible.windows.win_uri -a 'url=http://localhost:8080 status_code=200,404' ; \
-		rm -f "$$PROMOTION_INVENTORY" "$$PROMOTION_VARS"
-endef
+# --- Provider Aliases ---
 
 .PHONY: test-aws-provision-tomcat
-test-aws-provision-tomcat: update-roles check-aws-credentials
-	@set -e; \
-	$(load_aws_discovery_env) \
-	$(authorize_local_aws_test_ingress) \
-	cleanup() { \
-		status=$$?; \
-		if [ -z "$$KEEP_AWS_VM" ]; then \
-			echo "=== Cleaning up... ==="; \
-			KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) destroy default-aws-minimal-win-disk || true; \
-		else \
-			echo "=== KEEP_AWS_VM is set. Skipping cleanup. ==="; \
-		fi; \
-		$(revoke_local_aws_test_ingress); \
-		exit $$status; \
-	}; \
-	trap cleanup EXIT; \
-	echo "=== Detecting AWS Environment ==="; \
-	ACC=$(AWS_ACCOUNT_ID); \
-	REG=$(AWS_REGION); \
-	echo "Using Account: $$ACC"; \
-	echo "Using Region: $$REG"; \
-	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) destroy default-aws-minimal-win-disk; \
-	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) create default-aws-minimal-win-disk; \
-	IP=$$(yq .hostname .kitchen/default-aws-minimal-win-disk.yml); \
-	echo "=== Waiting for WinRM on $$IP:5985... ==="; \
-	for i in {1..60}; do if nc -z -w 5 $$IP 5985; then break; fi; echo "Waiting... ($$i/60)"; sleep 10; if [ $$i -eq 60 ]; then echo "Timeout waiting for WinRM"; exit 1; fi; done; \
-	sleep 10; \
-	echo "=== Running Integration Test ==="; \
-	KITCHEN_YAML=$(KITCHEN_YAML) ANSIBLE_HOST_OVERRIDE=$$IP $(KITCHEN_CMD) converge default-aws-minimal-win-disk; \
-	echo "=== Verifying Ansible Connectivity (win_ping) ==="; \
-	ANSIBLE_CONFIG=ansible.cfg ANSIBLE_HOST_OVERRIDE=$$IP ansible -i .kitchen/ansible_inventory/ansible_inventory.ini -m win_ping all; \
-	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) verify default-aws-minimal-win-disk
+test-aws-provision-tomcat:
+	$(MAKE) test-provision-tomcat PROVIDER=aws
+
+.PHONY: test-azure-provision-tomcat
+test-azure-provision-tomcat:
+	$(MAKE) test-provision-tomcat PROVIDER=azure
 
 .PHONY: test-aws-upgrade-candidate
-test-aws-upgrade-candidate: sync-aws update-roles check-aws-credentials
-	@set -e; \
-	$(load_aws_discovery_env) \
-	$(authorize_local_aws_test_ingress) \
-	cleanup() { \
-		status=$$?; \
-		if [ -z "$$KEEP_AWS_VM" ]; then \
-			echo "=== Cleaning up... ==="; \
-			KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) destroy upgrade-candidate-aws-disk-aws-minimal-win-disk || true; \
-		else \
-			echo "=== KEEP_AWS_VM is set. Skipping cleanup. ==="; \
-		fi; \
-		$(revoke_local_aws_test_ingress); \
-		exit $$status; \
-	}; \
-	trap cleanup EXIT; \
-	echo "=== Detecting AWS Environment ==="; \
-		ACC=$(AWS_ACCOUNT_ID); \
-		REG=$(AWS_REGION); \
-		echo "Using Account: $$ACC"; \
-		echo "Using Region: $$REG"; \
-		$(load_upgrade_test_env) \
-		KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) destroy upgrade-candidate-aws-disk-aws-minimal-win-disk; \
-		KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) create upgrade-candidate-aws-disk-aws-minimal-win-disk; \
-		IP=$$(yq .hostname .kitchen/upgrade-candidate-aws-disk-aws-minimal-win-disk.yml); \
-		echo "=== Waiting for WinRM on $$IP:5985... ==="; \
-		for i in {1..60}; do if nc -z -w 5 $$IP 5985; then break; fi; echo "Waiting... ($$i/60)"; sleep 10; if [ $$i -eq 60 ]; then echo "Timeout waiting for WinRM"; exit 1; fi; done; \
-		sleep 10; \
-		echo "=== Running Candidate Upgrade Test ==="; \
-		KITCHEN_YAML=$(KITCHEN_YAML) ANSIBLE_HOST_OVERRIDE=$$IP $(KITCHEN_CMD) converge upgrade-candidate-aws-disk-aws-minimal-win-disk; \
-		echo "=== Verifying Ansible Connectivity (win_ping) ==="; \
-		ANSIBLE_CONFIG=ansible.cfg ANSIBLE_HOST_OVERRIDE=$$IP ansible -i .kitchen/ansible_inventory/ansible_inventory.ini -m win_ping all; \
-		KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) verify upgrade-candidate-aws-disk-aws-minimal-win-disk; \
-		$(promote_aws_candidate)
+test-aws-upgrade-candidate:
+	$(MAKE) test-upgrade-candidate PROVIDER=aws
 
 .PHONY: test-aws-upgrade-candidate-latest
 test-aws-upgrade-candidate-latest:
-	$(MAKE) --no-print-directory test-aws-upgrade-candidate \
+	$(MAKE) test-aws-upgrade-candidate \
 		JAVA_OLD_VERSION=21 \
 		JAVA_NEW_VERSION=25 \
 		TOMCAT_OLD_VERSION=9.0.115 \
-		TOMCAT_NEW_VERSION=9.0.117 \
+		TOMCAT_NEW_VERSION=9.0.120 \
 		KEEP_AWS_VM=$(KEEP_AWS_VM)
 
-.PHONY: test-azure-provision-tomcat
-test-azure-provision-tomcat: update-roles
-	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) test default-azure-minimal-win-disk
+# --- Legacy Compatibility / Helpers ---
 
-# ============================================================================
-# Utility Targets
-# ============================================================================ 
+.PHONY: check-credentials
+check-credentials:
+	@scripts/common/check-credentials.sh $(PROVIDER)
 
-.PHONY: setup
+.PHONY: check-aws-credentials
+check-aws-credentials:
+	@scripts/common/check-credentials.sh aws
 
-setup:
+.PHONY: discover-aws-resources
+discover-aws-resources:
+	@scripts/providers/aws/discover.sh
 
-	@./scripts/setup.sh all
-
-
-
-.PHONY: deps
-deps:
-	@echo "Installing Ruby dependencies..."
-	@rbenv exec bundle install || bundle install
-	@echo "Installing Ansible collections..."
-	ansible-galaxy collection install -r requirements.yml -p ./collections
-
-# ============================================================================ 
-# Help
-# ============================================================================ 
-.PHONY: help
-help:
-	@echo "Available targets (auto KITCHEN_YAML=$(KITCHEN_YAML)):".
-	@echo ""
-	@echo "Validation:"
-	@echo "  lint                # Run ansible-lint"
-	@echo "  syntax              # Check playbook syntax"
-	@echo "  check               # Run all validation checks"
-	@echo "  deps                # Install Ansible collections to ./collections"
-	@echo ""
-	@echo "Utility:"
-	@echo "  list-kitchen-instances  # List all kitchen instances"
-	@echo "  update-roles            # Update test roles from parent directory"
-	@echo "  vagrant-up              # Re-create and start Vagrant VM (default: stromweld/windows-11)"
-	@echo "  vagrant-up-disk         # Bring up VM with windows11-disk box (D: drive)"
-	@echo "  vagrant-up-baseline     # Bring up VM with windows11-tomcat112 box"
-	@echo "  vagrant-login           # PowerShell into Vagrant VM"
-	@echo "  vagrant-ssh             # Alias for vagrant-login"
-	@echo "  vagrant-disk-setup      # Initialize and format D: drive"
-	@echo "  vagrant-provision       # Provision Tomcat + Java (default playbook)"
-	@echo "  vagrant-provision-step1 # Provision older Tomcat 9.0.112 + Java 17"
-	@echo "  vagrant-provision-step2 # Provision newer Tomcat 9.0.113 + Java 21"
-	@echo "  vagrant-build-baseline  # Build baseline box with D: drive + Tomcat + Java"
-	@echo "  vagrant-build-baseline-minimal # Build minimal box with D: drive only"
-	@echo "  vagrant-update-baseline # Rebuild baseline Win11 + Tomcat 9.0.112 box"
-	@echo "  vagrant-upgrade-demo    # Run upgrade-only demo via Vagrantfile-upgrade (append KEEP to skip destroy)"
-	@echo "  vagrant-destroy         # Destroy current Vagrant VM (default Vagrantfile)"
-	@echo "  vagrant-destroy-upgrade # Destroy VM defined by Vagrantfile-upgrade"
-	@echo "  vbox-cleanup-disks      # Clean up stale VirtualBox disk registrations"
-	@echo "  fix-vbox-locks          # Fix locked/stuck VirtualBox VMs"
-	@echo ""
-	@echo "Quick test (default suite):"
-	@$(foreach p,$(PLATFORMS),echo "  test-$(p)           # kitchen test default-$(p)" &&) true
-	@echo ""
-	@echo "Upgrade/Downgrade Testing:"
-	@echo "  test-upgrade-win11      # Test Java (17→21) + Tomcat (9.0.112→9.0.113) upgrade"
-	@echo "  test-upgrade-candidate-win11 # Same as above but exercises candidate workflow"
-	@echo "  test-upgrade-baseline-win11 # Run upgrade step 2 on baseline box (candidate workflow only)"
-	@echo "  candidate-cleanup-win11    # Remove candidate config + destroy upgrade VM"
-	@echo "  upgrade-cleanup-win11   # Cleanup upgrade test VM"
-	@echo "  test-downgrade-win11    # Test Java (21→17) + Tomcat (9.0.113→9.0.112) downgrade"
-	@echo "  downgrade-cleanup-win11 # Cleanup downgrade test VM"
-	@echo "  test-upgrade-candidate-stack # Run normal upgrade + candidate workflow + cleanup"
-	@echo ""
-	@echo "Test specific suite on platform:"
-	@$(foreach p,$(PLATFORMS),$(foreach s,$(SUITES),echo "  test-$(s)-$(p)     # kitchen test $(s)-$(p)" &&)) true
-	@echo ""
-	@echo "Test all suites on a platform:"
-	@$(foreach p,$(PLATFORMS),echo "  test-all-$(p)       # Run all test suites on $(p)" &&) true
-	@echo ""
-	@echo "Converge/Verify/Destroy (default suite):"
-	@$(foreach p,$(PLATFORMS),echo "  converge-$(p)       # kitchen converge default-$(p)" &&) true
-	@$(foreach p,$(PLATFORMS),echo "  verify-$(p)         # kitchen verify default-$(p)" &&) true
-	@$(foreach p,$(PLATFORMS),echo "  destroy-$(p)        # kitchen destroy all $(p) instances" &&) true
-	@echo ""
-	@echo "Override KITCHEN_YAML=/path/to/.kitchen.yml when needed."
-	@echo "See TESTING-UPGRADES.md for detailed upgrade testing documentation."
-
-# Build extra vars for Ansible
-EXTRA_VARS := $(if $(ADO_PAT_TOKEN),ado_pat_token=$(ADO_PAT_TOKEN),)
-
-.PHONY: list-kitchen-instances
-list-kitchen-instances:
-	KITCHEN_YAML=$(KITCHEN_YAML) $(KITCHEN_CMD) list
-
-.PHONY: vagrant-up
-vagrant-up: vagrant-destroy vbox-cleanup-disks
-	vagrant up
-
-.PHONY: vagrant-login
-vagrant-login:
-	vagrant powershell
-
-.PHONY: vagrant-ssh
-vagrant-ssh: vagrant-login
-
-.PHONY: vagrant-up-disk
-vagrant-up-disk:
-	VAGRANT_BOX=windows11-disk vagrant up
-
-.PHONY: vagrant-up-baseline
-vagrant-up-baseline:
-	VAGRANT_BOX=windows11-tomcat112 vagrant up
-
-.PHONY: vagrant-update-baseline
-vagrant-update-baseline:
-	./bin/vagrant-update-baseline
-
-.PHONY: vagrant-upgrade-demo
-vagrant-upgrade-demo:
-	./bin/vagrant-upgrade-demo $(if $(KEEP),--keep,)
-
-.PHONY: vagrant-destroy
-vagrant-destroy:
-	vagrant destroy -f
-
-.PHONY: vagrant-destroy-upgrade
-vagrant-destroy-upgrade:
-	VAGRANT_VAGRANTFILE=Vagrantfile-upgrade vagrant destroy -f
-
-.PHONY: vbox-cleanup-disks
-vbox-cleanup-disks:
-	./bin/vbox-cleanup-disks
-
-.PHONY: fix-vbox-locks
-fix-vbox-locks:
-	@echo "Checking for locked VirtualBox VMs..."
-	@pids=$$(ps aux | grep VBoxHeadless | grep "provision-tomcat" | grep -v grep | awk '{print $$2}'); \
-	if [ -n "$$pids" ]; then \
-		echo "Found hung VBoxHeadless process(es): $$pids"; \
-		echo "Killing..."; \
-		kill -9 $$pids; \
-	else \
-		echo "No hung VBox processes found."; \
-	fi
-	@echo "Cleaning up stuck VMs..."
-	@vms=$$(VBoxManage list vms | grep "provision-tomcat" | grep -o '{\(.*\)}' | tr -d '{}'); \
-	for uuid in $$vms; do \
-		echo "Checking VM: $$uuid"; \
-		state=$$(VBoxManage showvminfo $$uuid --machinereadable | grep '^VMState=' | cut -d'"' -f2); \
-		if [ "$$state" = "aborted" ] || [ "$$state" = "stopping" ]; then \
-			echo "  VM in bad state ($$state). Unregistering..."; \
-			VBoxManage unregistervm $$uuid --delete || true; \
-		fi; \
-	done
-	@echo "Done."
-
-.PHONY: vagrant-disk-setup
-vagrant-disk-setup:
-	$(if $(EXTRA_VARS),ansible_extra_vars="$(EXTRA_VARS)" ,)vagrant provision --provision-with disk_setup
-
-.PHONY: vagrant-provision
-vagrant-provision:
-	$(if $(EXTRA_VARS),ansible_extra_vars="$(EXTRA_VARS)" ,)vagrant provision --provision-with ansible
-
-.PHONY: vagrant-provision-step1
-vagrant-provision-step1:
-	$(if $(EXTRA_VARS),ansible_extra_vars="$(EXTRA_VARS)" ,)vagrant provision --provision-with ansible_upgrade_step1
-
-.PHONY: vagrant-provision-step2
-vagrant-provision-step2:
-	$(if $(EXTRA_VARS),ansible_extra_vars="$(EXTRA_VARS)" ,)vagrant provision --provision-with ansible_upgrade_step2
-
-.PHONY: vagrant-build-baseline
-vagrant-build-baseline: vbox-cleanup-disks
-	./bin/vagrant-build-baseline
-
-.PHONY: vagrant-build-baseline-minimal
-vagrant-build-baseline-minimal: vbox-cleanup-disks
-	./bin/vagrant-build-baseline --disk-only
 
 # Test all suites on a platform
 define TEST_ALL_SUITES
